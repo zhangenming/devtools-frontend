@@ -127,6 +127,7 @@ const i18nString = i18n.i18n.getLocalizedString.bind(undefined, str_);
 let loadedPanelCommonModule: typeof PanelCommon|undefined;
 export class MainImpl {
   #readyForTestPromise = Promise.withResolvers<void>();
+  #veStartPromise!: Promise<void>;
 
   constructor() {
     MainImpl.instanceForTest = this;
@@ -184,11 +185,12 @@ export class MainImpl {
           clickLogThrottler: new Common.Throttler.Throttler(10),
           resizeLogThrottler: new Common.Throttler.Throttler(10),
         };
-        void VisualLogging.startLogging(options);
+        this.#veStartPromise = VisualLogging.startLogging(options);
       } else {
-        void VisualLogging.startLogging();
+        this.#veStartPromise = VisualLogging.startLogging();
       }
     }
+
     void this.#createAppUI();
   }
 
@@ -516,7 +518,7 @@ export class MainImpl {
     this.#registerMessageSinkListener();
 
     // Initialize `GDPClient` and `UserBadges` for Google Developer Program integration
-    if (Root.Runtime.hostConfig.devToolsGdpProfiles?.enabled && !Root.Runtime.hostConfig.isOffTheRecord) {
+    if (Host.GdpClient.isGdpProfilesAvailable()) {
       void Host.GdpClient.GdpClient.instance().initialize();
       void Badges.UserBadges.instance().initialize();
       Badges.UserBadges.instance().addEventListener(Badges.Events.BADGE_TRIGGERED, async ev => {
@@ -584,6 +586,7 @@ export class MainImpl {
     for (const runnableInstanceFunction of Common.Runnable.earlyInitializationRunnables()) {
       await runnableInstanceFunction().run();
     }
+    await this.#veStartPromise;
     // Used for browser tests.
     Host.InspectorFrontendHost.InspectorFrontendHostInstance.readyForTest();
     this.#readyForTestPromise.resolve();
