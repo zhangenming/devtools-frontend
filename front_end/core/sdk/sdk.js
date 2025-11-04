@@ -31578,7 +31578,7 @@ var StubConnection = class {
     const messageObject = JSON.parse(message);
     const error = {
       message: "This is a stub connection, can't dispatch message.",
-      code: ProtocolClient2.InspectorBackend.DevToolsStubErrorCode,
+      code: ProtocolClient2.CDPConnection.CDPErrorStatus.DEVTOOLS_STUB_ERROR,
       data: messageObject
     };
     if (this.onMessage) {
