@@ -9,6 +9,10 @@ export default `/*
  * found in the LICENSE file.
  */
 
+:host {
+  overflow: auto;
+}
+
 .text-ellipsis {
   overflow: hidden;
   text-overflow: ellipsis;

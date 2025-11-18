@@ -78,6 +78,9 @@
       "path": "../../../models/bindings/bundle-tsconfig.json"
     },
     {
+      "path": "../../common/bundle-tsconfig.json"
+    },
+    {
       "path": "../../network/forward/bundle-tsconfig.json"
     },
     {

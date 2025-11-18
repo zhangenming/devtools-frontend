@@ -659,6 +659,7 @@ ui/components/text_editor/javascript.test.js
 ui/components/text_prompt/TextPrompt.test.js
 ui/components/tooltips/Tooltip.test.js
 ui/components/tree_outline/TreeOutline.test.js
+ui/helpers/OpenInNewTab.test.js
 ui/i18n/i18n.test.js
 ui/legacy/ARIAUtils.test.js
 ui/legacy/ActionRegistration.test.js

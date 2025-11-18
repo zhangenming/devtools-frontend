@@ -1748,8 +1748,7 @@ var StackTrace = class extends HTMLElement {
   #stackTraceRows = [];
   #showHidden = false;
   set data(data) {
-    const frame = data.frame;
-    const { creationStackTrace, creationStackTraceTarget } = frame.getCreationStackTraceData();
+    const { creationStackTrace, creationStackTraceTarget } = data.creationStackTraceData;
     if (creationStackTrace) {
       this.#stackTraceRows = data.buildStackTraceRows(creationStackTrace, creationStackTraceTarget, this.#linkifier, true, this.#onStackTraceRowsUpdated.bind(this));
     }
@@ -1822,11 +1821,10 @@ import * as Root from "./../../../core/root/root.js";
 import * as SDK4 from "./../../../core/sdk/sdk.js";
 import * as Bindings from "./../../../models/bindings/bindings.js";
 import * as Workspace from "./../../../models/workspace/workspace.js";
+import * as PanelCommon from "./../../common/common.js";
 import * as NetworkForward2 from "./../../network/forward/forward.js";
 import * as CspEvaluator from "./../../../third_party/csp_evaluator/csp_evaluator.js";
 import * as Buttons4 from "./../../../ui/components/buttons/buttons.js";
-import * as LegacyWrapper3 from "./../../../ui/components/legacy_wrapper/legacy_wrapper.js";
-import * as RenderCoordinator2 from "./../../../ui/components/render_coordinator/render_coordinator.js";
 import * as Components3 from "./../../../ui/legacy/components/utils/utils.js";
 import * as UI4 from "./../../../ui/legacy/legacy.js";
 import { Directives as Directives3, html as html7, nothing as nothing6, render as render7 } from "./../../../ui/lit/lit.js";
@@ -1838,6 +1836,10 @@ var frameDetailsReportView_css_default = `/*
  * Use of this source code is governed by a BSD-style license that can be
  * found in the LICENSE file.
  */
+
+:host {
+  overflow: auto;
+}
 
 .text-ellipsis {
   overflow: hidden;
@@ -2590,10 +2592,6 @@ var UIStrings8 = {
    */
   ownerElement: "Owner Element",
   /**
-   * @description Title for a link to the Elements panel
-   */
-  clickToOpenInElementsPanel: "Click to open in Elements panel",
-  /**
    * @description Title for ad frame type field
    */
   adStatus: "Ad Status",
@@ -2766,7 +2764,7 @@ var UIStrings8 = {
 };
 var str_8 = i18n15.i18n.registerUIStrings("panels/application/components/FrameDetailsView.ts", UIStrings8);
 var i18nString7 = i18n15.i18n.getLocalizedString.bind(void 0, str_8);
-function renderFrameDetailsView(input, target) {
+var DEFAULT_VIEW4 = (input, _output, target) => {
   if (!input.frame) {
     return;
   }
@@ -2785,7 +2783,7 @@ function renderFrameDetailsView(input, target) {
       ${input.protocolMonitorExperimentEnabled ? renderAdditionalInfoSection(input.frame) : nothing6}
     </devtools-report>
   `, target);
-}
+};
 function renderOriginTrial(trials) {
   if (!trials) {
     return nothing6;
@@ -2817,110 +2815,86 @@ function renderDocumentSection(input) {
       <devtools-report-key>${i18nString7(UIStrings8.url)}</devtools-report-key>
       <devtools-report-value>
         <div class="inline-items">
-          ${maybeRenderSourcesLinkForURL(input.frame, input.onRevealInSources)}
-          ${maybeRenderNetworkLinkForURL(input.frame)}
+          ${!input.frame?.unreachableUrl() ? renderSourcesLinkForURL(input.onRevealInSources) : nothing6}
+          ${input.onRevealInNetwork ? renderNetworkLinkForURL(input.onRevealInNetwork) : nothing6}
           <div class="text-ellipsis" title=${input.frame.url}>${input.frame.url}</div>
         </div>
       </devtools-report-value>
-      ${maybeRenderUnreachableURL(input.frame)}
-      ${maybeRenderOrigin(input.frame)}
-      ${until(input.linkTargetDOMNode?.then?.((value) => renderOwnerElement(input.frame, value)), nothing6)}
-      ${maybeRenderCreationStacktrace(input.frame)}
-      ${maybeRenderAdStatus(input.frame)}
-      ${maybeRenderCreatorAdScriptAncestry(input.frame, input.target, input.adScriptAncestry)}
+      ${maybeRenderUnreachableURL(input.frame?.unreachableUrl())}
+      ${maybeRenderOrigin(input.frame?.securityOrigin)}
+      ${until(input.linkTargetDOMNode?.then?.((value) => renderOwnerElement(value)), nothing6)}
+      ${maybeRenderCreationStacktrace(input.frame.getCreationStackTraceData())}
+      ${maybeRenderAdStatus(input.frame?.adFrameType(), input.frame?.adFrameStatus())}
+      ${maybeRenderCreatorAdScriptAncestry(input.frame?.adFrameType(), input.target, input.adScriptAncestry)}
       <devtools-report-divider></devtools-report-divider>
     `;
 }
-function maybeRenderSourcesLinkForURL(frame, onRevealInSources) {
-  if (!frame || frame.unreachableUrl()) {
-    return nothing6;
-  }
+function renderSourcesLinkForURL(onRevealInSources) {
   return renderIconLink("label", i18nString7(UIStrings8.clickToOpenInSourcesPanel), onRevealInSources, "reveal-in-sources");
 }
-function maybeRenderNetworkLinkForURL(frame) {
-  if (frame) {
-    const resource = frame.resourceForURL(frame.url);
-    if (resource?.request) {
-      const request = resource.request;
-      return renderIconLink("arrow-up-down-circle", i18nString7(UIStrings8.clickToOpenInNetworkPanel), () => {
-        const requestLocation = NetworkForward2.UIRequestLocation.UIRequestLocation.tab(
-          request,
-          "headers-component"
-          /* NetworkForward.UIRequestLocation.UIRequestTabs.HEADERS_COMPONENT */
-        );
-        return Common3.Revealer.reveal(requestLocation);
-      }, "reveal-in-network");
-    }
-  }
-  return nothing6;
+function renderNetworkLinkForURL(onRevealInNetwork) {
+  return renderIconLink("arrow-up-down-circle", i18nString7(UIStrings8.clickToOpenInNetworkPanel), onRevealInNetwork, "reveal-in-network");
 }
-function maybeRenderUnreachableURL(frame) {
-  if (!frame?.unreachableUrl()) {
+function maybeRenderUnreachableURL(unreachableUrl) {
+  if (!unreachableUrl) {
     return nothing6;
   }
   return html7`
       <devtools-report-key>${i18nString7(UIStrings8.unreachableUrl)}</devtools-report-key>
       <devtools-report-value>
         <div class="inline-items">
-          ${renderNetworkLinkForUnreachableURL(frame)}
-          <div class="text-ellipsis" title=${frame.unreachableUrl()}>${frame.unreachableUrl()}</div>
+          ${renderNetworkLinkForUnreachableURL(unreachableUrl)}
+          <div class="text-ellipsis" title=${unreachableUrl}>${unreachableUrl}</div>
         </div>
       </devtools-report-value>
     `;
 }
-function renderNetworkLinkForUnreachableURL(frame) {
-  if (frame) {
-    const unreachableUrl = Common3.ParsedURL.ParsedURL.fromString(frame.unreachableUrl());
-    if (unreachableUrl) {
-      return renderIconLink("arrow-up-down-circle", i18nString7(UIStrings8.clickToOpenInNetworkPanelMight), () => {
-        void Common3.Revealer.reveal(NetworkForward2.UIFilter.UIRequestFilter.filters([
-          {
-            filterType: NetworkForward2.UIFilter.FilterType.Domain,
-            filterValue: unreachableUrl.domain()
-          },
-          {
-            filterType: null,
-            filterValue: unreachableUrl.path
-          }
-        ]));
-      }, "unreachable-url.reveal-in-network");
-    }
+function renderNetworkLinkForUnreachableURL(unreachableUrlString) {
+  const unreachableUrl = Common3.ParsedURL.ParsedURL.fromString(unreachableUrlString);
+  if (unreachableUrl) {
+    return renderIconLink("arrow-up-down-circle", i18nString7(UIStrings8.clickToOpenInNetworkPanelMight), () => {
+      void Common3.Revealer.reveal(NetworkForward2.UIFilter.UIRequestFilter.filters([
+        {
+          filterType: NetworkForward2.UIFilter.FilterType.Domain,
+          filterValue: unreachableUrl.domain()
+        },
+        {
+          filterType: null,
+          filterValue: unreachableUrl.path
+        }
+      ]));
+    }, "unreachable-url.reveal-in-network");
   }
   return nothing6;
 }
-function maybeRenderOrigin(frame) {
-  if (frame?.securityOrigin && frame?.securityOrigin !== "://") {
+function maybeRenderOrigin(securityOrigin) {
+  if (securityOrigin && securityOrigin !== "://") {
     return html7`
         <devtools-report-key>${i18nString7(UIStrings8.origin)}</devtools-report-key>
         <devtools-report-value>
-          <div class="text-ellipsis" title=${frame.securityOrigin}>${frame.securityOrigin}</div>
+          <div class="text-ellipsis" title=${securityOrigin}>${securityOrigin}</div>
         </devtools-report-value>
       `;
   }
   return nothing6;
 }
-function renderOwnerElement(frame, linkTargetDOMNode) {
+function renderOwnerElement(linkTargetDOMNode) {
   if (linkTargetDOMNode) {
     return html7`
         <devtools-report-key>${i18nString7(UIStrings8.ownerElement)}</devtools-report-key>
         <devtools-report-value class="without-min-width">
           <div class="inline-items">
-            <button class="link text-link" role="link" tabindex=0 title=${i18nString7(UIStrings8.clickToOpenInElementsPanel)}
-              @mouseenter=${() => frame?.highlight()}
-              @mouseleave=${() => SDK4.OverlayModel.OverlayModel.hideDOMNodeHighlight()}
-              @click=${() => Common3.Revealer.reveal(linkTargetDOMNode)}
-              jslog=${VisualLogging6.action("reveal-in-elements").track({ click: true })}
-            >
-              &lt;${linkTargetDOMNode.nodeName().toLocaleLowerCase()}&gt;
-            </button>
+            <devtools-widget .widgetConfig=${widgetConfig3(PanelCommon.DOMLinkifier.DOMNodeLink, {
+      node: linkTargetDOMNode
+    })}>
+            </devtools-widget>
           </div>
         </devtools-report-value>
       `;
   }
   return nothing6;
 }
-function maybeRenderCreationStacktrace(frame) {
-  const creationStackTraceData = frame?.getCreationStackTraceData();
+function maybeRenderCreationStacktrace(creationStackTraceData) {
   if (creationStackTraceData?.creationStackTrace) {
     return html7`
         <devtools-report-key title=${i18nString7(UIStrings8.creationStackTraceExplanation)}>${i18nString7(UIStrings8.creationStackTrace)}</devtools-report-key>
@@ -2928,7 +2902,7 @@ function maybeRenderCreationStacktrace(frame) {
         jslog=${VisualLogging6.section("frame-creation-stack-trace")}
         >
           <devtools-resources-stack-trace .data=${{
-      frame,
+      creationStackTraceData,
       buildStackTraceRows: Components3.JSPresentationUtils.buildStackTraceRowsForLegacyRuntimeStackTrace
     }}>
           </devtools-resources-stack-trace>
@@ -2955,17 +2929,13 @@ function getAdFrameExplanationString(explanation) {
       return i18nString7(UIStrings8.parentIsAdExplanation);
   }
 }
-function maybeRenderAdStatus(frame) {
-  if (!frame) {
-    return nothing6;
-  }
-  const adFrameType = frame.adFrameType();
-  if (adFrameType === "none") {
+function maybeRenderAdStatus(adFrameType, adFrameStatus) {
+  if (adFrameType === void 0 || adFrameType === "none") {
     return nothing6;
   }
   const typeStrings = getAdFrameTypeStrings(adFrameType);
   const rows = [html7`<div title=${typeStrings.description}>${typeStrings.value}</div>`];
-  for (const explanation of frame.adFrameStatus()?.explanations || []) {
+  for (const explanation of adFrameStatus?.explanations || []) {
     rows.push(html7`<div>${getAdFrameExplanationString(explanation)}</div>`);
   }
   return html7`
@@ -2975,11 +2945,7 @@ function maybeRenderAdStatus(frame) {
         </devtools-expandable-list>
       </devtools-report-value>`;
 }
-function maybeRenderCreatorAdScriptAncestry(frame, target, adScriptAncestry) {
-  if (!frame) {
-    return nothing6;
-  }
-  const adFrameType = frame.adFrameType();
+function maybeRenderCreatorAdScriptAncestry(adFrameType, target, adScriptAncestry) {
   if (adFrameType === "none") {
     return nothing6;
   }
@@ -3257,24 +3223,27 @@ function renderAdditionalInfoSection(frame) {
       <devtools-report-divider></devtools-report-divider>
     `;
 }
-var FrameDetailsReportView = class extends LegacyWrapper3.LegacyWrapper.WrappableComponent {
-  #shadow = this.attachShadow({ mode: "open" });
+var FrameDetailsReportView = class extends UI4.Widget.Widget {
   #frame;
   #target = null;
   #protocolMonitorExperimentEnabled = false;
   #permissionsPolicies = null;
   #linkifier = new Components3.Linkifier.Linkifier();
   #adScriptAncestry = null;
-  constructor(frame) {
-    super();
-    this.#frame = frame;
-    void this.render();
-  }
-  connectedCallback() {
-    this.parentElement?.classList.add("overflow-auto");
+  #view;
+  constructor(element, view = DEFAULT_VIEW4) {
+    super(element, { useShadowDom: true });
     this.#protocolMonitorExperimentEnabled = Root.Runtime.experiments.isEnabled("protocol-monitor");
+    this.#view = view;
   }
-  async render() {
+  set frame(frame) {
+    this.#frame = frame;
+    this.requestUpdate();
+  }
+  get frame() {
+    return this.#frame;
+  }
+  async performUpdate() {
     const result = await this.#frame?.parentFrame()?.getAdScriptAncestry(this.#frame?.id);
     if (result && result.ancestryChain.length > 0) {
       this.#adScriptAncestry = result;
@@ -3285,33 +3254,40 @@ var FrameDetailsReportView = class extends LegacyWrapper3.LegacyWrapper.Wrappabl
     if (!this.#permissionsPolicies && this.#frame) {
       this.#permissionsPolicies = this.#frame.getPermissionsPolicyState();
     }
-    await RenderCoordinator2.write("FrameDetailsView render", async () => {
-      const frame = this.#frame;
-      if (!frame) {
-        return;
-      }
-      const networkManager = frame.resourceTreeModel().target().model(SDK4.NetworkManager.NetworkManager);
-      const securityIsolationInfo = networkManager?.getSecurityIsolationStatus(frame.id);
-      const linkTargetDOMNode = frame.getOwnerDOMNodeOrDocument();
-      const input = {
-        frame,
-        target: this.#target,
-        protocolMonitorExperimentEnabled: this.#protocolMonitorExperimentEnabled,
-        permissionsPolicies: this.#permissionsPolicies,
-        adScriptAncestry: this.#adScriptAncestry,
-        linkifier: this.#linkifier,
-        linkTargetDOMNode,
-        trials: await frame.getOriginTrials(),
-        securityIsolationInfo,
-        onRevealInSources: async () => {
-          const sourceCode = this.#uiSourceCodeForFrame(frame);
-          if (sourceCode) {
-            await Common3.Revealer.reveal(sourceCode);
-          }
+    const frame = this.#frame;
+    if (!frame) {
+      return;
+    }
+    const networkManager = frame.resourceTreeModel().target().model(SDK4.NetworkManager.NetworkManager);
+    const securityIsolationInfo = networkManager?.getSecurityIsolationStatus(frame.id);
+    const linkTargetDOMNode = frame.getOwnerDOMNodeOrDocument();
+    const frameRequest = frame.resourceForURL(frame.url)?.request;
+    const input = {
+      frame,
+      target: this.#target,
+      protocolMonitorExperimentEnabled: this.#protocolMonitorExperimentEnabled,
+      permissionsPolicies: this.#permissionsPolicies,
+      adScriptAncestry: this.#adScriptAncestry,
+      linkifier: this.#linkifier,
+      linkTargetDOMNode,
+      trials: await frame.getOriginTrials(),
+      securityIsolationInfo,
+      onRevealInNetwork: frameRequest ? () => {
+        const requestLocation = NetworkForward2.UIRequestLocation.UIRequestLocation.tab(
+          frameRequest,
+          "headers-component"
+          /* NetworkForward.UIRequestLocation.UIRequestTabs.HEADERS_COMPONENT */
+        );
+        return Common3.Revealer.reveal(requestLocation);
+      } : void 0,
+      onRevealInSources: async () => {
+        const sourceCode = this.#uiSourceCodeForFrame(frame);
+        if (sourceCode) {
+          await Common3.Revealer.reveal(sourceCode);
         }
-      };
-      renderFrameDetailsView(input, this.#shadow);
-    });
+      }
+    };
+    this.#view(input, void 0, this.contentElement);
   }
   #uiSourceCodeForFrame(frame) {
     for (const project of Workspace.Workspace.WorkspaceImpl.instance().projects()) {
@@ -3326,7 +3302,6 @@ var FrameDetailsReportView = class extends LegacyWrapper3.LegacyWrapper.Wrappabl
     return null;
   }
 };
-customElements.define("devtools-resources-frame-details-view", FrameDetailsReportView);
 
 // gen/front_end/panels/application/components/InterestGroupAccessGrid.js
 var InterestGroupAccessGrid_exports = {};
@@ -3681,7 +3656,7 @@ customElements.define("devtools-protocol-handlers-view", ProtocolHandlersView);
 // gen/front_end/panels/application/components/ReportsGrid.js
 var ReportsGrid_exports = {};
 __export(ReportsGrid_exports, {
-  DEFAULT_VIEW: () => DEFAULT_VIEW4,
+  DEFAULT_VIEW: () => DEFAULT_VIEW5,
   ReportsGrid: () => ReportsGrid,
   i18nString: () => i18nString10
 });
@@ -3766,7 +3741,7 @@ var str_11 = i18n21.i18n.registerUIStrings("panels/application/components/Report
 var i18nString10 = i18n21.i18n.getLocalizedString.bind(void 0, str_11);
 var { render: render10, html: html10 } = Lit7;
 var REPORTING_API_EXPLANATION_URL = "https://developer.chrome.com/docs/capabilities/web-apis/reporting-api";
-var DEFAULT_VIEW4 = (input, output, target) => {
+var DEFAULT_VIEW5 = (input, output, target) => {
   render10(html10`
     <style>${reportsGrid_css_default}</style>
     <style>${UI7.inspectorCommonStyles}</style>
@@ -3829,7 +3804,7 @@ var ReportsGrid = class extends UI7.Widget.Widget {
   #view;
   onReportSelected = () => {
   };
-  constructor(element, view = DEFAULT_VIEW4) {
+  constructor(element, view = DEFAULT_VIEW5) {
     super(element);
     this.#view = view;
     this.#protocolMonitorExperimentEnabled = Root2.Runtime.experiments.isEnabled("protocol-monitor");
@@ -3850,7 +3825,7 @@ var ServiceWorkerRouterView_exports = {};
 __export(ServiceWorkerRouterView_exports, {
   ServiceWorkerRouterView: () => ServiceWorkerRouterView
 });
-import * as LegacyWrapper5 from "./../../../ui/components/legacy_wrapper/legacy_wrapper.js";
+import * as LegacyWrapper3 from "./../../../ui/components/legacy_wrapper/legacy_wrapper.js";
 import * as Lit8 from "./../../../ui/lit/lit.js";
 
 // gen/front_end/panels/application/components/serviceWorkerRouterView.css.js
@@ -3914,7 +3889,7 @@ var serviceWorkerRouterView_css_default = `/*
 
 // gen/front_end/panels/application/components/ServiceWorkerRouterView.js
 var { html: html11, render: render11 } = Lit8;
-var ServiceWorkerRouterView = class extends LegacyWrapper5.LegacyWrapper.WrappableComponent {
+var ServiceWorkerRouterView = class extends LegacyWrapper3.LegacyWrapper.WrappableComponent {
   #shadow = this.attachShadow({ mode: "open" });
   #rules = [];
   update(rules) {
@@ -3954,7 +3929,7 @@ customElements.define("devtools-service-worker-router-view", ServiceWorkerRouter
 // gen/front_end/panels/application/components/SharedStorageAccessGrid.js
 var SharedStorageAccessGrid_exports = {};
 __export(SharedStorageAccessGrid_exports, {
-  DEFAULT_VIEW: () => DEFAULT_VIEW5,
+  DEFAULT_VIEW: () => DEFAULT_VIEW6,
   SharedStorageAccessGrid: () => SharedStorageAccessGrid,
   i18nString: () => i18nString11
 });
@@ -4061,7 +4036,7 @@ var UIStrings12 = {
 };
 var str_12 = i18n23.i18n.registerUIStrings("panels/application/components/SharedStorageAccessGrid.ts", UIStrings12);
 var i18nString11 = i18n23.i18n.getLocalizedString.bind(void 0, str_12);
-var DEFAULT_VIEW5 = (input, _output, target) => {
+var DEFAULT_VIEW6 = (input, _output, target) => {
   render12(html12`
     <style>${sharedStorageAccessGrid_css_default}</style>
     ${input.events.length === 0 ? html12`
@@ -4128,7 +4103,7 @@ var SharedStorageAccessGrid = class extends UI8.Widget.Widget {
   #events = [];
   #onSelect = () => {
   };
-  constructor(element, view = DEFAULT_VIEW5) {
+  constructor(element, view = DEFAULT_VIEW6) {
     super(element, { useShadowDom: true });
     this.#view = view;
     this.performUpdate();
@@ -4204,8 +4179,8 @@ import "./../../../ui/components/report_view/report_view.js";
 import * as i18n25 from "./../../../core/i18n/i18n.js";
 import * as SDK5 from "./../../../core/sdk/sdk.js";
 import * as Buttons6 from "./../../../ui/components/buttons/buttons.js";
-import * as LegacyWrapper7 from "./../../../ui/components/legacy_wrapper/legacy_wrapper.js";
-import * as RenderCoordinator3 from "./../../../ui/components/render_coordinator/render_coordinator.js";
+import * as LegacyWrapper5 from "./../../../ui/components/legacy_wrapper/legacy_wrapper.js";
+import * as RenderCoordinator2 from "./../../../ui/components/render_coordinator/render_coordinator.js";
 import * as UI9 from "./../../../ui/legacy/legacy.js";
 import * as Lit10 from "./../../../ui/lit/lit.js";
 
@@ -4319,7 +4294,7 @@ var UIStrings13 = {
 };
 var str_13 = i18n25.i18n.registerUIStrings("panels/application/components/StorageMetadataView.ts", UIStrings13);
 var i18nString12 = i18n25.i18n.getLocalizedString.bind(void 0, str_13);
-var StorageMetadataView = class extends LegacyWrapper7.LegacyWrapper.WrappableComponent {
+var StorageMetadataView = class extends LegacyWrapper5.LegacyWrapper.WrappableComponent {
   #shadow = this.attachShadow({ mode: "open" });
   #storageBucketsModel;
   #storageKey = null;
@@ -4343,7 +4318,7 @@ var StorageMetadataView = class extends LegacyWrapper7.LegacyWrapper.WrappableCo
     }
   }
   render() {
-    return RenderCoordinator3.write("StorageMetadataView render", async () => {
+    return RenderCoordinator2.write("StorageMetadataView render", async () => {
       Lit10.render(html13`
         <style>
           ${storageMetadataView_css_default}
@@ -4571,8 +4546,8 @@ import "./../../../ui/legacy/components/data_grid/data_grid.js";
 import * as i18n29 from "./../../../core/i18n/i18n.js";
 import * as SDK6 from "./../../../core/sdk/sdk.js";
 import * as Buttons8 from "./../../../ui/components/buttons/buttons.js";
-import * as LegacyWrapper9 from "./../../../ui/components/legacy_wrapper/legacy_wrapper.js";
-import * as RenderCoordinator4 from "./../../../ui/components/render_coordinator/render_coordinator.js";
+import * as LegacyWrapper7 from "./../../../ui/components/legacy_wrapper/legacy_wrapper.js";
+import * as RenderCoordinator3 from "./../../../ui/components/render_coordinator/render_coordinator.js";
 import * as UI10 from "./../../../ui/legacy/legacy.js";
 import * as Lit12 from "./../../../ui/lit/lit.js";
 import * as VisualLogging10 from "./../../../ui/visual_logging/visual_logging.js";
@@ -4657,7 +4632,7 @@ var UIStrings15 = {
 var str_15 = i18n29.i18n.registerUIStrings("panels/application/components/TrustTokensView.ts", UIStrings15);
 var i18nString14 = i18n29.i18n.getLocalizedString.bind(void 0, str_15);
 var REFRESH_INTERVAL_MS = 1e3;
-var TrustTokensView = class extends LegacyWrapper9.LegacyWrapper.WrappableComponent {
+var TrustTokensView = class extends LegacyWrapper7.LegacyWrapper.WrappableComponent {
   #shadow = this.attachShadow({ mode: "open" });
   #deleteClickHandler(issuerOrigin) {
     const mainTarget = SDK6.TargetManager.TargetManager.instance().primaryPageTarget();
@@ -4674,7 +4649,7 @@ var TrustTokensView = class extends LegacyWrapper9.LegacyWrapper.WrappableCompon
     }
     const { tokens } = await mainTarget.storageAgent().invoke_getTrustTokens();
     tokens.sort((a, b) => a.issuerOrigin.localeCompare(b.issuerOrigin));
-    await RenderCoordinator4.write("Render TrustTokensView", () => {
+    await RenderCoordinator3.write("Render TrustTokensView", () => {
       Lit12.render(html15`
         <style>${trustTokensView_css_default}</style>
         <style>${UI10.inspectorCommonStyles}</style>

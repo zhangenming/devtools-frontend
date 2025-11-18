@@ -11168,7 +11168,8 @@ var FrameTreeElement = class _FrameTreeElement extends ApplicationPanelTreeEleme
     this.treeElementForResource.clear();
     this.treeElementForWorker.clear();
     if (this.selected) {
-      this.view = LegacyWrapper9.LegacyWrapper.legacyWrapper(UI21.Widget.Widget, new ApplicationComponents14.FrameDetailsView.FrameDetailsReportView(this.frame));
+      this.view = new ApplicationComponents14.FrameDetailsView.FrameDetailsReportView();
+      this.view.frame = this.frame;
       this.showView(this.view);
     } else {
       this.view = null;
@@ -11195,7 +11196,8 @@ var FrameTreeElement = class _FrameTreeElement extends ApplicationPanelTreeEleme
   onselect(selectedByUser) {
     super.onselect(selectedByUser);
     if (!this.view) {
-      this.view = LegacyWrapper9.LegacyWrapper.legacyWrapper(UI21.Widget.Widget, new ApplicationComponents14.FrameDetailsView.FrameDetailsReportView(this.frame));
+      this.view = new ApplicationComponents14.FrameDetailsView.FrameDetailsReportView();
+      this.view.frame = this.frame;
     }
     Host9.userMetrics.panelShown("frame-details");
     this.showView(this.view);
