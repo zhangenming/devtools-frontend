@@ -1,26 +1,25 @@
 // Copyright 2021 The Chromium Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-import '../../../ui/components/expandable_list/expandable_list.js';
-import '../../../ui/components/report_view/report_view.js';
-import './StackTrace.js';
-import * as Common from '../../../core/common/common.js';
-import * as i18n from '../../../core/i18n/i18n.js';
-import * as Root from '../../../core/root/root.js';
-import * as SDK from '../../../core/sdk/sdk.js';
-import * as Bindings from '../../../models/bindings/bindings.js';
-import * as Workspace from '../../../models/workspace/workspace.js';
-import * as PanelCommon from '../../../panels/common/common.js';
-import * as NetworkForward from '../../../panels/network/forward/forward.js';
-import * as CspEvaluator from '../../../third_party/csp_evaluator/csp_evaluator.js';
-import * as Buttons from '../../../ui/components/buttons/buttons.js';
-import * as Components from '../../../ui/legacy/components/utils/utils.js';
-import * as UI from '../../../ui/legacy/legacy.js';
-import { Directives, html, nothing, render } from '../../../ui/lit/lit.js';
-import * as VisualLogging from '../../../ui/visual_logging/visual_logging.js';
+import '../../ui/components/expandable_list/expandable_list.js';
+import '../../ui/components/report_view/report_view.js';
+import * as Common from '../../core/common/common.js';
+import * as i18n from '../../core/i18n/i18n.js';
+import * as Root from '../../core/root/root.js';
+import * as SDK from '../../core/sdk/sdk.js';
+import * as Bindings from '../../models/bindings/bindings.js';
+import * as Workspace from '../../models/workspace/workspace.js';
+import * as PanelCommon from '../../panels/common/common.js';
+import * as NetworkForward from '../../panels/network/forward/forward.js';
+import * as CspEvaluator from '../../third_party/csp_evaluator/csp_evaluator.js';
+import * as Buttons from '../../ui/components/buttons/buttons.js';
+import * as Components from '../../ui/legacy/components/utils/utils.js';
+import * as UI from '../../ui/legacy/legacy.js';
+import { Directives, html, nothing, render } from '../../ui/lit/lit.js';
+import * as VisualLogging from '../../ui/visual_logging/visual_logging.js';
+import * as ApplicationComponents from './components/components.js';
 import frameDetailsReportViewStyles from './frameDetailsReportView.css.js';
 import { OriginTrialTreeView } from './OriginTrialTreeView.js';
-import { renderIconLink, } from './PermissionsPolicySection.js';
 const { until } = Directives;
 const { widgetConfig } = UI.Widget;
 const UIStrings = {
@@ -242,7 +241,7 @@ const UIStrings = {
      */
     originTrialsExplanation: 'Origin trials give you access to a new or experimental feature.',
 };
-const str_ = i18n.i18n.registerUIStrings('panels/application/components/FrameDetailsView.ts', UIStrings);
+const str_ = i18n.i18n.registerUIStrings('panels/application/FrameDetailsView.ts', UIStrings);
 const i18nString = i18n.i18n.getLocalizedString.bind(undefined, str_);
 const DEFAULT_VIEW = (input, _output, target) => {
     if (!input.frame) {
@@ -314,10 +313,10 @@ function renderDocumentSection(input) {
     `;
 }
 function renderSourcesLinkForURL(onRevealInSources) {
-    return renderIconLink('label', i18nString(UIStrings.clickToOpenInSourcesPanel), onRevealInSources, 'reveal-in-sources');
+    return ApplicationComponents.PermissionsPolicySection.renderIconLink('label', i18nString(UIStrings.clickToOpenInSourcesPanel), onRevealInSources, 'reveal-in-sources');
 }
 function renderNetworkLinkForURL(onRevealInNetwork) {
-    return renderIconLink('arrow-up-down-circle', i18nString(UIStrings.clickToOpenInNetworkPanel), onRevealInNetwork, 'reveal-in-network');
+    return ApplicationComponents.PermissionsPolicySection.renderIconLink('arrow-up-down-circle', i18nString(UIStrings.clickToOpenInNetworkPanel), onRevealInNetwork, 'reveal-in-network');
 }
 function maybeRenderUnreachableURL(unreachableUrl) {
     if (!unreachableUrl) {
@@ -336,7 +335,7 @@ function maybeRenderUnreachableURL(unreachableUrl) {
 function renderNetworkLinkForUnreachableURL(unreachableUrlString) {
     const unreachableUrl = Common.ParsedURL.ParsedURL.fromString(unreachableUrlString);
     if (unreachableUrl) {
-        return renderIconLink('arrow-up-down-circle', i18nString(UIStrings.clickToOpenInNetworkPanelMight), () => {
+        return ApplicationComponents.PermissionsPolicySection.renderIconLink('arrow-up-down-circle', i18nString(UIStrings.clickToOpenInNetworkPanelMight), () => {
             void Common.Revealer.reveal(NetworkForward.UIFilter.UIRequestFilter.filters([
                 {
                     filterType: NetworkForward.UIFilter.FilterType.Domain,

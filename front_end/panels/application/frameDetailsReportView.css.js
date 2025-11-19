@@ -121,5 +121,4 @@ button.text-link {
     text-decoration-color: linktext;
   }
 }
-
 /*# sourceURL=${import.meta.resolve('./frameDetailsReportView.css')} */`;

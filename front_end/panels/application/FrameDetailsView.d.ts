@@ -1,9 +1,8 @@
-import '../../../ui/components/expandable_list/expandable_list.js';
-import '../../../ui/components/report_view/report_view.js';
-import './StackTrace.js';
-import * as SDK from '../../../core/sdk/sdk.js';
-import * as Protocol from '../../../generated/protocol.js';
-import * as UI from '../../../ui/legacy/legacy.js';
+import '../../ui/components/expandable_list/expandable_list.js';
+import '../../ui/components/report_view/report_view.js';
+import * as SDK from '../../core/sdk/sdk.js';
+import * as Protocol from '../../generated/protocol.js';
+import * as UI from '../../ui/legacy/legacy.js';
 export interface FrameDetailsReportViewData {
     frame: SDK.ResourceTreeModel.ResourceTreeFrame;
     target?: SDK.Target.Target;
