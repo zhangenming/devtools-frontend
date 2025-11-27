@@ -32,8 +32,8 @@ export class HelpQuickOpen extends Provider {
     }
     renderItem(itemIndex, _query, wrapperElement) {
         const provider = this.providers[itemIndex];
-        const itemElement = wrapperElement.createChild('div', 'filtered-list-widget-item one-row');
-        const titleElement = itemElement.createChild('div', 'filtered-list-widget-title');
+        const itemElement = wrapperElement.createChild('div');
+        const titleElement = itemElement.createChild('div');
         const iconElement = new IconButton.Icon.Icon();
         iconElement.name = provider.iconName;
         iconElement.classList.add('large');

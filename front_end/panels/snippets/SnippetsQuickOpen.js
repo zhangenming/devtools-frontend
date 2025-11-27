@@ -66,8 +66,8 @@ export class SnippetsQuickOpen extends QuickOpen.FilteredListWidget.Provider {
         return this.snippets[itemIndex].name();
     }
     renderItem(itemIndex, query, wrapperElement) {
-        const itemElement = wrapperElement.createChild('div', 'filtered-list-widget-item one-row');
-        const titleElement = itemElement.createChild('div', 'filtered-list-widget-title');
+        const itemElement = wrapperElement.createChild('div');
+        const titleElement = itemElement.createChild('div');
         const icon = IconButton.Icon.create('snippet', 'snippet');
         wrapperElement.insertBefore(icon, itemElement);
         titleElement.textContent = this.snippets[itemIndex].name();

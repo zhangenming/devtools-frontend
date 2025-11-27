@@ -5,9 +5,11 @@ import * as i18n from '../../core/i18n/i18n.js';
 import * as Root from '../../core/root/root.js';
 import * as Persistence from '../../models/persistence/persistence.js';
 import * as Workspace from '../../models/workspace/workspace.js';
+import * as Highlighting from '../../ui/components/highlighting/highlighting.js';
 import * as QuickOpen from '../../ui/legacy/components/quick_open/quick_open.js';
 import * as UI from '../../ui/legacy/legacy.js';
 import { FilePathScoreFunction } from './FilePathScoreFunction.js';
+import filteredUISourceCodeListProviderStyles from './filteredUISourceCodeListProvider.css.js';
 const UIStrings = {
     /**
      * @description Text in Filtered UISource Code List Provider of the Sources panel
@@ -118,9 +120,10 @@ export class FilteredUISourceCodeListProvider extends QuickOpen.FilteredListWidg
         return score + multiplier * (contentTypeBonus + this.scorer.calculateScore(fullDisplayName, null));
     }
     renderItem(itemIndex, query, wrapperElement) {
-        const itemElement = wrapperElement.createChild('div', 'filtered-list-widget-item two-rows');
-        const titleElement = itemElement.createChild('div', 'filtered-list-widget-title');
-        wrapperElement.classList.toggle('search-mode', Boolean(query));
+        wrapperElement.createChild('style').textContent = filteredUISourceCodeListProviderStyles;
+        const itemElement = wrapperElement.createChild('div', 'filtered-ui-source-code-list-item');
+        const titleElement = itemElement.createChild('div', 'filtered-ui-source-code-title');
+        titleElement.classList.toggle('search-mode', Boolean(query));
         query = this.rewriteQuery(query);
         const uiSourceCode = this.uiSourceCodes[itemIndex];
         const fullDisplayName = uiSourceCode.fullDisplayName();
@@ -134,7 +137,7 @@ export class FilteredUISourceCodeListProvider extends QuickOpen.FilteredListWidg
             tooltipText = i18nString(UIStrings.sIgnoreListed, { PH1: tooltipText });
         }
         titleElement.textContent = uiSourceCode.displayName() + (this.queryLineNumberAndColumnNumber || '');
-        const subtitleElement = itemElement.createChild('div', 'filtered-list-widget-subtitle');
+        const subtitleElement = itemElement.createChild('div', 'filtered-ui-source-code-subtitle');
         this.renderSubtitleElement(subtitleElement, fullDisplayName.substring(0, fileNameIndex + 1));
         UI.Tooltip.Tooltip.install(subtitleElement, tooltipText);
         const ranges = [];
@@ -145,10 +148,10 @@ export class FilteredUISourceCodeListProvider extends QuickOpen.FilteredListWidg
             for (let i = 0; i < ranges.length; ++i) {
                 ranges[i].offset -= fileNameIndex + 1;
             }
-            UI.UIUtils.highlightRangesWithStyleClass(titleElement, ranges, 'highlight');
+            Highlighting.highlightRangesWithStyleClass(titleElement, ranges, 'highlight');
         }
         else {
-            UI.UIUtils.highlightRangesWithStyleClass(subtitleElement, ranges, 'highlight');
+            Highlighting.highlightRangesWithStyleClass(subtitleElement, ranges, 'highlight');
         }
     }
     renderSubtitleElement(element, text) {

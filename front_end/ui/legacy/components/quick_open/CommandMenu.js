@@ -163,7 +163,7 @@ export class CommandMenu {
                 locations.set(name, category);
             }
         }
-        const views = UI.ViewManager.getRegisteredViewExtensions();
+        const views = UI.ViewManager.ViewManager.instance().getRegisteredViewExtensions();
         for (const view of views) {
             const viewLocation = view.location();
             const category = viewLocation && locations.get(viewLocation);
@@ -257,14 +257,14 @@ export class CommandMenuProvider extends Provider {
     }
     renderItem(itemIndex, query, wrapperElement) {
         const command = this.commands[itemIndex];
-        const itemElement = wrapperElement.createChild('div', 'filtered-list-widget-item one-row');
-        const titleElement = itemElement.createChild('div', 'filtered-list-widget-title');
+        const itemElement = wrapperElement.createChild('div');
+        const titleElement = itemElement.createChild('div');
         titleElement.removeChildren();
         const icon = IconButton.Icon.create(categoryIcons[command.category]);
         wrapperElement.insertBefore(icon, itemElement);
         UI.UIUtils.createTextChild(titleElement, command.title);
         FilteredListWidget.highlightRanges(titleElement, query, true);
-        const subtitleElement = itemElement.createChild('div', 'filtered-list-widget-subtitle');
+        const subtitleElement = itemElement.createChild('div');
         if (command.featurePromotionId) {
             const badge = UI.UIUtils.maybeCreateNewBadge(command.featurePromotionId);
             if (badge) {

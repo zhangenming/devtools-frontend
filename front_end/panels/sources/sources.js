@@ -12344,8 +12344,56 @@ import * as i18n39 from "./../../core/i18n/i18n.js";
 import * as Root4 from "./../../core/root/root.js";
 import * as Persistence12 from "./../../models/persistence/persistence.js";
 import * as Workspace25 from "./../../models/workspace/workspace.js";
+import * as Highlighting from "./../../ui/components/highlighting/highlighting.js";
 import * as QuickOpen3 from "./../../ui/legacy/components/quick_open/quick_open.js";
 import * as UI20 from "./../../ui/legacy/legacy.js";
+
+// gen/front_end/panels/sources/filteredUISourceCodeListProvider.css.js
+var filteredUISourceCodeListProvider_css_default = `/*
+ * Copyright 2025 The Chromium Authors
+ * Use of this source code is governed by a BSD-style license that can be
+ * found in the LICENSE file.
+ */
+
+.filtered-list-widget-item > .filtered-ui-source-code-list-item {
+  align-content: center;
+  display: grid;
+  gap: var(--sys-size-2);
+  line-height: initial;
+}
+
+.filtered-ui-source-code-list-item.is-ignore-listed * {
+  color: var(--sys-color-state-disabled);
+}
+
+.filtered-ui-source-code-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.filtered-ui-source-code-title:not(.search-mode) {
+  font-weight: var(--ref-typeface-weight-bold);
+}
+
+.filtered-ui-source-code-subtitle {
+  flex: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--sys-color-on-surface-subtle);
+  padding-left: var(--sys-size-3);
+  display: flex;
+  white-space: pre;
+}
+
+.filtered-ui-source-code-subtitle .first-part {
+  flex-shrink: 1000;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/*# sourceURL=${import.meta.resolve("./filteredUISourceCodeListProvider.css")} */`;
+
+// gen/front_end/panels/sources/FilteredUISourceCodeListProvider.js
 var UIStrings19 = {
   /**
    * @description Text in Filtered UISource Code List Provider of the Sources panel
@@ -12453,9 +12501,10 @@ var FilteredUISourceCodeListProvider = class extends QuickOpen3.FilteredListWidg
     return score + multiplier * (contentTypeBonus + this.scorer.calculateScore(fullDisplayName, null));
   }
   renderItem(itemIndex, query, wrapperElement) {
-    const itemElement = wrapperElement.createChild("div", "filtered-list-widget-item two-rows");
-    const titleElement = itemElement.createChild("div", "filtered-list-widget-title");
-    wrapperElement.classList.toggle("search-mode", Boolean(query));
+    wrapperElement.createChild("style").textContent = filteredUISourceCodeListProvider_css_default;
+    const itemElement = wrapperElement.createChild("div", "filtered-ui-source-code-list-item");
+    const titleElement = itemElement.createChild("div", "filtered-ui-source-code-title");
+    titleElement.classList.toggle("search-mode", Boolean(query));
     query = this.rewriteQuery(query);
     const uiSourceCode = this.uiSourceCodes[itemIndex];
     const fullDisplayName = uiSourceCode.fullDisplayName();
@@ -12469,7 +12518,7 @@ var FilteredUISourceCodeListProvider = class extends QuickOpen3.FilteredListWidg
       tooltipText = i18nString18(UIStrings19.sIgnoreListed, { PH1: tooltipText });
     }
     titleElement.textContent = uiSourceCode.displayName() + (this.queryLineNumberAndColumnNumber || "");
-    const subtitleElement = itemElement.createChild("div", "filtered-list-widget-subtitle");
+    const subtitleElement = itemElement.createChild("div", "filtered-ui-source-code-subtitle");
     this.renderSubtitleElement(subtitleElement, fullDisplayName.substring(0, fileNameIndex + 1));
     UI20.Tooltip.Tooltip.install(subtitleElement, tooltipText);
     const ranges = [];
@@ -12480,9 +12529,9 @@ var FilteredUISourceCodeListProvider = class extends QuickOpen3.FilteredListWidg
       for (let i = 0; i < ranges.length; ++i) {
         ranges[i].offset -= fileNameIndex + 1;
       }
-      UI20.UIUtils.highlightRangesWithStyleClass(titleElement, ranges, "highlight");
+      Highlighting.highlightRangesWithStyleClass(titleElement, ranges, "highlight");
     } else {
-      UI20.UIUtils.highlightRangesWithStyleClass(subtitleElement, ranges, "highlight");
+      Highlighting.highlightRangesWithStyleClass(subtitleElement, ranges, "highlight");
     }
   }
   renderSubtitleElement(element, text) {
@@ -12620,8 +12669,8 @@ var GoToLineQuickOpen = class extends QuickOpen4.FilteredListWidget.Provider {
     return this.#goToLineStrings.length;
   }
   renderItem(itemIndex, _query, wrapperElement) {
-    const itemElement = wrapperElement.createChild("div", "filtered-list-widget-item one-row");
-    const titleElement = itemElement.createChild("div", "filtered-list-widget-title");
+    const itemElement = wrapperElement.createChild("div");
+    const titleElement = itemElement.createChild("div");
     const icon = IconButton10.Icon.create("colon");
     wrapperElement.insertBefore(icon, itemElement);
     UI21.UIUtils.createTextChild(titleElement, this.#goToLineStrings[itemIndex]);
@@ -13159,8 +13208,8 @@ var OutlineQuickOpen = class extends QuickOpen5.FilteredListWidget.Provider {
   }
   renderItem(itemIndex, query, wrapperElement) {
     const item = this.items[itemIndex];
-    const itemElement = wrapperElement.createChild("div", "filtered-list-widget-item one-row");
-    const titleElement = itemElement.createChild("div", "filtered-list-widget-title");
+    const itemElement = wrapperElement.createChild("div");
+    const titleElement = itemElement.createChild("div");
     const icon = IconButton12.Icon.create("deployed");
     wrapperElement.insertBefore(icon, itemElement);
     titleElement.textContent = item.title + (item.subtitle ? item.subtitle : "");

@@ -69,8 +69,8 @@ export class GoToLineQuickOpen extends QuickOpen.FilteredListWidget.Provider {
         return this.#goToLineStrings.length;
     }
     renderItem(itemIndex, _query, wrapperElement) {
-        const itemElement = wrapperElement.createChild('div', 'filtered-list-widget-item one-row');
-        const titleElement = itemElement.createChild('div', 'filtered-list-widget-title');
+        const itemElement = wrapperElement.createChild('div');
+        const titleElement = itemElement.createChild('div');
         const icon = IconButton.Icon.create('colon');
         wrapperElement.insertBefore(icon, itemElement);
         UI.UIUtils.createTextChild(titleElement, this.#goToLineStrings[itemIndex]);
