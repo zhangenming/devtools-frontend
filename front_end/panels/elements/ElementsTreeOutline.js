@@ -205,7 +205,7 @@ export class DOMTreeWidget extends UI.Widget.Widget {
             return;
         }
         this.#currentHighlightedNode = null;
-        this.requestUpdate();
+        this.performUpdate();
     }
     selectDOMNode(node, focus) {
         this.#viewOutput?.elementsTreeOutline?.selectDOMNode(node, focus);
@@ -233,6 +233,9 @@ export class DOMTreeWidget extends UI.Widget.Widget {
      */
     getTreeOutlineForTesting() {
         return this.#viewOutput.elementsTreeOutline;
+    }
+    treeElementForNode(node) {
+        return this.#viewOutput.elementsTreeOutline?.findTreeElement(node) || null;
     }
     performUpdate() {
         this.#view({

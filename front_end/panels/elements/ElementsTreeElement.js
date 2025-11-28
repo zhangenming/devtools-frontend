@@ -44,8 +44,8 @@ import * as Adorners from '../../ui/components/adorners/adorners.js';
 import * as Buttons from '../../ui/components/buttons/buttons.js';
 import * as CodeHighlighter from '../../ui/components/code_highlighter/code_highlighter.js';
 import * as Highlighting from '../../ui/components/highlighting/highlighting.js';
-import * as IconButton from '../../ui/components/icon_button/icon_button.js';
 import * as TextEditor from '../../ui/components/text_editor/text_editor.js';
+import { createIcon, Icon } from '../../ui/kit/kit.js';
 import * as Components from '../../ui/legacy/components/utils/utils.js';
 import * as UI from '../../ui/legacy/legacy.js';
 import * as Lit from '../../ui/lit/lit.js';
@@ -422,7 +422,7 @@ export class ElementsTreeElement extends UI.TreeOutline.TreeElement {
         this.expandAllButtonElement = null;
         this.performUpdate();
         if (this.nodeInternal.retained && !this.isClosingTag()) {
-            const icon = new IconButton.Icon.Icon();
+            const icon = new Icon();
             icon.name = 'small-status-dot';
             icon.style.color = 'var(--icon-error)';
             icon.classList.add('extra-small');
@@ -2146,7 +2146,7 @@ export class ElementsTreeElement extends UI.TreeOutline.TreeElement {
         return adorner;
     }
     adornSlot({ name }) {
-        const linkIcon = IconButton.Icon.create('select-element');
+        const linkIcon = createIcon('select-element');
         const slotText = document.createElement('span');
         slotText.textContent = name;
         const adornerContent = document.createElement('span');
@@ -2168,7 +2168,7 @@ export class ElementsTreeElement extends UI.TreeOutline.TreeElement {
         const adornerContent = document.createElement('span');
         adornerContent.textContent = name;
         adornerContent.classList.add('adorner-with-icon');
-        const linkIcon = IconButton.Icon.create('select-element');
+        const linkIcon = createIcon('select-element');
         adornerContent.append(linkIcon);
         const adorner = new Adorners.Adorner.Adorner();
         adorner.data = {
