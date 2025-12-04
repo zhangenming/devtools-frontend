@@ -1,6 +1,5 @@
 import '../../../ui/kit/kit.js';
 import './ValueInterpreterDisplay.js';
-import './ValueInterpreterSettings.js';
 import { Endianness, type ValueType, type ValueTypeMode } from './ValueInterpreterDisplayUtils.js';
 export declare class EndiannessChangedEvent extends Event {
     static readonly eventName = "endiannesschanged";

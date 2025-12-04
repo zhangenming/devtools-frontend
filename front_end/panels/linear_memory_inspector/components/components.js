@@ -11,6 +11,7 @@ __export(LinearMemoryHighlightChipList_exports, {
 });
 import "./../../../ui/kit/kit.js";
 import * as i18n from "./../../../core/i18n/i18n.js";
+import * as UI from "./../../../ui/legacy/legacy.js";
 import { Directives, html, render } from "./../../../ui/lit/lit.js";
 import * as VisualLogging from "./../../../ui/visual_logging/visual_logging.js";
 
@@ -164,65 +165,93 @@ var UIStrings = {
 var str_ = i18n.i18n.registerUIStrings("panels/linear_memory_inspector/components/LinearMemoryHighlightChipList.ts", UIStrings);
 var i18nString = i18n.i18n.getLocalizedString.bind(void 0, str_);
 var { classMap } = Directives;
-var LinearMemoryHighlightChipList = class extends HTMLElement {
-  #shadow = this.attachShadow({ mode: "open" });
+var DEFAULT_VIEW = (input, output, target) => {
+  render(html`
+    <style>${linearMemoryHighlightChipList_css_default}</style>
+    <div class="highlight-chip-list">
+      ${input.highlightInfos.map((highlightInfo) => renderChip(highlightInfo, input))}
+    </div>`, target);
+};
+function renderChip(highlightInfo, input) {
+  const expressionName = highlightInfo.name || "<anonymous>";
+  const expressionType = highlightInfo.type;
+  const isFocused = highlightInfo === input.focusedMemoryHighlight;
+  return html`
+    <div class=${classMap({ focused: isFocused, "highlight-chip": true })}>
+      <button class="jump-to-highlight-button"
+              title=${i18nString(UIStrings.jumpToAddress)}
+              jslog=${VisualLogging.action("linear-memory-inspector.jump-to-highlight").track({ click: true })}
+              @click=${() => input.onJumpToAddress(highlightInfo.startAddress)}>
+        <span class="source-code">
+          <span class="value">${expressionName}</span>
+          <span class="separator">: </span>
+          <span>${expressionType}</span>
+        </span>
+      </button>
+      <div class="delete-highlight-container">
+        <button class="delete-highlight-button" title=${i18nString(UIStrings.deleteHighlight)}
+            jslog=${VisualLogging.action("linear-memory-inspector.delete-highlight").track({ click: true })}
+            @click=${() => input.onDeleteHighlight(highlightInfo)}>
+          <devtools-icon name="cross" class="medium">
+          </devtools-icon>
+        </button>
+      </div>
+    </div>`;
+}
+var LinearMemoryHighlightChipList = class extends UI.Widget.Widget {
   #highlightedAreas = [];
   #focusedMemoryHighlight;
-  #jumpToAddress;
-  #deleteHighlight;
-  set data(data) {
-    this.#highlightedAreas = data.highlightInfos;
-    this.#focusedMemoryHighlight = data.focusedMemoryHighlight;
-    this.#jumpToAddress = data.jumpToAddress;
-    this.#deleteHighlight = data.deleteHighlight;
-    this.#render();
+  #jumpToAddress = (_) => {
+  };
+  #deleteHighlight = (_) => {
+  };
+  #view;
+  constructor(element, view = DEFAULT_VIEW) {
+    super(element, { useShadowDom: true });
+    this.#view = view;
   }
-  #render() {
-    render(html`
-      <style>${linearMemoryHighlightChipList_css_default}</style>
-      <div class="highlight-chip-list">
-        ${this.#highlightedAreas.map((highlightInfo) => this.#createChip(highlightInfo))}
-      </div>`, this.#shadow);
+  set highlightInfos(highlightInfos) {
+    this.#highlightedAreas = highlightInfos;
+    this.requestUpdate();
   }
-  #createChip(highlightInfo) {
-    const expressionName = highlightInfo.name || "<anonymous>";
-    const expressionType = highlightInfo.type;
-    const isFocused = highlightInfo === this.#focusedMemoryHighlight;
-    return html`
-      <div class=${classMap({ focused: isFocused, "highlight-chip": true })}>
-        <button class="jump-to-highlight-button"
-                title=${i18nString(UIStrings.jumpToAddress)}
-                jslog=${VisualLogging.action("linear-memory-inspector.jump-to-highlight").track({ click: true })}
-                @click=${() => this.#onJumpToHighlightClick(highlightInfo.startAddress)}>
-          <span class="source-code">
-            <span class="value">${expressionName}</span>
-            <span class="separator">: </span>
-            <span>${expressionType}</span>
-          </span>
-        </button>
-        <div class="delete-highlight-container">
-          <button class="delete-highlight-button" title=${i18nString(UIStrings.deleteHighlight)}
-              jslog=${VisualLogging.action("linear-memory-inspector.delete-highlight").track({ click: true })}
-              @click=${() => this.#onDeleteHighlightClick(highlightInfo)}>
-            <devtools-icon name="cross" class="medium">
-            </devtools-icon>
-          </button>
-        </div>
-      </div>`;
+  get highlightInfos() {
+    return this.#highlightedAreas;
   }
-  #onJumpToHighlightClick(startAddress) {
-    this.#jumpToAddress?.(startAddress);
+  set focusedMemoryHighlight(focusedMemoryHighlight) {
+    this.#focusedMemoryHighlight = focusedMemoryHighlight;
+    this.requestUpdate();
   }
-  #onDeleteHighlightClick(highlight) {
-    this.#deleteHighlight?.(highlight);
+  get focusedMemoryHighlight() {
+    return this.#focusedMemoryHighlight;
+  }
+  set jumpToAddress(jumpToAddress) {
+    this.#jumpToAddress = jumpToAddress;
+    this.requestUpdate();
+  }
+  get jumpToAddress() {
+    return this.#jumpToAddress;
+  }
+  set deleteHighlight(deleteHighlight) {
+    this.#deleteHighlight = deleteHighlight;
+    this.requestUpdate();
+  }
+  get deleteHighlight() {
+    return this.#deleteHighlight;
+  }
+  performUpdate() {
+    this.#view({
+      highlightInfos: this.#highlightedAreas,
+      focusedMemoryHighlight: this.#focusedMemoryHighlight,
+      onJumpToAddress: this.#jumpToAddress,
+      onDeleteHighlight: this.#deleteHighlight
+    }, void 0, this.contentElement);
   }
 };
-customElements.define("devtools-linear-memory-highlight-chip-list", LinearMemoryHighlightChipList);
 
 // gen/front_end/panels/linear_memory_inspector/components/LinearMemoryInspector.js
 var LinearMemoryInspector_exports = {};
 __export(LinearMemoryInspector_exports, {
-  DEFAULT_VIEW: () => DEFAULT_VIEW,
+  DEFAULT_VIEW: () => DEFAULT_VIEW3,
   LinearMemoryInspector: () => LinearMemoryInspector
 });
 
@@ -244,7 +273,7 @@ __export(ValueInterpreterDisplay_exports, {
 });
 import "./../../../ui/kit/kit.js";
 import * as i18n5 from "./../../../core/i18n/i18n.js";
-import * as UI from "./../../../ui/legacy/legacy.js";
+import * as UI2 from "./../../../ui/legacy/legacy.js";
 import * as Lit from "./../../../ui/lit/lit.js";
 import * as VisualLogging2 from "./../../../ui/visual_logging/visual_logging.js";
 
@@ -600,7 +629,7 @@ var ValueInterpreterDisplay = class extends HTMLElement {
   }
   #render() {
     render2(html2`
-      <style>${UI.inspectorCommonStyles}</style>
+      <style>${UI2.inspectorCommonStyles}</style>
       <style>${valueInterpreterDisplay_css_default}</style>
       <div class="value-types">
         ${SORTED_VALUE_TYPES.map((type) => this.#valueTypes.has(type) ? this.#showValue(type) : "")}
@@ -700,143 +729,11 @@ var ValueInterpreterDisplay = class extends HTMLElement {
 };
 customElements.define("devtools-linear-memory-inspector-interpreter-display", ValueInterpreterDisplay);
 
-// gen/front_end/panels/linear_memory_inspector/components/ValueInterpreterSettings.js
-var ValueInterpreterSettings_exports = {};
-__export(ValueInterpreterSettings_exports, {
-  TypeToggleEvent: () => TypeToggleEvent,
-  ValueInterpreterSettings: () => ValueInterpreterSettings
-});
-import "./../../../ui/legacy/legacy.js";
-import * as i18n7 from "./../../../core/i18n/i18n.js";
-import * as Platform2 from "./../../../core/platform/platform.js";
-import * as Lit2 from "./../../../ui/lit/lit.js";
-import * as VisualLogging3 from "./../../../ui/visual_logging/visual_logging.js";
-
-// gen/front_end/panels/linear_memory_inspector/components/valueInterpreterSettings.css.js
-var valueInterpreterSettings_css_default = `/*
- * Copyright 2021 The Chromium Authors
- * Use of this source code is governed by a BSD-style license that can be
- * found in the LICENSE file.
- */
-
-:host {
-  flex: auto;
-  display: flex;
-  min-height: 20px;
-}
-
-.settings {
-  display: flex;
-  flex-wrap: wrap;
-  margin: 0 12px 12px;
-  gap: 15px 45px;
-}
-
-.value-types-selection {
-  display: flex;
-  flex-direction: column;
-}
-
-.group {
-  font-weight: bold;
-  margin-bottom: var(--sys-size-6);
-}
-
-/*# sourceURL=${import.meta.resolve("./valueInterpreterSettings.css")} */`;
-
-// gen/front_end/panels/linear_memory_inspector/components/ValueInterpreterSettings.js
-var { render: render3, html: html3 } = Lit2;
-var UIStrings4 = {
-  /**
-   * @description Name of a group of selectable value types that do not fall under integer and floating point value types, e.g. Pointer32. The group appears name appears under the Value Interpreter Settings.
-   */
-  otherGroup: "Other"
-};
-var str_4 = i18n7.i18n.registerUIStrings("panels/linear_memory_inspector/components/ValueInterpreterSettings.ts", UIStrings4);
-var i18nString4 = i18n7.i18n.getLocalizedString.bind(void 0, str_4);
-var GROUP_TO_TYPES = /* @__PURE__ */ new Map([
-  ["Integer", [
-    "Integer 8-bit",
-    "Integer 16-bit",
-    "Integer 32-bit",
-    "Integer 64-bit"
-    /* ValueType.INT64 */
-  ]],
-  ["Floating point", [
-    "Float 32-bit",
-    "Float 64-bit"
-    /* ValueType.FLOAT64 */
-  ]],
-  ["Other", [
-    "Pointer 32-bit",
-    "Pointer 64-bit"
-    /* ValueType.POINTER64 */
-  ]]
-]);
-function valueTypeGroupToLocalizedString(group) {
-  if (group === "Other") {
-    return i18nString4(UIStrings4.otherGroup);
-  }
-  return group;
-}
-var TypeToggleEvent = class _TypeToggleEvent extends Event {
-  static eventName = "typetoggle";
-  data;
-  constructor(type, checked) {
-    super(_TypeToggleEvent.eventName);
-    this.data = { type, checked };
-  }
-};
-var ValueInterpreterSettings = class extends HTMLElement {
-  #shadow = this.attachShadow({ mode: "open" });
-  #valueTypes = /* @__PURE__ */ new Set();
-  set data(data) {
-    this.#valueTypes = data.valueTypes;
-    this.#render();
-  }
-  #render() {
-    render3(html3`
-      <style>${valueInterpreterSettings_css_default}</style>
-      <div class="settings" jslog=${VisualLogging3.pane("settings")}>
-       ${[...GROUP_TO_TYPES.keys()].map((group) => {
-      return html3`
-          <div class="value-types-selection">
-            <span class="group">${valueTypeGroupToLocalizedString(group)}</span>
-            ${this.#plotTypeSelections(group)}
-          </div>
-        `;
-    })}
-      </div>
-      `, this.#shadow, { host: this });
-  }
-  #plotTypeSelections(group) {
-    const types = GROUP_TO_TYPES.get(group);
-    if (!types) {
-      throw new Error(`Unknown group ${group}`);
-    }
-    return html3`
-      ${types.map((type) => {
-      return html3`
-            <devtools-checkbox
-              title=${valueTypeToLocalizedString(type)}
-              ?checked=${this.#valueTypes.has(type)}
-              @change=${(e) => this.#onTypeToggle(type, e)} jslog=${VisualLogging3.toggle().track({ change: true }).context(Platform2.StringUtilities.toKebabCase(type))}
-              >${valueTypeToLocalizedString(type)}</devtools-checkbox>
-     `;
-    })}`;
-  }
-  #onTypeToggle(type, event) {
-    const checkbox = event.target;
-    this.dispatchEvent(new TypeToggleEvent(type, checkbox.checked));
-  }
-};
-customElements.define("devtools-linear-memory-inspector-interpreter-settings", ValueInterpreterSettings);
-
 // gen/front_end/panels/linear_memory_inspector/components/LinearMemoryValueInterpreter.js
 import * as i18n9 from "./../../../core/i18n/i18n.js";
 import * as Platform3 from "./../../../core/platform/platform.js";
 import * as Buttons from "./../../../ui/components/buttons/buttons.js";
-import * as UI2 from "./../../../ui/legacy/legacy.js";
+import * as UI4 from "./../../../ui/legacy/legacy.js";
 import * as Lit3 from "./../../../ui/lit/lit.js";
 import * as VisualLogging4 from "./../../../ui/visual_logging/visual_logging.js";
 
@@ -891,6 +788,146 @@ var linearMemoryValueInterpreter_css_default = `/*
 
 /*# sourceURL=${import.meta.resolve("./linearMemoryValueInterpreter.css")} */`;
 
+// gen/front_end/panels/linear_memory_inspector/components/ValueInterpreterSettings.js
+var ValueInterpreterSettings_exports = {};
+__export(ValueInterpreterSettings_exports, {
+  DEFAULT_VIEW: () => DEFAULT_VIEW2,
+  ValueInterpreterSettings: () => ValueInterpreterSettings
+});
+import * as i18n7 from "./../../../core/i18n/i18n.js";
+import * as Platform2 from "./../../../core/platform/platform.js";
+import * as UI3 from "./../../../ui/legacy/legacy.js";
+import * as Lit2 from "./../../../ui/lit/lit.js";
+import * as VisualLogging3 from "./../../../ui/visual_logging/visual_logging.js";
+
+// gen/front_end/panels/linear_memory_inspector/components/valueInterpreterSettings.css.js
+var valueInterpreterSettings_css_default = `/*
+ * Copyright 2021 The Chromium Authors
+ * Use of this source code is governed by a BSD-style license that can be
+ * found in the LICENSE file.
+ */
+
+@scope to (devtools-widget > *) {
+  :scope {
+    flex: auto;
+    display: flex;
+    min-height: 20px;
+  }
+
+  .settings {
+    display: flex;
+    flex-wrap: wrap;
+    margin: 0 12px 12px;
+    gap: 15px 45px;
+  }
+
+  .value-types-selection {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .group {
+    font-weight: bold;
+    margin-bottom: var(--sys-size-6);
+  }
+}
+
+/*# sourceURL=${import.meta.resolve("./valueInterpreterSettings.css")} */`;
+
+// gen/front_end/panels/linear_memory_inspector/components/ValueInterpreterSettings.js
+var { render: render3, html: html3 } = Lit2;
+var UIStrings4 = {
+  /**
+   * @description Name of a group of selectable value types that do not fall under integer and floating point value types, e.g. Pointer32. The group appears name appears under the Value Interpreter Settings.
+   */
+  otherGroup: "Other"
+};
+var str_4 = i18n7.i18n.registerUIStrings("panels/linear_memory_inspector/components/ValueInterpreterSettings.ts", UIStrings4);
+var i18nString4 = i18n7.i18n.getLocalizedString.bind(void 0, str_4);
+var GROUP_TO_TYPES = /* @__PURE__ */ new Map([
+  ["Integer", [
+    "Integer 8-bit",
+    "Integer 16-bit",
+    "Integer 32-bit",
+    "Integer 64-bit"
+    /* ValueType.INT64 */
+  ]],
+  ["Floating point", [
+    "Float 32-bit",
+    "Float 64-bit"
+    /* ValueType.FLOAT64 */
+  ]],
+  ["Other", [
+    "Pointer 32-bit",
+    "Pointer 64-bit"
+    /* ValueType.POINTER64 */
+  ]]
+]);
+function valueTypeGroupToLocalizedString(group) {
+  if (group === "Other") {
+    return i18nString4(UIStrings4.otherGroup);
+  }
+  return group;
+}
+var DEFAULT_VIEW2 = (input, _output, target) => {
+  render3(html3`
+      <style>${valueInterpreterSettings_css_default}</style>
+      <div class="settings" jslog=${VisualLogging3.pane("settings")}>
+       ${[...GROUP_TO_TYPES.keys()].map((group) => {
+    const types = GROUP_TO_TYPES.get(group) ?? [];
+    return html3`
+          <div class="value-types-selection">
+            <span class="group">${valueTypeGroupToLocalizedString(group)}</span>
+            ${types.map((type) => {
+      return html3`
+                <devtools-checkbox
+                  title=${valueTypeToLocalizedString(type)}
+                  ?checked=${input.valueTypes.has(type)}
+                  @change=${(e) => {
+        const checkbox = e.target;
+        input.onToggle(type, checkbox.checked);
+      }} jslog=${VisualLogging3.toggle().track({ change: true }).context(Platform2.StringUtilities.toKebabCase(type))}
+                  }>${valueTypeToLocalizedString(type)}</devtools-checkbox>
+         `;
+    })}
+          </div>
+        `;
+  })}
+      </div>
+      `, target);
+};
+var ValueInterpreterSettings = class extends UI3.Widget.Widget {
+  #view;
+  #valueTypes = /* @__PURE__ */ new Set();
+  #onToggle = () => {
+  };
+  constructor(element, view = DEFAULT_VIEW2) {
+    super(element);
+    this.#view = view;
+  }
+  get valueTypes() {
+    return this.#valueTypes;
+  }
+  set valueTypes(value) {
+    this.#valueTypes = value;
+    this.requestUpdate();
+  }
+  get onToggle() {
+    return this.#onToggle;
+  }
+  set onToggle(value) {
+    this.#onToggle = value;
+    this.requestUpdate();
+  }
+  performUpdate() {
+    const viewInput = {
+      valueTypes: this.#valueTypes,
+      onToggle: this.#onToggle
+    };
+    this.#view(viewInput, void 0, this.contentElement);
+  }
+};
+
 // gen/front_end/panels/linear_memory_inspector/components/LinearMemoryValueInterpreter.js
 var UIStrings5 = {
   /**
@@ -906,6 +943,7 @@ var UIStrings5 = {
 var str_5 = i18n9.i18n.registerUIStrings("panels/linear_memory_inspector/components/LinearMemoryValueInterpreter.ts", UIStrings5);
 var i18nString5 = i18n9.i18n.getLocalizedString.bind(void 0, str_5);
 var { render: render4, html: html4 } = Lit3;
+var { widgetConfig } = UI4.Widget;
 var EndiannessChangedEvent = class _EndiannessChangedEvent extends Event {
   static eventName = "endiannesschanged";
   data;
@@ -940,7 +978,7 @@ var LinearMemoryValueInterpreter = class extends HTMLElement {
   }
   #render() {
     render4(html4`
-      <style>${UI2.inspectorCommonStyles}</style>
+      <style>${UI4.inspectorCommonStyles}</style>
       <style>${linearMemoryValueInterpreter_css_default}</style>
       <div class="value-interpreter">
         <div class="settings-toolbar">
@@ -957,10 +995,11 @@ var LinearMemoryValueInterpreter = class extends HTMLElement {
         <span class="divider"></span>
         <div>
           ${this.#showSettings ? html4`
-              <devtools-linear-memory-inspector-interpreter-settings
-                .data=${{ valueTypes: this.#valueTypes }}
-                @typetoggle=${this.#onTypeToggle}>
-              </devtools-linear-memory-inspector-interpreter-settings>` : html4`
+              <devtools-widget .widgetConfig=${widgetConfig(ValueInterpreterSettings, {
+      valueTypes: this.#valueTypes,
+      onToggle: this.#onSettingTypeToggle
+    })}>
+              </devtools-widget>` : html4`
               <devtools-linear-memory-inspector-interpreter-display
                 .data=${{
       buffer: this.#buffer,
@@ -1004,9 +1043,9 @@ var LinearMemoryValueInterpreter = class extends HTMLElement {
     this.#showSettings = !this.#showSettings;
     this.#render();
   }
-  #onTypeToggle(e) {
-    this.dispatchEvent(new ValueTypeToggledEvent(e.data.type, e.data.checked));
-  }
+  #onSettingTypeToggle = (type, checked) => {
+    this.dispatchEvent(new ValueTypeToggledEvent(type, checked));
+  };
 };
 customElements.define("devtools-linear-memory-inspector-interpreter", LinearMemoryValueInterpreter);
 
@@ -1367,7 +1406,7 @@ customElements.define("devtools-linear-memory-inspector-viewer", LinearMemoryVie
 // gen/front_end/panels/linear_memory_inspector/components/LinearMemoryInspector.js
 import * as Common from "./../../../core/common/common.js";
 import * as i18n11 from "./../../../core/i18n/i18n.js";
-import * as UI3 from "./../../../ui/legacy/legacy.js";
+import * as UI5 from "./../../../ui/legacy/legacy.js";
 import { html as html6, nothing, render as render6 } from "./../../../ui/lit/lit.js";
 
 // gen/front_end/panels/linear_memory_inspector/components/linearMemoryInspector.css.js
@@ -1424,6 +1463,7 @@ var UIStrings6 = {
 };
 var str_6 = i18n11.i18n.registerUIStrings("panels/linear_memory_inspector/components/LinearMemoryInspector.ts", UIStrings6);
 var i18nString6 = i18n11.i18n.getLocalizedString.bind(void 0, str_6);
+var { widgetConfig: widgetConfig2 } = UI5.Widget;
 var AddressHistoryEntry = class {
   #address = 0;
   #callback;
@@ -1441,7 +1481,7 @@ var AddressHistoryEntry = class {
     this.#callback(this.#address);
   }
 };
-var DEFAULT_VIEW = (input, _output, target) => {
+var DEFAULT_VIEW3 = (input, _output, target) => {
   const navigatorAddressToShow = input.currentNavigatorMode === "Submitted" ? formatAddress(input.address) : input.currentNavigatorAddressLine;
   const navigatorAddressIsValid = isValidAddress(navigatorAddressToShow, input.outerMemoryLength);
   const invalidAddressMsg = i18nString6(UIStrings6.addressHasToBeANumberBetweenSAnd, { PH1: formatAddress(0), PH2: formatAddress(input.outerMemoryLength) });
@@ -1464,15 +1504,13 @@ var DEFAULT_VIEW = (input, _output, target) => {
         @addressinputchanged=${input.onAddressChange}
         @pagenavigation=${input.onNavigatePage}
         @historynavigation=${input.onNavigateHistory}></devtools-linear-memory-inspector-navigator>
-        <devtools-linear-memory-highlight-chip-list
-        .data=${{
+      <devtools-widget .widgetConfig=${widgetConfig2(LinearMemoryHighlightChipList, {
     highlightInfos: highlightedMemoryAreas,
     focusedMemoryHighlight,
     jumpToAddress: (address) => input.onJumpToAddress({ data: address }),
     deleteHighlight: input.onDeleteMemoryHighlight
-  }}
-        >
-        </devtools-linear-memory-highlight-chip-list>
+  })}>
+      </devtools-widget>
       <devtools-linear-memory-inspector-viewer
         .data=${{
     memory: input.memorySlice,
@@ -1528,7 +1566,7 @@ function getSmallestEnclosingMemoryHighlight(highlightedMemoryAreas, address) {
   }
   return smallestEnclosingHighlight;
 }
-var LinearMemoryInspector = class extends Common.ObjectWrapper.eventMixin(UI3.Widget.Widget) {
+var LinearMemoryInspector = class extends Common.ObjectWrapper.eventMixin(UI5.Widget.Widget) {
   #history = new Common.SimpleHistoryManager.SimpleHistoryManager(10);
   #memory = new Uint8Array();
   #memoryOffset = 0;
@@ -1545,7 +1583,7 @@ var LinearMemoryInspector = class extends Common.ObjectWrapper.eventMixin(UI3.Wi
   #view;
   constructor(element, view) {
     super(element);
-    this.#view = view ?? DEFAULT_VIEW;
+    this.#view = view ?? DEFAULT_VIEW3;
   }
   set memory(value) {
     this.#memory = value;
