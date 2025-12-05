@@ -6935,6 +6935,9 @@
   "panels/elements/components/StylePropertyEditor.ts | selectButton": {
     "message": "Add {propertyName}: {propertyValue}"
   },
+  "panels/elements/ComputedStyleWidget.ts | filterUpdateAriaText": {
+    "message": "Filter applied: {PH1}. Total Results: {PH2}"
+  },
   "panels/elements/ComputedStyleWidget.ts | group": {
     "message": "Group"
   },
@@ -6942,7 +6945,7 @@
     "message": "Navigate to selector source"
   },
   "panels/elements/ComputedStyleWidget.ts | navigateToStyle": {
-    "message": "Navigate to style"
+    "message": "Navigate to styles"
   },
   "panels/elements/ComputedStyleWidget.ts | noMatchingProperty": {
     "message": "No matching property"
@@ -12196,12 +12199,6 @@
   },
   "panels/security/CookieControlsView.ts | siteReloadMessage": {
     "message": "To apply your updated controls, reload the page"
-  },
-  "panels/security/CookieControlsView.ts | tpcdHeuristicsGrants": {
-    "message": "#tpcd-heuristics-grants"
-  },
-  "panels/security/CookieControlsView.ts | tpcdMetadataGrants": {
-    "message": "#tpcd-metadata-grants"
   },
   "panels/security/CookieControlsView.ts | viewDetails": {
     "message": "View details"
