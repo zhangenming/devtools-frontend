@@ -48,10 +48,12 @@ const i18nString = i18n.i18n.getLocalizedString.bind(undefined, str_);
  */
 export const SORT_ORDER_PAGE_LOAD_MARKERS = {
     ["navigationStart" /* Trace.Types.Events.Name.NAVIGATION_START */]: 0,
-    ["MarkLoad" /* Trace.Types.Events.Name.MARK_LOAD */]: 1,
-    ["firstContentfulPaint" /* Trace.Types.Events.Name.MARK_FCP */]: 2,
-    ["MarkDOMContent" /* Trace.Types.Events.Name.MARK_DOM_CONTENT */]: 3,
-    ["largestContentfulPaint::Candidate" /* Trace.Types.Events.Name.MARK_LCP_CANDIDATE */]: 4,
+    ["SoftNavigationStart" /* Trace.Types.Events.Name.SOFT_NAVIGATION_START */]: 1,
+    ["MarkLoad" /* Trace.Types.Events.Name.MARK_LOAD */]: 2,
+    ["firstContentfulPaint" /* Trace.Types.Events.Name.MARK_FCP */]: 3,
+    ["MarkDOMContent" /* Trace.Types.Events.Name.MARK_DOM_CONTENT */]: 4,
+    ["largestContentfulPaint::Candidate" /* Trace.Types.Events.Name.MARK_LCP_CANDIDATE */]: 5,
+    ["largestContentfulPaint::CandidateForSoftNavigation" /* Trace.Types.Events.Name.MARK_LCP_CANDIDATE_FOR_SOFT_NAVIGATION */]: 6,
 };
 // Threshold to match up overlay markers that are off by a tiny amount so they aren't rendered
 // on top of each other.
@@ -84,6 +86,7 @@ export class TimelineFlameChartView extends Common.ObjectWrapper.eventMixin(UI.W
     onMainEntrySelected;
     onNetworkEntrySelected;
     #boundRefreshAfterIgnoreList;
+    /** This is sorted by ts. */
     #selectedEvents;
     // TODO(crbug.com/1172300) Ignored during the jsdoc to ts migration
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -524,6 +527,7 @@ export class TimelineFlameChartView extends Common.ObjectWrapper.eventMixin(UI.W
                 }
                 else if (event.name === "largestContentfulPaint::Candidate" /* Trace.Types.Events.Name.MARK_LCP_CANDIDATE */) {
                     fieldMetricResult = fieldMetricResults.lcp;
+                    // Ignoring soft-nav LCP on purpose.
                 }
                 if (!fieldMetricResult) {
                     continue;
@@ -541,14 +545,16 @@ export class TimelineFlameChartView extends Common.ObjectWrapper.eventMixin(UI.W
         const markerEvents = parsedTrace.data.PageLoadMetrics.allMarkerEvents;
         // Set markers for Navigations, LCP, FCP, DCL, L.
         const markers = markerEvents.filter(event => event.name === "navigationStart" /* Trace.Types.Events.Name.NAVIGATION_START */ ||
+            event.name === "SoftNavigationStart" /* Trace.Types.Events.Name.SOFT_NAVIGATION_START */ ||
             event.name === "largestContentfulPaint::Candidate" /* Trace.Types.Events.Name.MARK_LCP_CANDIDATE */ ||
+            event.name === "largestContentfulPaint::CandidateForSoftNavigation" /* Trace.Types.Events.Name.MARK_LCP_CANDIDATE_FOR_SOFT_NAVIGATION */ ||
             event.name === "firstContentfulPaint" /* Trace.Types.Events.Name.MARK_FCP */ ||
             event.name === "MarkDOMContent" /* Trace.Types.Events.Name.MARK_DOM_CONTENT */ ||
             event.name === "MarkLoad" /* Trace.Types.Events.Name.MARK_LOAD */);
         this.#sortMarkersForPreferredVisualOrder(markers);
         const overlayByTs = new Map();
         markers.forEach(marker => {
-            const adjustedTimestamp = Trace.Helpers.Timing.timeStampForEventAdjustedByClosestNavigation(marker, parsedTrace.data.Meta.traceBounds, parsedTrace.data.Meta.navigationsByNavigationId, parsedTrace.data.Meta.navigationsByFrameId);
+            const adjustedTimestamp = Trace.Helpers.Timing.timeStampForEventAdjustedByClosestNavigation(marker, parsedTrace.data.Meta.traceBounds, parsedTrace.data.Meta.navigationsByNavigationId, parsedTrace.data.Meta.softNavigationsById, parsedTrace.data.Meta.navigationsByFrameId);
             // If any of the markers overlap in timing, lets put them on the same marker.
             let matchingOverlay = false;
             for (const [ts, overlay] of overlayByTs.entries()) {
