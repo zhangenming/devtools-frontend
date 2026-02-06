@@ -17997,7 +17997,7 @@ var InplaceEditor = class _InplaceEditor {
       element.dispatchEvent(new Event("change"));
     }
     function defaultFinishHandler(event) {
-      if (event.key === "Enter") {
+      if (event.key === "Enter" && !event.shiftKey) {
         return "commit";
       }
       if (event.keyCode === Keys.Esc.code || event.key === Platform21.KeyboardUtilities.ESCAPE_KEY) {
