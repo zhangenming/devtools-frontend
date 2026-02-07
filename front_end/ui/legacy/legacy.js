@@ -1952,6 +1952,7 @@ var currentUpdateQueue = null;
 var currentlyProcessed = /* @__PURE__ */ new Set();
 var nextUpdateQueue = /* @__PURE__ */ new Map();
 var pendingAnimationFrame = null;
+var overallUpdatePromise = null;
 function enqueueIntoNextUpdateQueue(widget) {
   const scheduledUpdate = nextUpdateQueue.get(widget) ?? Promise.withResolvers();
   nextUpdateQueue.delete(widget);
@@ -2007,6 +2008,10 @@ function runNextUpdate() {
     } else {
       currentUpdateQueue = null;
       currentlyProcessed.clear();
+      if (!pendingAnimationFrame && overallUpdatePromise) {
+        overallUpdatePromise.resolve();
+        overallUpdatePromise = null;
+      }
     }
   });
 }
@@ -2207,6 +2212,15 @@ var Widget = class _Widget {
    */
   static get(node) {
     return widgetMap.get(node);
+  }
+  static get allUpdatesComplete() {
+    if (!pendingAnimationFrame && !currentUpdateQueue) {
+      return Promise.resolve();
+    }
+    if (!overallUpdatePromise) {
+      overallUpdatePromise = Promise.withResolvers();
+    }
+    return overallUpdatePromise.promise;
   }
   static getOrCreateWidget(element) {
     const widget = _Widget.get(element);
@@ -20206,8 +20220,10 @@ var SearchableView = class extends VBox {
   updateSearchNavigationButtonState(enabled) {
     this.replaceButtonElement.disabled = !enabled;
     this.replaceAllButtonElement.disabled = !enabled;
-    this.searchNavigationPrevElement.setEnabled(enabled);
-    this.searchNavigationNextElement.setEnabled(enabled);
+    if (this.searchProvider.supportsMatchCounts?.() === true) {
+      this.searchNavigationPrevElement.setEnabled(enabled);
+      this.searchNavigationNextElement.setEnabled(enabled);
+    }
   }
   updateSearchMatchesCountAndCurrentMatchIndex(matches, currentMatchIndex) {
     if (!this.currentQuery) {
