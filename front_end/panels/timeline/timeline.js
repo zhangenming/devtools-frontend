@@ -4837,6 +4837,8 @@ __export(TimelinePanel_exports, {
   CoreVitalsRevealer: () => CoreVitalsRevealer,
   EventRevealer: () => EventRevealer,
   InsightRevealer: () => InsightRevealer,
+  ParsedTraceRevealable: () => ParsedTraceRevealable,
+  ParsedTraceRevealer: () => ParsedTraceRevealer,
   SelectedInsight: () => SelectedInsight,
   TimelinePanel: () => TimelinePanel,
   TraceRevealer: () => TraceRevealer,
@@ -9291,6 +9293,19 @@ var TimelinePanel = class _TimelinePanel extends Common10.ObjectWrapper.eventMix
       }
     }
   }
+  revealParsedTrace(revealable) {
+    const index = this.model.indexForTrace(revealable.parsedTrace);
+    if (index === -1) {
+      return;
+    }
+    if (this.#activeTraceIndex() === index) {
+      return;
+    }
+    this.#changeView({
+      mode: "VIEWING_TRACE",
+      traceIndex: index
+    });
+  }
   navigateHistory(direction) {
     const recordingData = this.#historyManager.navigate(direction);
     if (recordingData?.type === "TRACE_INDEX") {
@@ -10548,6 +10563,18 @@ var TraceRevealer = class {
   async reveal(trace) {
     await UI10.ViewManager.ViewManager.instance().showView("timeline");
     TimelinePanel.instance().loadFromTraceFile(trace);
+  }
+};
+var ParsedTraceRevealer = class {
+  async reveal(traceRevealer) {
+    await UI10.ViewManager.ViewManager.instance().showView("timeline");
+    TimelinePanel.instance().revealParsedTrace(traceRevealer);
+  }
+};
+var ParsedTraceRevealable = class {
+  parsedTrace;
+  constructor(parsedTrace) {
+    this.parsedTrace = parsedTrace;
   }
 };
 var EventRevealer = class {

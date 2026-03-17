@@ -271,6 +271,7 @@ var knownContextValues = /* @__PURE__ */ new Set([
   "accept",
   "accept-execute-code",
   "access-control-allow-origin",
+  "accessibility-default",
   "accessibility-tree",
   "accessibility.view",
   "accuracy",
