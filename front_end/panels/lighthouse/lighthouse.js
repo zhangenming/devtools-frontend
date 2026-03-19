@@ -401,16 +401,18 @@ var LighthouseRun = class {
   inspectedURL;
   categoryIDs;
   flags;
+  isAIControlled;
   emulationStateBefore;
   protocolService;
   #isRunning;
   #cancelPromise = null;
-  constructor(controller, protocolService, inspectedURL, categoryIDs, flags) {
+  constructor(controller, protocolService, inspectedURL, categoryIDs, flags, isAIControlled) {
     this.controller = controller;
     this.protocolService = protocolService;
     this.inspectedURL = inspectedURL;
     this.categoryIDs = categoryIDs;
     this.flags = flags;
+    this.isAIControlled = isAIControlled;
     this.#isRunning = false;
   }
   isRunning() {
@@ -655,7 +657,8 @@ var LighthouseController = class extends Common.ObjectWrapper.ObjectWrapper {
     return {
       inspectedURL: this.currentLighthouseRun.inspectedURL,
       categoryIDs: this.currentLighthouseRun.categoryIDs,
-      flags: this.currentLighthouseRun.flags
+      flags: this.currentLighthouseRun.flags,
+      isAIControlled: this.currentLighthouseRun.isAIControlled
     };
   }
   getFlags() {
@@ -754,7 +757,7 @@ var LighthouseController = class extends Common.ObjectWrapper.ObjectWrapper {
       const categoryIDs = overrides?.categoryIds ?? this.getCategoryIDs();
       const flags = this.getFlags();
       this.recordMetrics(flags, categoryIDs);
-      this.currentLighthouseRun = new LighthouseRun(this, this.protocolService, inspectedURL, categoryIDs, flags);
+      this.currentLighthouseRun = new LighthouseRun(this, this.protocolService, inspectedURL, categoryIDs, flags, Boolean(overrides?.isAIControlled));
       await this.currentLighthouseRun.start();
       resolve();
     });
@@ -1305,6 +1308,7 @@ import * as LighthouseReport from "./../../third_party/lighthouse/report/report.
 import * as Components from "./../../ui/legacy/components/utils/utils.js";
 import * as UI from "./../../ui/legacy/legacy.js";
 import * as ThemeSupport from "./../../ui/legacy/theme_support/theme_support.js";
+import { html, nothing, render } from "./../../ui/lit/lit.js";
 import * as VisualLogging from "./../../ui/visual_logging/visual_logging.js";
 import * as PanelsCommon from "./../common/common.js";
 var MaxLengthForLinks = 40;
@@ -1416,10 +1420,7 @@ var LighthouseReportRenderer = class _LighthouseReportRenderer {
       UI.Tooltip.Tooltip.install(origHTMLElement, "");
       const screenshotElement = origHTMLElement.querySelector(".lh-element-screenshot");
       origHTMLElement.textContent = "";
-      if (screenshotElement) {
-        origHTMLElement.append(screenshotElement);
-      }
-      origHTMLElement.appendChild(element);
+      render(html`${screenshotElement ?? nothing}${element}`, origHTMLElement);
     }
   }
   static async linkifySourceLocationDetails(el) {
@@ -1599,7 +1600,7 @@ import * as i18n6 from "./../../core/i18n/i18n.js";
 import * as Buttons from "./../../ui/components/buttons/buttons.js";
 import { Link } from "./../../ui/kit/kit.js";
 import * as UI4 from "./../../ui/legacy/legacy.js";
-import { Directives as Directives2, html as html2, render as render2 } from "./../../ui/lit/lit.js";
+import { Directives as Directives2, html as html3, render as render3 } from "./../../ui/lit/lit.js";
 
 // gen/front_end/panels/lighthouse/lighthouseStartView.css.js
 var lighthouseStartView_css_default = `/*
@@ -1773,7 +1774,7 @@ __export(RadioSetting_exports, {
   RadioSetting: () => RadioSetting
 });
 import * as UI3 from "./../../ui/legacy/legacy.js";
-import { Directives, html, render } from "./../../ui/lit/lit.js";
+import { Directives, html as html2, render as render2 } from "./../../ui/lit/lit.js";
 var { ifDefined } = Directives;
 var RadioSetting = class {
   setting;
@@ -1789,10 +1790,10 @@ var RadioSetting = class {
     UI3.ARIAUtils.setDescription(this.element, description);
     UI3.ARIAUtils.markAsRadioGroup(this.element);
     this.radioElements = [];
-    render(html`
+    render2(html2`
         ${this.options.map((option) => {
       const tooltip = option.tooltip?.() || description;
-      return html`
+      return html2`
             <label class="lighthouse-radio">
               <input
                 type="radio"
@@ -1880,7 +1881,7 @@ var UIStrings3 = {
 var str_3 = i18n6.i18n.registerUIStrings("panels/lighthouse/LighthouseStartView.ts", UIStrings3);
 var i18nString3 = i18n6.i18n.getLocalizedString.bind(void 0, str_3);
 var renderStartView = (_input, output, target) => {
-  render2(html2`
+  render3(html3`
       <form class="lighthouse-start-view">
         <header class="hbox">
           <div class="lighthouse-logo"></div>
@@ -2272,7 +2273,7 @@ var lighthouseDialog_css_default = `/*
 /*# sourceURL=${import.meta.resolve("./lighthouseDialog.css")} */`;
 
 // gen/front_end/panels/lighthouse/LighthouseStatusView.js
-var { html: html3 } = Lit;
+var { html: html4 } = Lit;
 var UIStrings4 = {
   /**
    * @description Text to cancel something
@@ -2291,6 +2292,15 @@ var UIStrings4 = {
    * @description Status text in Lighthouse splash screen while an audit is being performed
    */
   auditingYourWebPage: "Auditing your web page",
+  /**
+   * @description Status text in Lighthouse splash screen while an AI assistant is performing an audit
+   * @example {github.com} PH1
+   */
+  aiAuditingS: "AI assistance is auditing {PH1}",
+  /**
+   * @description Status text in Lighthouse splash screen while an AI assistant is performing an audit
+   */
+  aiAuditingYourWebPage: "AI assistance is auditing your web page",
   /**
    * @description Status text in Lighthouse splash screen while an audit is being performed, and cancellation to take effect
    */
@@ -2410,12 +2420,12 @@ Chrome Version: ${chromeVersion[1]}
 Stack Trace: ${err.stack}
 \`\`\`
 `;
-    return html3`
+    return html4`
       <p>${i18nString4(UIStrings4.ifThisIssueIsReproduciblePlease)}</p>
       <code class="monospace">${issueBody.trim()}</code>
     `;
   };
-  Lit.render(html3`
+  Lit.render(html4`
     <div class="lighthouse-view vbox">
       <span class="header">${statusHeader}</span>
       <div class="lighthouse-status vbox">
@@ -2430,9 +2440,9 @@ Stack Trace: ${err.stack}
           ></div>
         </div>
         <div class="lighthouse-status-text" role="status">
-          ${bugReport ? html3`
+          ${bugReport ? html4`
             <p>${i18nString4(UIStrings4.ahSorryWeRanIntoAnError)}</p>
-            ${bugReport.knownBugPattern ? html3`
+            ${bugReport.knownBugPattern ? html4`
               <p>${i18nString4(UIStrings4.tryToNavigateToTheUrlInAFresh)}</p>
             ` : renderBugReportBody(bugReport.error, bugReport.auditURL)}
           ` : statusText}
@@ -2463,6 +2473,7 @@ var StatusView = class {
   progressBarClass;
   progressBarValue;
   cancelButtonVisible;
+  isAIControlled;
   bugReport;
   constructor(panel) {
     this.panel = panel;
@@ -2480,6 +2491,7 @@ var StatusView = class {
     this.progressBarClass = "";
     this.progressBarValue = 0;
     this.cancelButtonVisible = true;
+    this.isAIControlled = false;
     this.bugReport = null;
     this.render();
   }
@@ -2518,12 +2530,18 @@ var StatusView = class {
   show(dialogRenderElement) {
     this.reset();
     this.updateStatus(i18nString4(UIStrings4.loading));
-    const parsedURL = Common4.ParsedURL.ParsedURL.fromString(this.inspectedURL);
-    const pageHost = parsedURL?.host;
-    const statusHeader = pageHost ? i18nString4(UIStrings4.auditingS, { PH1: pageHost }) : i18nString4(UIStrings4.auditingYourWebPage);
+    const statusHeader = this.getStatusHeader();
     this.renderStatusHeader(statusHeader);
     this.dialog.show(dialogRenderElement);
     this.render();
+  }
+  getStatusHeader() {
+    const parsedURL = Common4.ParsedURL.ParsedURL.fromString(this.inspectedURL);
+    const pageHost = parsedURL?.host;
+    if (this.isAIControlled) {
+      return pageHost ? i18nString4(UIStrings4.aiAuditingS, { PH1: pageHost }) : i18nString4(UIStrings4.aiAuditingYourWebPage);
+    }
+    return pageHost ? i18nString4(UIStrings4.auditingS, { PH1: pageHost }) : i18nString4(UIStrings4.auditingYourWebPage);
   }
   renderStatusHeader(statusHeader) {
     this.statusHeader = `${statusHeader}\u2026`;
@@ -2533,6 +2551,9 @@ var StatusView = class {
     if (this.dialog.isShowing()) {
       this.dialog.hide();
     }
+  }
+  setAIControlled(isAIControlled) {
+    this.isAIControlled = isAIControlled;
   }
   setInspectedURL(url = "") {
     this.inspectedURL = url;
@@ -2712,7 +2733,7 @@ import * as i18n10 from "./../../core/i18n/i18n.js";
 import * as Geometry2 from "./../../models/geometry/geometry.js";
 import * as Buttons3 from "./../../ui/components/buttons/buttons.js";
 import * as UI6 from "./../../ui/legacy/legacy.js";
-import { Directives as Directives4, html as html4, render as render4 } from "./../../ui/lit/lit.js";
+import { Directives as Directives4, html as html5, render as render5 } from "./../../ui/lit/lit.js";
 var UIStrings5 = {
   /**
    * @description Header indicating that a Lighthouse timespan is starting. "Timespan" is a Lighthouse mode that analyzes user interactions over a period of time.
@@ -2738,7 +2759,7 @@ var UIStrings5 = {
 var str_5 = i18n10.i18n.registerUIStrings("panels/lighthouse/LighthouseTimespanView.ts", UIStrings5);
 var i18nString5 = i18n10.i18n.getLocalizedString.bind(void 0, str_5);
 var renderTimespanView = (input, output, target) => {
-  render4(html4`
+  render5(html5`
       <div class="lighthouse-view vbox">
         <span
           ${Directives4.ref((e) => {
@@ -3042,9 +3063,10 @@ var LighthousePanel = class _LighthousePanel extends UI7.Panel.Panel {
     this.setDefaultFocusedChild(this.startView);
   }
   renderStatusView() {
-    const inspectedURL = this.controller.getCurrentRun()?.inspectedURL;
+    const currentRun = this.controller.getCurrentRun();
     this.contentElement.classList.toggle("in-progress", true);
-    this.statusView.setInspectedURL(inspectedURL);
+    this.statusView.setInspectedURL(currentRun?.inspectedURL);
+    this.statusView.setAIControlled(Boolean(currentRun?.isAIControlled));
     this.statusView.show(this.contentElement);
   }
   beforePrint() {

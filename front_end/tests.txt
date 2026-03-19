@@ -77,6 +77,7 @@ models/issues_manager/SRIMessageSignatureIssue.test.js
 models/issues_manager/SharedDictionaryIssue.test.js
 models/issues_manager/StylesheetLoadingIssue.test.js
 models/issues_manager/UnencodedDigestIssue.test.js
+models/stack_trace/ErrorStackParser.test.js
 models/stack_trace/StackTrace.test.js
 models/stack_trace/StackTraceImpl.test.js
 models/stack_trace/StackTraceModel.test.js
@@ -395,7 +396,6 @@ panels/console/ConsoleSidebar.test.js
 panels/console/ConsoleView.test.js
 panels/console/ConsoleViewMessage.test.js
 panels/console/ConsoleViewport.test.js
-panels/console/ErrorStackParser.test.js
 panels/console/PromptBuilder.test.js
 panels/console_counters/console_counters.test.js
 panels/coverage/CoverageDecorationManager.test.js
@@ -459,6 +459,7 @@ panels/lighthouse/LighthousePanel.test.js
 panels/lighthouse/LighthouseProtocolService.test.js
 panels/lighthouse/LighthouseReportRenderer.test.js
 panels/lighthouse/LighthouseStartView.test.js
+panels/lighthouse/LighthouseStatusView.test.js
 panels/lighthouse/LighthouseTimespanView.test.js
 panels/lighthouse/RadioSetting.test.js
 panels/linear_memory_inspector/LinearMemoryInspectorController.test.js

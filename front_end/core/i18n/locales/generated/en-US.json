@@ -9284,6 +9284,12 @@
   "panels/lighthouse/LighthouseStatusView.ts | ahSorryWeRanIntoAnError": {
     "message": "Ah, sorry! We ran into an error."
   },
+  "panels/lighthouse/LighthouseStatusView.ts | aiAuditingS": {
+    "message": "AI assistance is auditing {PH1}"
+  },
+  "panels/lighthouse/LighthouseStatusView.ts | aiAuditingYourWebPage": {
+    "message": "AI assistance is auditing your web page"
+  },
   "panels/lighthouse/LighthouseStatusView.ts | almostThereLighthouseIsNow": {
     "message": "Almost there! Lighthouse is now generating your report."
   },
@@ -16708,9 +16714,6 @@
   },
   "panels/timeline/TimelineUIUtils.ts | stylesheetUrl": {
     "message": "Stylesheet URL"
-  },
-  "panels/timeline/TimelineUIUtils.ts | thirdPartyTable": {
-    "message": "1st / 3rd party table"
   },
   "panels/timeline/TimelineUIUtils.ts | timeout": {
     "message": "Timeout"
