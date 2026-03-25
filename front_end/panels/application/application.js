@@ -3062,6 +3062,7 @@ SDK6.SDKModel.SDKModel.register(ExtensionStorageModel, { capabilities: 4, autost
 // gen/front_end/panels/application/FrameDetailsView.js
 var FrameDetailsView_exports = {};
 __export(FrameDetailsView_exports, {
+  DEFAULT_VIEW: () => DEFAULT_VIEW3,
   FrameDetailsReportView: () => FrameDetailsReportView
 });
 import "./../../ui/kit/kit.js";
@@ -3165,6 +3166,18 @@ button.text-link {
   display: flex;
 }
 
+.inline-items devtools-button {
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
+}
+
+.inline-items .text-ellipsis {
+  flex: 0 1 auto;
+  min-width: 0;
+  padding-left: 2px;
+}
+
 .span-cols {
   grid-column-start: span 2;
   margin-left: var(--sys-size-9);
@@ -3202,6 +3215,7 @@ button.text-link {
     text-decoration-color: linktext;
   }
 }
+
 /*# sourceURL=${import.meta.resolve("./frameDetailsReportView.css")} */`;
 
 // gen/front_end/panels/application/OriginTrialTreeView.js
