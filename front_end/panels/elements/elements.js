@@ -12706,7 +12706,7 @@ function maybeRenderAdAdorner(input) {
   }
   return html8`
     <devtools-adorner
-      aria-describedby=${input.adTooltipId}
+      aria-details=${input.adTooltipId}
       aria-label=${i18nString10(UIStrings11.thisElementWasIdentifiedAsAnAd)}
       .name=${ElementsComponents5.AdornerManager.RegisteredAdorners.AD}
       jslog=${VisualLogging8.adorner(ElementsComponents5.AdornerManager.RegisteredAdorners.AD)}

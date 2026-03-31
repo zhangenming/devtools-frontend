@@ -138,7 +138,6 @@ core/sdk/SourceMapScopesInfo.test.js
 core/sdk/StorageBucketsModel.test.js
 core/sdk/StorageKeyManager.test.js
 core/sdk/TraceObject.test.js
-core/sdk/WebMCPModel.test.js
 entrypoints/heap_snapshot_worker/heap_snapshot_worker.test.js
 entrypoints/inspector_main/InspectorMain.test.js
 entrypoints/inspector_main/OutermostTargetSelector.test.js
@@ -309,6 +308,7 @@ models/trace/lantern/simulation/TCPConnection.test.js
 models/trace/types/File.test.js
 models/trace/types/TraceEvents.test.js
 models/trace_source_maps_resolver/SourceMapsResolver.test.js
+models/web_mcp/WebMCPModel.test.js
 models/workspace/IgnoreListManager.test.js
 models/workspace/SearchConfig.test.js
 models/workspace/UISourceCode.test.js
