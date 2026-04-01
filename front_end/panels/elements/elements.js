@@ -890,6 +890,10 @@ var computedStyleWidget_css_default = `/*
 /*# sourceURL=${import.meta.resolve("./computedStyleWidget.css")} */`;
 
 // gen/front_end/panels/elements/ImagePreviewPopover.js
+var ImagePreviewPopover_exports = {};
+__export(ImagePreviewPopover_exports, {
+  ImagePreviewPopover: () => ImagePreviewPopover
+});
 import * as Components from "./../../ui/legacy/components/utils/utils.js";
 import * as UI3 from "./../../ui/legacy/legacy.js";
 var ImagePreviewPopover = class {
@@ -2277,6 +2281,7 @@ var stylePropertiesTreeOutline_css_default = `/*
   padding-left: 22px;
   white-space: normal;
   text-overflow: ellipsis;
+  overflow-wrap: break-word;
   cursor: auto;
   display: block;
 
@@ -2330,6 +2335,12 @@ var stylePropertiesTreeOutline_css_default = `/*
     overflow-wrap: break-word !important; /* stylelint-disable-line declaration-no-important */
     white-space: normal !important; /* stylelint-disable-line declaration-no-important */
     padding-left: 0;
+
+    /* Constrain the TextPrompt proxy span (display: inline-block) so that
+       long values wrap instead of overflowing the section. */
+    > span:has(> .text-prompt-root) {
+      max-width: 100%;
+    }
   }
 
   .info {
@@ -6715,9 +6726,6 @@ var StylePropertiesSection = class _StylePropertiesSection {
     return mediaQueryElement;
   }
   createContainerQueryElement(containerQuery) {
-    if (!containerQuery.text) {
-      return;
-    }
     let onQueryTextClick;
     if (containerQuery.styleSheetId) {
       onQueryTextClick = this.handleQueryRuleClick.bind(this, containerQuery);
@@ -21316,6 +21324,7 @@ export {
   ElementsTreeOutline_exports as ElementsTreeOutline,
   ElementsTreeOutlineRenderer_exports as ElementsTreeOutlineRenderer,
   EventListenersWidget_exports as EventListenersWidget,
+  ImagePreviewPopover_exports as ImagePreviewPopover,
   InspectElementModeController_exports as InspectElementModeController,
   LayersWidget_exports as LayersWidget,
   LayoutPane_exports as LayoutPane,
