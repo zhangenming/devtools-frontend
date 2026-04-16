@@ -12,6 +12,8 @@ __export(StackTraceImpl_exports, {
   DebuggableFrameImpl: () => DebuggableFrameImpl,
   FragmentImpl: () => FragmentImpl,
   FrameImpl: () => FrameImpl,
+  ParsedErrorStackFragmentImpl: () => ParsedErrorStackFragmentImpl,
+  ParsedErrorStackFrameImpl: () => ParsedErrorStackFrameImpl,
   StackTraceImpl: () => StackTraceImpl
 });
 import * as Common from "./../../core/common/common.js";
@@ -22,7 +24,7 @@ var StackTraceImpl = class extends Common.ObjectWrapper.ObjectWrapper {
     super();
     this.syncFragment = syncFragment;
     this.asyncFragments = asyncFragments;
-    const fragment = syncFragment instanceof DebuggableFragmentImpl ? syncFragment.fragment : syncFragment;
+    const fragment = syncFragment instanceof DebuggableFragmentImpl || syncFragment instanceof ParsedErrorStackFragmentImpl ? syncFragment.fragment : syncFragment;
     fragment.stackTraces.add(this);
     this.asyncFragments.forEach((asyncFragment) => asyncFragment.fragment.stackTraces.add(this));
   }
@@ -83,6 +85,88 @@ var FrameImpl = class {
     this.column = column;
     this.missingDebugInfo = missingDebugInfo;
     this.rawName = rawName;
+  }
+};
+var ParsedErrorStackFragmentImpl = class {
+  fragment;
+  constructor(fragment) {
+    this.fragment = fragment;
+  }
+  get frames() {
+    if (!this.fragment.node) {
+      return [];
+    }
+    const frames = [];
+    for (const node of this.fragment.node.getCallStack()) {
+      for (const frame of node.frames) {
+        frames.push(new ParsedErrorStackFrameImpl(frame, node.parsedFrameInfo, node.evalOriginFrames));
+      }
+    }
+    return frames;
+  }
+};
+var ParsedErrorStackFrameImpl = class _ParsedErrorStackFrameImpl {
+  #frame;
+  #parsedFrameInfo;
+  #evalOriginFrames;
+  constructor(frame, parsedFrameInfo, evalOriginFrames) {
+    this.#frame = frame;
+    this.#parsedFrameInfo = parsedFrameInfo;
+    this.#evalOriginFrames = evalOriginFrames;
+  }
+  get url() {
+    return this.#frame.url;
+  }
+  get uiSourceCode() {
+    return this.#frame.uiSourceCode;
+  }
+  get name() {
+    return this.#frame.name;
+  }
+  get line() {
+    return this.#frame.line;
+  }
+  get column() {
+    return this.#frame.column;
+  }
+  get missingDebugInfo() {
+    return this.#frame.missingDebugInfo;
+  }
+  get rawName() {
+    return this.#frame.rawName;
+  }
+  get isAsync() {
+    return this.#parsedFrameInfo?.isAsync;
+  }
+  get isConstructor() {
+    return this.#parsedFrameInfo?.isConstructor;
+  }
+  get isEval() {
+    return this.#parsedFrameInfo?.isEval;
+  }
+  get evalOrigin() {
+    if (!this.#evalOriginFrames || this.#evalOriginFrames.length === 0) {
+      return void 0;
+    }
+    return new _ParsedErrorStackFrameImpl(this.#evalOriginFrames[0], this.#parsedFrameInfo?.evalOrigin?.parsedFrameInfo);
+  }
+  get isWasm() {
+    return this.#parsedFrameInfo?.isWasm;
+  }
+  get wasmModuleName() {
+    return this.#parsedFrameInfo?.wasmModuleName;
+  }
+  get wasmFunctionIndex() {
+    return this.#parsedFrameInfo?.wasmFunctionIndex;
+  }
+  get typeName() {
+    return this.#parsedFrameInfo?.typeName;
+  }
+  get methodName() {
+    return this.#parsedFrameInfo?.methodName;
+  }
+  get promiseIndex() {
+    return this.#parsedFrameInfo?.promiseIndex;
   }
 };
 var DebuggableFragmentImpl = class {
@@ -167,9 +251,12 @@ var FrameNode = class {
   rawFrame;
   frames = [];
   fragment;
+  parsedFrameInfo;
+  evalOriginFrames;
   constructor(rawFrame, parent) {
     this.rawFrame = rawFrame;
     this.parent = parent;
+    this.parsedFrameInfo = rawFrame.parsedFrameInfo;
   }
   /**
    * Produces the ancestor chain. Including `this` but excluding the `RootFrameNode`.
@@ -212,6 +299,9 @@ var Trie = class {
       }
       const compareResult = compareRawFrames(child.rawFrame, rawFrame);
       if (compareResult === 0) {
+        if (rawFrame.parsedFrameInfo && !child.parsedFrameInfo) {
+          child.parsedFrameInfo = rawFrame.parsedFrameInfo;
+        }
         return child;
       }
       if (compareResult > 0) {

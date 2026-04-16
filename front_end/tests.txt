@@ -778,6 +778,7 @@ ui/legacy/components/utils/JSPresentationUtils.test.js
 ui/legacy/components/utils/Linkifier.test.js
 ui/legacy/theme_support/ThemeSupport.test.js
 ui/lit/i18n-template.test.js
+ui/lit/render.test.js
 ui/lit/strip-whitespace.test.js
 ui/visual_logging/Debugging.test.js
 ui/visual_logging/DomState.test.js
