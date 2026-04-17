@@ -299,6 +299,7 @@ export class ConsoleViewMessage implements ConsoleViewportElement {
   protected messageIcon: Icon|null;
   private traceExpanded: boolean;
   private expandTrace: ((arg0: boolean) => void)|null;
+  private hasStackTrace: boolean;
   protected anchorElement: HTMLElement|null;
   protected contentElementInternal: HTMLElement|null;
   private nestingLevelMarkers: HTMLElement[]|null;
@@ -340,6 +341,7 @@ export class ConsoleViewMessage implements ConsoleViewportElement {
     this.messageIcon = null;
     this.traceExpanded = false;
     this.expandTrace = null;
+    this.hasStackTrace = false;
     this.anchorElement = null;
     this.contentElementInternal = null;
     this.nestingLevelMarkers = null;
@@ -652,6 +654,8 @@ export class ConsoleViewMessage implements ConsoleViewportElement {
         Common.Settings.Settings.instance().moduleSetting('console-trace-expand').get()) {
       this.expandTrace(true);
     }
+
+    this.hasStackTrace = true;
 
     // @ts-expect-error
     toggleElement._expandStackTraceForTest = this.expandTrace.bind(this, true);
@@ -1198,6 +1202,20 @@ export class ConsoleViewMessage implements ConsoleViewportElement {
 
   consoleGroup(): ConsoleGroupViewMessage|null {
     return this.consoleGroupInternal;
+  }
+
+  isTraceExpanded(): boolean {
+    return this.traceExpanded;
+  }
+
+  isExpandableTrace(): boolean {
+    return this.hasStackTrace;
+  }
+
+  setTraceExpanded(expanded: boolean): void {
+    if (this.expandTrace && this.traceExpanded !== expanded) {
+      this.expandTrace(expanded);
+    }
   }
 
   setInSimilarGroup(inSimilarGroup: boolean, isLast?: boolean): void {
@@ -2161,11 +2179,15 @@ export class ConsoleGroupViewMessage extends ConsoleViewMessage {
   }
 
   setCollapsed(collapsed: boolean): void {
+    this.setCollapsedSilent(collapsed);
+    this.onToggle.call(null);
+  }
+
+  setCollapsedSilent(collapsed: boolean): void {
     this.collapsedInternal = collapsed;
     if (this.expandGroupIcon) {
       this.expandGroupIcon.name = this.collapsedInternal ? 'triangle-right' : 'triangle-down';
     }
-    this.onToggle.call(null);
   }
 
   collapsed(): boolean {

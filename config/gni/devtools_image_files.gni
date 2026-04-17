@@ -140,6 +140,7 @@ devtools_svg_sources = [
   "empty.svg",
   "errorWave.svg",
   "exclamation.svg",
+  "expand.svg",
   "experiment-check.svg",
   "experiment.svg",
   "extension.svg",
