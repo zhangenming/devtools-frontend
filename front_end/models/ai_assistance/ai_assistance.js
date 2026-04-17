@@ -6940,6 +6940,7 @@ var PerformanceAgent = class extends AiAgent {
    * we only show it once.
    */
   #hasShownWidgetForInsightSet = /* @__PURE__ */ new WeakSet();
+  #hasShownWidgetForCallTree = /* @__PURE__ */ new WeakSet();
   get preamble() {
     return buildPreamble();
   }
@@ -6970,16 +6971,41 @@ var PerformanceAgent = class extends AiAgent {
     }
     contextDisclosure.push(...this.#additionalSelectionsForQuery);
     const widgets = [];
-    const primaryInsightSet = context.getItem().primaryInsightSet;
-    if (primaryInsightSet && !this.#hasShownWidgetForInsightSet.has(primaryInsightSet)) {
-      widgets.push({
-        name: "CORE_VITALS",
-        data: {
-          parsedTrace: context.getItem().parsedTrace,
-          insightSetKey: primaryInsightSet.id
-        }
-      });
-      this.#hasShownWidgetForInsightSet.add(primaryInsightSet);
+    const focus = context.getItem();
+    if (focus.callTree && !this.#hasShownWidgetForCallTree.has(focus.callTree)) {
+      const event = focus.callTree.selectedNode?.event;
+      if (event) {
+        const { startTime, endTime } = Trace6.Helpers.Timing.eventTimingsMicroSeconds(event);
+        const bounds = Trace6.Helpers.Timing.traceWindowFromMicroSeconds(startTime, endTime);
+        widgets.push({
+          name: "TIMELINE_RANGE_SUMMARY",
+          data: {
+            bounds,
+            parsedTrace: focus.parsedTrace,
+            track: "main"
+          }
+        });
+        widgets.push({
+          name: "BOTTOM_UP_TREE",
+          data: {
+            bounds,
+            parsedTrace: focus.parsedTrace
+          }
+        });
+        this.#hasShownWidgetForCallTree.add(focus.callTree);
+      }
+    } else {
+      const primaryInsightSet = focus.primaryInsightSet;
+      if (primaryInsightSet && !this.#hasShownWidgetForInsightSet.has(primaryInsightSet)) {
+        widgets.push({
+          name: "CORE_VITALS",
+          data: {
+            parsedTrace: focus.parsedTrace,
+            insightSetKey: primaryInsightSet.id
+          }
+        });
+        this.#hasShownWidgetForInsightSet.add(primaryInsightSet);
+      }
     }
     yield {
       type: "context",
@@ -8759,28 +8785,40 @@ var ContextSelectionAgent = class _ContextSelectionAgent extends AiAgent {
         };
       }
     });
+    const parseLighthouseMode = (mode) => {
+      return mode === "snapshot" ? "snapshot" : "navigation";
+    };
     this.declareFunction("runLighthouseAudits", {
       description: "Records a Lighthouse audit on the current page. Use this to debug accessibility, SEO, and best practices. (For performance metrics like LCP, use performanceRecordAndReload instead).",
       parameters: {
         type: 6,
         description: "",
         nullable: true,
-        required: [],
-        properties: {}
+        required: ["mode"],
+        properties: {
+          mode: {
+            type: 1,
+            description: `The mode to run Lighthouse in. Your ONLY options are "navigation" or "snapshot". You should determine this based on the user's question. If the user is asking specifically about accessibility, you can run in "snapshot" mode which avoids reloading the page. If the user asks for a full Lighthouse report, you should run in "navigation" mode which is the default. These are the only options you can pass.`,
+            nullable: false
+          }
+        }
       },
-      displayInfoFromArgs: () => {
+      displayInfoFromArgs: (args) => {
+        const mode = parseLighthouseMode(args.mode);
         return {
           title: "Auditing your page with Lighthouse",
-          action: "runLighthouseAudits()"
+          action: `runLighthouseAudits(${mode})`
         };
       },
-      handler: async () => {
+      handler: async (params) => {
         if (!this.#lighthouseRecording) {
           return {
             error: "Lighthouse report is not available."
           };
         }
-        const result = await this.#lighthouseRecording();
+        const mode = parseLighthouseMode(params.mode);
+        debugLog(`Recording with Lighthouse; runMode=${mode}`);
+        const result = await this.#lighthouseRecording({ mode });
         if (!result) {
           return { error: "Failed to generate Lighthouse report." };
         }

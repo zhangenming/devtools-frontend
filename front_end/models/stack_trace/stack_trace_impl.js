@@ -4,6 +4,140 @@ var __export = (target, all) => {
     __defProp(target, name, { get: all[name], enumerable: true });
 };
 
+// gen/front_end/models/stack_trace/DetailedErrorStackParser.js
+var DetailedErrorStackParser_exports = {};
+__export(DetailedErrorStackParser_exports, {
+  augmentRawFramesWithScriptIds: () => augmentRawFramesWithScriptIds,
+  parseRawFramesFromErrorStack: () => parseRawFramesFromErrorStack
+});
+import * as Common from "./../../core/common/common.js";
+function parseRawFramesFromErrorStack(stack) {
+  const lines = stack.split("\n");
+  const rawFrames = [];
+  for (const line of lines) {
+    const match = /^\s*at\s+(.*)/.exec(line);
+    if (!match) {
+      continue;
+    }
+    let lineContent = match[1];
+    let isAsync = false;
+    if (lineContent.startsWith("async ")) {
+      isAsync = true;
+      lineContent = lineContent.substring(6);
+    }
+    let isConstructor = false;
+    if (lineContent.startsWith("new ")) {
+      isConstructor = true;
+      lineContent = lineContent.substring(4);
+    }
+    let functionName = "";
+    let url = "";
+    let lineNumber = -1;
+    let columnNumber = -1;
+    let typeName;
+    let methodName;
+    let isEval = false;
+    let isWasm = false;
+    let wasmModuleName;
+    let wasmFunctionIndex;
+    let promiseIndex;
+    let evalOrigin;
+    const openParenIndex = lineContent.indexOf(" (");
+    if (lineContent.endsWith(")") && openParenIndex !== -1) {
+      functionName = lineContent.substring(0, openParenIndex).trim();
+      let location = lineContent.substring(openParenIndex + 2, lineContent.length - 1);
+      if (location.startsWith("eval at ")) {
+        isEval = true;
+        const commaIndex = location.lastIndexOf(", ");
+        let evalOriginStr = location;
+        if (commaIndex !== -1) {
+          evalOriginStr = location.substring(0, commaIndex);
+          location = location.substring(commaIndex + 2);
+        } else {
+          location = "";
+        }
+        if (evalOriginStr.startsWith("eval at ")) {
+          evalOriginStr = evalOriginStr.substring(8);
+        }
+        const innerOpenParen = evalOriginStr.indexOf(" (");
+        let evalFunctionName = evalOriginStr;
+        let evalLocation = "";
+        if (innerOpenParen !== -1) {
+          evalFunctionName = evalOriginStr.substring(0, innerOpenParen).trim();
+          evalLocation = evalOriginStr.substring(innerOpenParen + 2, evalOriginStr.length - 1);
+          evalOrigin = parseRawFramesFromErrorStack(`    at ${evalFunctionName} (${evalLocation})`)[0];
+        } else {
+          evalOrigin = parseRawFramesFromErrorStack(`    at ${evalFunctionName}`)[0];
+        }
+      }
+      if (location.startsWith("index ")) {
+        promiseIndex = parseInt(location.substring(6), 10);
+        url = "";
+      } else if (location.includes(":wasm-function[")) {
+        isWasm = true;
+        const wasmMatch = /^(.*):wasm-function\[(\d+)\]:(0x[0-9a-fA-F]+)$/.exec(location);
+        if (wasmMatch) {
+          url = wasmMatch[1];
+          wasmFunctionIndex = parseInt(wasmMatch[2], 10);
+          columnNumber = parseInt(wasmMatch[3], 16);
+        }
+      } else {
+        const splitResult = Common.ParsedURL.ParsedURL.splitLineAndColumn(location);
+        url = splitResult.url;
+        lineNumber = splitResult.lineNumber ?? -1;
+        columnNumber = splitResult.columnNumber ?? -1;
+      }
+    } else {
+      const splitResult = Common.ParsedURL.ParsedURL.splitLineAndColumn(lineContent);
+      url = splitResult.url;
+      lineNumber = splitResult.lineNumber ?? -1;
+      columnNumber = splitResult.columnNumber ?? -1;
+    }
+    if (functionName) {
+      const aliasMatch = /(.*)\s+\[as\s+(.*)\]/.exec(functionName);
+      if (aliasMatch) {
+        methodName = aliasMatch[2];
+        functionName = aliasMatch[1];
+      }
+      const dotIndex = functionName.indexOf(".");
+      if (dotIndex !== -1) {
+        typeName = functionName.substring(0, dotIndex);
+        methodName = methodName ?? functionName.substring(dotIndex + 1);
+      }
+      if (isWasm && typeName) {
+        wasmModuleName = typeName;
+      }
+    }
+    rawFrames.push({
+      url,
+      functionName,
+      lineNumber,
+      columnNumber,
+      parsedFrameInfo: {
+        isAsync,
+        isConstructor,
+        isEval,
+        evalOrigin,
+        isWasm,
+        wasmModuleName,
+        wasmFunctionIndex,
+        typeName,
+        methodName,
+        promiseIndex
+      }
+    });
+  }
+  return rawFrames;
+}
+function augmentRawFramesWithScriptIds(rawFrames, protocolStackTrace) {
+  for (const rawFrame of rawFrames) {
+    const protocolFrame = protocolStackTrace.callFrames.find((frame) => rawFrame.url === frame.url && rawFrame.lineNumber === frame.lineNumber && rawFrame.columnNumber === frame.columnNumber);
+    if (protocolFrame) {
+      rawFrame.scriptId = protocolFrame.scriptId;
+    }
+  }
+}
+
 // gen/front_end/models/stack_trace/StackTraceImpl.js
 var StackTraceImpl_exports = {};
 __export(StackTraceImpl_exports, {
@@ -16,8 +150,8 @@ __export(StackTraceImpl_exports, {
   ParsedErrorStackFrameImpl: () => ParsedErrorStackFrameImpl,
   StackTraceImpl: () => StackTraceImpl
 });
-import * as Common from "./../../core/common/common.js";
-var StackTraceImpl = class extends Common.ObjectWrapper.ObjectWrapper {
+import * as Common2 from "./../../core/common/common.js";
+var StackTraceImpl = class extends Common2.ObjectWrapper.ObjectWrapper {
   syncFragment;
   asyncFragments;
   constructor(syncFragment, asyncFragments) {
@@ -230,7 +364,7 @@ var StackTraceModel_exports = {};
 __export(StackTraceModel_exports, {
   StackTraceModel: () => StackTraceModel
 });
-import * as Common2 from "./../../core/common/common.js";
+import * as Common3 from "./../../core/common/common.js";
 import * as SDK from "./../../core/sdk/sdk.js";
 import * as StackTrace from "./stack_trace.js";
 
@@ -357,7 +491,7 @@ function compareRawFrames(a, b) {
 var _a;
 var StackTraceModel = class extends SDK.SDKModel.SDKModel {
   #trie = new Trie();
-  #mutex = new Common2.Mutex.Mutex();
+  #mutex = new Common3.Mutex.Mutex();
   /** @returns the {@link StackTraceModel} for the target, or the model for the primaryPageTarget when passing null/undefined */
   static #modelForTarget(target) {
     const model = (target ?? SDK.TargetManager.TargetManager.instance().primaryPageTarget())?.model(_a);
@@ -372,6 +506,17 @@ var StackTraceModel = class extends SDK.SDKModel.SDKModel {
       this.#createAsyncFragments(stackTrace, rawFramesToUIFrames)
     ]);
     return new StackTraceImpl(syncFragment, asyncFragments);
+  }
+  async createFromErrorStackLikeString(stack, rawFramesToUIFrames, exceptionDetails) {
+    const rawFrames = parseRawFramesFromErrorStack(stack);
+    if (exceptionDetails?.stackTrace) {
+      augmentRawFramesWithScriptIds(rawFrames, exceptionDetails.stackTrace);
+    }
+    const [syncFragment, asyncFragments] = await Promise.all([
+      this.#createFragment(rawFrames, rawFramesToUIFrames),
+      exceptionDetails?.stackTrace ? this.#createAsyncFragments(exceptionDetails.stackTrace, rawFramesToUIFrames) : Promise.resolve([])
+    ]);
+    return new StackTraceImpl(new ParsedErrorStackFragmentImpl(syncFragment), asyncFragments);
   }
   async createFromDebuggerPaused(pausedDetails, rawFramesToUIFrames) {
     const [syncFragment, asyncFragments] = await Promise.all([
@@ -452,9 +597,21 @@ var StackTraceModel = class extends SDK.SDKModel.SDKModel {
     const rawFrames = fragment.node.getCallStack().map((node) => node.rawFrame).toArray();
     const uiFrames = await rawFramesToUIFrames(rawFrames, this.target());
     console.assert(rawFrames.length === uiFrames.length, "Broken rawFramesToUIFrames implementation");
+    const evalOriginPromises = [];
+    for (const node of fragment.node.getCallStack()) {
+      if (node.parsedFrameInfo?.evalOrigin) {
+        evalOriginPromises.push(rawFramesToUIFrames([node.parsedFrameInfo.evalOrigin], this.target()));
+      }
+    }
+    const evalUiFrames = await Promise.all(evalOriginPromises);
     let i = 0;
+    let evalI = 0;
     for (const node of fragment.node.getCallStack()) {
       node.frames = uiFrames[i++].map((frame) => new FrameImpl(frame.url, frame.uiSourceCode, frame.name, frame.line, frame.column, frame.missingDebugInfo, node.rawFrame.functionName));
+      if (node.parsedFrameInfo?.evalOrigin) {
+        const evalOriginRawFrame = node.parsedFrameInfo.evalOrigin;
+        node.evalOriginFrames = evalUiFrames[evalI++][0].map((frame) => new FrameImpl(frame.url, frame.uiSourceCode, frame.name, frame.line, frame.column, frame.missingDebugInfo, evalOriginRawFrame.functionName));
+      }
     }
   }
   #affectedFragments(script) {
@@ -481,6 +638,7 @@ var StackTraceModel = class extends SDK.SDKModel.SDKModel {
 _a = StackTraceModel;
 SDK.SDKModel.SDKModel.register(StackTraceModel, { capabilities: 0, autostart: false });
 export {
+  DetailedErrorStackParser_exports as DetailedErrorStackParser,
   StackTraceImpl_exports as StackTraceImpl,
   StackTraceModel_exports as StackTraceModel,
   Trie_exports as Trie
