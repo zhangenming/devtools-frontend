@@ -2124,9 +2124,21 @@ var ChatInput = class extends UI3.Widget.Widget {
   isReadOnly = false;
   #textAreaRef = createRef();
   #imageInput;
+  /**
+   * Tracks the user's position when navigating through prompt history.
+   * -1 means the user is at the newest "uncommitted" position (the current input).
+   * 0 to N-1 are indices into the recent prompts array (newest to oldest).
+   */
+  #historyOffset = -1;
+  /**
+   * Stores the text the user had typed before they started navigating through history,
+   * so it can be restored if they navigate back to the newest position.
+   */
+  #uncommittedText = "";
   setInputValue(text) {
     if (this.#textAreaRef.value) {
       this.#textAreaRef.value.value = text;
+      this.#textAreaRef.value.setSelectionRange(text.length, text.length);
     }
     this.performUpdate();
   }
@@ -2145,6 +2157,31 @@ var ChatInput = class extends UI3.Widget.Widget {
   };
   onContextRemoved = null;
   onContextAdd = null;
+  /**
+   * Navigates the prompt history.
+   * @param dir direction to navigate. -1 for older, 1 for newer.
+   */
+  #navigatePromptHistory(dir) {
+    const prompts = AiAssistanceModel3.AiHistoryStorage.AiHistoryStorage.instance().getRecentPrompts();
+    if (!prompts.length) {
+      return;
+    }
+    if (dir === -1) {
+      if (this.#historyOffset === -1) {
+        this.#uncommittedText = this.#textAreaRef.value?.value || "";
+      }
+      if (this.#historyOffset < prompts.length - 1) {
+        this.#historyOffset++;
+        this.setInputValue(prompts[this.#historyOffset]);
+      }
+    } else if (this.#historyOffset > 0) {
+      this.#historyOffset--;
+      this.setInputValue(prompts[this.#historyOffset]);
+    } else if (this.#historyOffset === 0) {
+      this.#historyOffset = -1;
+      this.setInputValue(this.#uncommittedText);
+    }
+  }
   async #handleTakeScreenshot() {
     const mainTarget = SDK2.TargetManager.TargetManager.instance().primaryPageTarget();
     if (!mainTarget) {
@@ -2321,10 +2358,28 @@ var ChatInput = class extends UI3.Widget.Widget {
     const imageInput = !this.#imageInput?.isLoading && this.#imageInput?.data ? { inlineData: { data: this.#imageInput.data, mimeType: this.#imageInput.mimeType } } : void 0;
     this.onTextSubmit(this.#textAreaRef.value?.value ?? "", imageInput, this.#imageInput?.inputType);
     this.#imageInput = void 0;
+    this.#historyOffset = -1;
+    this.#uncommittedText = "";
     this.setInputValue("");
   };
   onTextAreaKeyDown = (event) => {
     if (!event.target || !(event.target instanceof HTMLTextAreaElement)) {
+      return;
+    }
+    if (event.key === "ArrowUp") {
+      const { value, selectionStart, selectionEnd } = event.target;
+      if (selectionStart === selectionEnd && value.lastIndexOf("\n", selectionStart - 1) === -1) {
+        event.preventDefault();
+        this.#navigatePromptHistory(-1);
+      }
+      return;
+    }
+    if (event.key === "ArrowDown") {
+      const { selectionEnd, selectionStart, value } = event.target;
+      if (selectionStart === selectionEnd && value.indexOf("\n", selectionEnd) === -1) {
+        event.preventDefault();
+        this.#navigatePromptHistory(1);
+      }
       return;
     }
     if (event.key === "Enter" && !event.shiftKey && !event.isComposing) {
@@ -2335,6 +2390,8 @@ var ChatInput = class extends UI3.Widget.Widget {
       const imageInput = !this.#imageInput?.isLoading && this.#imageInput?.data ? { inlineData: { data: this.#imageInput.data, mimeType: this.#imageInput.mimeType } } : void 0;
       this.onTextSubmit(event.target.value, imageInput, this.#imageInput?.inputType);
       this.#imageInput = void 0;
+      this.#historyOffset = -1;
+      this.#uncommittedText = "";
       this.setInputValue("");
     }
   };
@@ -2741,6 +2798,10 @@ var chatMessage_css_default = `/*
     &[open] {
       width: auto;
 
+      summary {
+        margin-bottom: var(--sys-size-2);
+      }
+
       .summary .title {
         white-space: normal;
         overflow: unset;
@@ -2757,6 +2818,11 @@ var chatMessage_css_default = `/*
 
     summary {
       border-radius: 16px;
+
+      &:focus-visible {
+        outline: var(--sys-size-2) solid var(--sys-color-state-focus-ring);
+        outline-offset: var(--sys-size-2);
+      }
     }
 
     .step-details {
@@ -3160,6 +3226,11 @@ var walkthroughView_css_default = `/*
       text-overflow: ellipsis;
       white-space: nowrap;
       min-width: 0;
+    }
+
+    &:focus-visible {
+      outline: var(--sys-size-2) solid var(--sys-color-state-focus-ring);
+      outline-offset: calc(-1 * var(--sys-size-2));
     }
   }
 
@@ -3639,6 +3710,34 @@ var UIStringsNotTranslate4 = {
    */
   revealTrace: "Reveal trace",
   /**
+   * @description Accessible label for the reveal button in the computed styles widget.
+   */
+  revealComputedStyles: "Reveal computed styles",
+  /**
+   * @description Accessible label for the reveal button in the core web vitals widget.
+   */
+  revealCoreWebVitals: "Reveal Core Web Vitals",
+  /**
+   * @description Accessible label for the reveal button in the style properties widget.
+   */
+  revealStyleProperties: "Reveal style properties",
+  /**
+   * @description Accessible label for the reveal button in the LCP breakdown widget.
+   */
+  revealLcpBreakdown: "Reveal LCP breakdown",
+  /**
+   * @description Accessible label for the reveal button in the LCP element widget.
+   */
+  revealLcpElement: "Reveal LCP element",
+  /**
+   * @description Accessible label for the reveal button in the performance summary widget.
+   */
+  revealPerformanceSummary: "Reveal performance summary",
+  /**
+   * @description Accessible label for the reveal button in the bottom up thread activity widget.
+   */
+  revealBottomUpTree: "Reveal bottom-up thread activity",
+  /**
    * @description Title for the core web vitals widget.
    */
   coreVitals: "Core Web Vitals",
@@ -4002,6 +4101,7 @@ async function makeComputedStyleWidget(widgetData) {
   return {
     renderedWidget,
     revealable: new Elements.ElementsPanel.NodeComputedStyles(domNodeForId),
+    accessibleRevealLabel: lockedString5(UIStringsNotTranslate4.revealComputedStyles),
     // clang-format off
     title: html7`
       <span class="computed-style-title-wrapper">
@@ -4024,6 +4124,7 @@ async function makeCoreWebVitalsWidget(widgetData) {
   return {
     renderedWidget,
     revealable: new TimelineUtils.Helpers.RevealableCoreVitals(widgetData.data.insightSetKey),
+    accessibleRevealLabel: lockedString5(UIStringsNotTranslate4.revealCoreWebVitals),
     title: lockedString5(UIStringsNotTranslate4.coreVitals),
     jslogContext: "core-web-vitals"
   };
@@ -4049,6 +4150,7 @@ async function makeStylePropertiesWidget(widgetData) {
   return {
     renderedWidget,
     revealable: domNodeForId,
+    accessibleRevealLabel: lockedString5(UIStringsNotTranslate4.revealStyleProperties),
     title: html7`<devtools-widget
       ${widget3(PanelsCommon3.DOMLinkifier.DOMNodeLink, {
       node: domNodeForId
@@ -4073,6 +4175,7 @@ async function makePerfInsightWidget(widgetData) {
       return {
         renderedWidget,
         revealable: new TimelineUtils.Helpers.RevealableInsight(insight),
+        accessibleRevealLabel: lockedString5(UIStringsNotTranslate4.revealLcpBreakdown),
         title: lockedString5(UIStringsNotTranslate4.lcpBreakdown),
         jslogContext: "lcp-breakdown"
       };
@@ -4103,6 +4206,7 @@ async function makeBottomUpTimelineTreeWidget(widgetData) {
   return {
     renderedWidget,
     revealable: new TimelineUtils.Helpers.RevealableBottomUpProfile(widgetData.data.bounds),
+    accessibleRevealLabel: lockedString5(UIStringsNotTranslate4.revealBottomUpTree),
     title: lockedString5(UIStringsNotTranslate4.bottomUpTree),
     jslogContext: "bottom-up"
   };
@@ -4124,7 +4228,7 @@ function renderWidgetResponse(response) {
   const revealButton = html7`
     <devtools-button class="widget-reveal-button"
       .variant=${"text"}
-      .accessibleLabel=${lockedString5(UIStringsNotTranslate4.reveal)}
+      .accessibleLabel=${response.accessibleRevealLabel}
       .jslogContext=${"reveal"}
       @click=${onReveal}
     >
@@ -4155,11 +4259,13 @@ function renderWidgetResponse(response) {
     `;
 }
 async function makePerformanceTraceWidget(widgetData) {
+  const customRevealTitle = lockedString5(UIStringsNotTranslate4.revealTrace);
   return {
     renderedWidget: null,
     title: null,
     revealable: new Timeline.TimelinePanel.ParsedTraceRevealable(widgetData.data.parsedTrace),
-    customRevealTitle: lockedString5(UIStringsNotTranslate4.revealTrace),
+    customRevealTitle,
+    accessibleRevealLabel: customRevealTitle,
     jslogContext: "performance-trace"
   };
 }
@@ -4208,6 +4314,7 @@ async function makeDomTreeWidget(widgetData) {
   return {
     renderedWidget,
     revealable: new SDK3.DOMModel.DeferredDOMNode(root.domModel().target(), root.backendNodeId()),
+    accessibleRevealLabel: lockedString5(UIStringsNotTranslate4.revealLcpElement),
     title: lockedString5(UIStringsNotTranslate4.lcpElement),
     jslogContext: "dom-snapshot"
   };
@@ -4676,10 +4783,12 @@ async function makeTimelineRangeSummaryWidget(widgetData) {
     data: {
       parsedTrace,
       events,
+      isInAIWidget: true,
       startTime: Trace.Helpers.Timing.microToMilli(bounds.min),
       endTime: Trace.Helpers.Timing.microToMilli(bounds.max),
       thirdPartyTreeTemplate: html7`${widget3(Timeline.ThirdPartyTreeView.ThirdPartyTreeViewWidget, {
         maxRows: 10,
+        isInAIWidget: true,
         model: {
           selectedEvents: thirdPartyTree.selectedEvents ?? null,
           parsedTrace,
@@ -4696,6 +4805,7 @@ async function makeTimelineRangeSummaryWidget(widgetData) {
   return {
     renderedWidget: template,
     revealable: new TimelineUtils.Helpers.RevealableTimeRange(bounds),
+    accessibleRevealLabel: lockedString5(UIStringsNotTranslate4.revealPerformanceSummary),
     title: lockedString5(UIStringsNotTranslate4.performanceSummary),
     jslogContext: "timeline-range-summary"
   };
@@ -5288,6 +5398,7 @@ var DEFAULT_VIEW5 = (input, _output, target) => {
             value="prompt"
             name="export-state"
             .checked=${isPrompt}
+            autofocus
             aria-label=${i18nString3(UIStrings3.asPrompt)}
             @change=${() => input.onStateChange(
     "prompt"
