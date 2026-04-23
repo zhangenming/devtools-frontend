@@ -2709,6 +2709,7 @@ var chatMessage_css_default = `/*
     align-items: center;
 
     .title {
+      margin: 0;
       text-overflow: ellipsis;
       white-space: nowrap;
       overflow: hidden;
@@ -2907,6 +2908,7 @@ var chatMessage_css_default = `/*
 
     .widget-name {
       font: var(--sys-typescale-body4-regular);
+      margin: 0;
       max-width: 80%;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -3044,6 +3046,55 @@ var chatMessage_css_default = `/*
 }
 
 /*# sourceURL=${import.meta.resolve("././components/chatMessage.css")} */`;
+
+// gen/front_end/panels/ai_assistance/components/WalkthroughUtils.js
+var WalkthroughUtils_exports = {};
+__export(WalkthroughUtils_exports, {
+  getButtonLabel: () => getButtonLabel
+});
+function smartTruncate(text, targetLength) {
+  if (text.length <= targetLength) {
+    return { truncatedText: text, moreCharacters: 0 };
+  }
+  const lastSpaceBefore = text.lastIndexOf(" ", targetLength);
+  const firstSpaceAfter = text.indexOf(" ", targetLength);
+  let cutIndex = targetLength;
+  if (lastSpaceBefore === -1 && firstSpaceAfter === -1) {
+    cutIndex = targetLength;
+  } else if (lastSpaceBefore === -1) {
+    cutIndex = firstSpaceAfter;
+  } else if (firstSpaceAfter === -1) {
+    cutIndex = lastSpaceBefore;
+  } else {
+    const distanceToSpaceBefore = targetLength - lastSpaceBefore;
+    const distanceToSpaceAfter = firstSpaceAfter - targetLength;
+    cutIndex = distanceToSpaceBefore <= distanceToSpaceAfter ? lastSpaceBefore : firstSpaceAfter;
+  }
+  let truncatedText = text;
+  let moreCharacters = 0;
+  if (cutIndex < text.length) {
+    truncatedText = text.slice(0, cutIndex);
+    moreCharacters = text.length - cutIndex;
+  }
+  return { truncatedText, moreCharacters };
+}
+function getButtonLabel(input) {
+  let labelBase = "";
+  if (input.isLoading && !input.isExpanded && input.stepTitle) {
+    labelBase = input.stepTitle;
+  } else {
+    const action2 = input.isExpanded ? "Hide" : "Show";
+    const type = input.hasWidgets ? "AI walkthrough" : "thinking";
+    labelBase = `${action2} ${type}`;
+  }
+  if (input.isLoading) {
+    return `Loading: ${labelBase}`;
+  }
+  const TARGET_LENGTH = 50;
+  const { truncatedText, moreCharacters } = smartTruncate(input.prompt, TARGET_LENGTH);
+  const promptSuffix = moreCharacters > 0 ? ` (and ${moreCharacters} more characters)` : "";
+  return `${labelBase} for prompt '${truncatedText}'${promptSuffix}`;
+}
 
 // gen/front_end/panels/ai_assistance/components/WalkthroughView.js
 var WalkthroughView_exports = {};
@@ -3222,6 +3273,8 @@ var walkthroughView_css_default = `/*
     }
 
     > .walkthrough-inline-title {
+      font: var(--sys-typescale-body4-regular);
+      font-weight: var(--ref-typeface-weight-medium);
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
@@ -3358,10 +3411,19 @@ function renderInlineWalkthrough(input, stepsOutput, allSteps) {
         ${input.isLoading ? html6`<devtools-spinner aria-label=${lockedString4(UIStrings2.inProgress)}></devtools-spinner>` : html6`<devtools-icon name=${icon}></devtools-icon>`}
       </span>
       <details class="walkthrough-inline" ?open=${input.isExpanded} @toggle=${onToggle} jslog=${VisualLogging3.expand("walkthrough").track({ click: true })}>
-        <summary ?data-has-widgets=${!input.isLoading && hasWidgets}>
-          <span class="walkthrough-inline-title">
+        <summary
+          ?data-has-widgets=${!input.isLoading && hasWidgets}
+          aria-label=${getButtonLabel({
+    isExpanded: input.isExpanded,
+    isLoading: input.isLoading,
+    hasWidgets,
+    prompt: input.prompt,
+    stepTitle: titleForStep(lastStep)
+  })}
+        >
+          <h2 class="walkthrough-inline-title">
             ${input.isExpanded ? walkthroughCloseTitle({ hasWidgets, isInlined: true }) : walkthroughTitle({ isLoading: input.isLoading, lastStep, hasWidgets })}
-          </span>
+          </h2>
           <devtools-icon name="chevron-right"></devtools-icon>
         </summary>
 
@@ -3446,6 +3508,7 @@ var WalkthroughView = class extends UI4.Widget.Widget {
   };
   #isInlined = false;
   #isExpanded = false;
+  #prompt = "";
   #pinScrollToBottom = true;
   #isProgrammaticScroll = false;
   #output = {};
@@ -3548,6 +3611,13 @@ var WalkthroughView = class extends UI4.Widget.Widget {
     this.#isExpanded = isExpanded;
     this.requestUpdate();
   }
+  get prompt() {
+    return this.#prompt;
+  }
+  set prompt(prompt) {
+    this.#prompt = prompt;
+    this.requestUpdate();
+  }
   performUpdate() {
     if (!this.#markdownRenderer) {
       return;
@@ -3559,6 +3629,7 @@ var WalkthroughView = class extends UI4.Widget.Widget {
       onOpen: this.#onOpen,
       isInlined: this.#isInlined,
       isExpanded: this.#isExpanded,
+      prompt: this.#prompt,
       message: this.#message,
       handleScroll: this.#handleScroll
     }, this.#output, this.contentElement);
@@ -3760,15 +3831,7 @@ var UIStringsNotTranslate4 = {
   /**
    * @description Title for the bottom up thread activity widget.
    */
-  bottomUpTree: "Bottom-up thread activity",
-  /**
-   * @description Accessilility label for the button that shows the walkthrough when there are no widgets in the walkthrough.
-   */
-  showThinking: "Show thinking",
-  /**
-   * @description Accessilility label for the button that hides the walkthrough when there are no widgets in the walkthrough.
-   */
-  hideThinking: "Hide thinking"
+  bottomUpTree: "Bottom-up thread activity"
 };
 var DEFAULT_VIEW4 = (input, output, target) => {
   const hasAiV2 = Boolean(Root3.Runtime.hostConfig.devToolsAiAssistanceV2?.enabled);
@@ -3875,7 +3938,7 @@ function titleForStep(step) {
 }
 function renderTitle(step) {
   const paused = step.requestApproval ? html7`<span class="paused">${lockedString5(UIStringsNotTranslate4.paused)}: </span>` : Lit5.nothing;
-  return html7`<span class="title" aria-label=${titleForStep(step)}>${paused}${titleForStep(step)}</span>`;
+  return html7`<h3 class="title" aria-label=${titleForStep(step)}>${paused}${titleForStep(step)}</h3>`;
 }
 function renderStepCode(step) {
   if (!step.code && !step.output) {
@@ -3943,11 +4006,13 @@ function renderWalkthroughSidebarButton(input, steps) {
     // We only apply the widget styling when loading is complete
     "has-widgets": hasOneStepWithWidget && !input.isLoading
   });
-  let accessibleLabel = title;
-  if (input.isLoading) {
-    const suffix = isExpanded ? UIStringsNotTranslate4.hideThinking : UIStringsNotTranslate4.showThinking;
-    accessibleLabel = `${titleForStep(lastStep)} ${i18n9.i18n.lockedString(suffix)}`;
-  }
+  const accessibleLabel = getButtonLabel({
+    isExpanded,
+    isLoading: input.isLoading,
+    hasWidgets: hasOneStepWithWidget,
+    prompt: input.prompt,
+    stepTitle: titleForStep(lastStep)
+  });
   return html7`
     <div class=${toggleContainerClasses}>
       ${input.isLoading ? html7`<devtools-spinner></devtools-spinner>` : html7`<devtools-icon name=${icon}></devtools-icon>`}
@@ -3984,6 +4049,7 @@ function renderWalkthroughUI(input, steps) {
     markdownRenderer: input.markdownRenderer,
     isInlined: true,
     isExpanded,
+    prompt: input.prompt,
     onToggle: input.walkthrough.onToggle,
     onOpen: input.walkthrough.onOpen
   })}
@@ -4240,7 +4306,7 @@ function renderWidgetResponse(response) {
     <div class=${classes} jslog=${ifDefined(response.jslogContext ? VisualLogging4.section(response.jslogContext) : void 0)}>
       ${response.title ? html7`
         <div class="widget-header">
-          <h3 class="widget-name">${response.title}</h3>
+          <h4 class="widget-name">${response.title}</h4>
           <div class="widget-reveal-container">
             ${revealButton}
           </div>
@@ -4594,6 +4660,7 @@ var ChatMessage = class extends UI5.Widget.Widget {
   message = { entity: "user", text: "" };
   isLoading = false;
   isReadOnly = false;
+  prompt = "";
   canShowFeedbackForm = false;
   isLastMessage = false;
   isFirstMessage = false;
@@ -4645,6 +4712,7 @@ var ChatMessage = class extends UI5.Widget.Widget {
       markdownRenderer: this.markdownRenderer,
       isLastMessage: this.isLastMessage,
       isFirstMessage: this.isFirstMessage,
+      prompt: this.prompt,
       shouldShowCSSChangeSummary: this.shouldShowCSSChangeSummary,
       onSuggestionClick: this.onSuggestionClick,
       onRatingClick: this.#handleRateClick.bind(this),
@@ -5585,24 +5653,29 @@ var DEFAULT_VIEW6 = (input, output, target) => {
   })}>
           ${input.messages.length > 0 ? html9`
             <div class="messages-container" ${ref4(input.handleMessageContainerRef)}>
-              ${repeat(input.messages, (message) => widget4(ChatMessage, {
-    message,
-    isLoading: input.isLoading && input.messages.at(-1) === message,
-    isReadOnly: input.isReadOnly,
-    canShowFeedbackForm: input.canShowFeedbackForm,
-    markdownRenderer: input.markdownRenderer,
-    isLastMessage: input.messages.at(-1) === message,
-    isFirstMessage: input.messages.at(0) === message,
-    shouldShowCSSChangeSummary: message === cssChangeSummaryMessage,
-    onSuggestionClick: input.handleSuggestionClick,
-    onFeedbackSubmit: input.onFeedbackSubmit,
-    onCopyResponseClick: input.onCopyResponseClick,
-    onExportClick: input.exportForAgentsClick,
-    changeSummary: input.changeSummary,
-    walkthrough: {
-      ...input.walkthrough
-    }
-  }))}
+              ${repeat(input.messages, (message, index) => {
+    const prevMessage = index > 0 ? input.messages[index - 1] : null;
+    const prompt = message.entity === "model" && prevMessage?.entity === "user" ? prevMessage.text : "";
+    return widget4(ChatMessage, {
+      message,
+      isLoading: input.isLoading && index === input.messages.length - 1,
+      isReadOnly: input.isReadOnly,
+      canShowFeedbackForm: input.canShowFeedbackForm,
+      markdownRenderer: input.markdownRenderer,
+      isLastMessage: index === input.messages.length - 1,
+      isFirstMessage: index === 0,
+      prompt,
+      shouldShowCSSChangeSummary: message === cssChangeSummaryMessage,
+      onSuggestionClick: input.handleSuggestionClick,
+      onFeedbackSubmit: input.onFeedbackSubmit,
+      onCopyResponseClick: input.onCopyResponseClick,
+      onExportClick: input.exportForAgentsClick,
+      changeSummary: input.changeSummary,
+      walkthrough: {
+        ...input.walkthrough
+      }
+    });
+  })}
               ${shouldShowPatchWidget ? widget4(PatchWidget, {
     changeSummary: input.changeSummary ?? "",
     changeManager: input.changeManager
@@ -8425,6 +8498,7 @@ export {
   PatchWidget_exports as PatchWidget,
   SELECT_WORKSPACE_DIALOG_DEFAULT_VIEW,
   SelectWorkspaceDialog,
+  WalkthroughUtils_exports as WalkthroughUtils,
   WalkthroughView_exports as WalkthroughView,
   getCSSChangeSummaryMessage,
   getResponseMarkdown

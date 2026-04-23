@@ -171,7 +171,11 @@ export class DebuggerWorkspaceBinding {
             this.createStackTraceFromErrorStackLikeString(remoteObject.runtimeModel().target(), remoteError.errorStack, exceptionDetails),
             causeRemoteObject ? this.createSymbolizedError(causeRemoteObject) : Promise.resolve(null),
         ]);
-        return new SymbolizedError(remoteError, stackTrace, cause);
+        if (!stackTrace) {
+            return null;
+        }
+        const message = StackTraceImpl.DetailedErrorStackParser.parseMessage(remoteError.errorStack);
+        return new SymbolizedError(message, stackTrace, cause);
     }
     async createLiveLocation(rawLocation, updateDelegate, locationPool) {
         const modelData = this.#debuggerModelToData.get(rawLocation.debuggerModel);

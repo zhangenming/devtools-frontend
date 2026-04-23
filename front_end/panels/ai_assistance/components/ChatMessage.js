@@ -27,6 +27,7 @@ import * as Timeline from '../../timeline/timeline.js';
 import * as TimelineUtils from '../../timeline/utils/utils.js';
 import { PanelUtils } from '../../utils/utils.js';
 import chatMessageStyles from './chatMessage.css.js';
+import { getButtonLabel } from './WalkthroughUtils.js';
 import { walkthroughCloseTitle, walkthroughTitle, WalkthroughView } from './WalkthroughView.js';
 const { html, Directives: { ref, ifDefined } } = Lit;
 const lockedString = i18n.i18n.lockedString;
@@ -222,14 +223,6 @@ const UIStringsNotTranslate = {
      * @description Title for the bottom up thread activity widget.
      */
     bottomUpTree: 'Bottom-up thread activity',
-    /**
-     * @description Accessilility label for the button that shows the walkthrough when there are no widgets in the walkthrough.
-     */
-    showThinking: 'Show thinking',
-    /**
-     * @description Accessilility label for the button that hides the walkthrough when there are no widgets in the walkthrough.
-     */
-    hideThinking: 'Hide thinking',
 };
 export const DEFAULT_VIEW = (input, output, target) => {
     const hasAiV2 = Boolean(Root.Runtime.hostConfig.devToolsAiAssistanceV2?.enabled);
@@ -354,7 +347,7 @@ function renderTitle(step) {
     const paused = step.requestApproval ?
         html `<span class="paused">${lockedString(UIStringsNotTranslate.paused)}: </span>` :
         Lit.nothing;
-    return html `<span class="title" aria-label=${titleForStep(step)}>${paused}${titleForStep(step)}</span>`;
+    return html `<h3 class="title" aria-label=${titleForStep(step)}>${paused}${titleForStep(step)}</h3>`;
 }
 function renderStepCode(step) {
     if (!step.code && !step.output) {
@@ -437,12 +430,13 @@ function renderWalkthroughSidebarButton(input, steps) {
         // We only apply the widget styling when loading is complete
         'has-widgets': hasOneStepWithWidget && !input.isLoading,
     });
-    let accessibleLabel = title;
-    // If the agent is still thinking we want the accessibility label to include the current step title followed by Show/Hide thinking.
-    if (input.isLoading) {
-        const suffix = isExpanded ? UIStringsNotTranslate.hideThinking : UIStringsNotTranslate.showThinking;
-        accessibleLabel = `${titleForStep(lastStep)} ${i18n.i18n.lockedString(suffix)}`;
-    }
+    const accessibleLabel = getButtonLabel({
+        isExpanded,
+        isLoading: input.isLoading,
+        hasWidgets: hasOneStepWithWidget,
+        prompt: input.prompt,
+        stepTitle: titleForStep(lastStep),
+    });
     // clang-format off
     return html `
     <div class=${toggleContainerClasses}>
@@ -502,6 +496,7 @@ function renderWalkthroughUI(input, steps) {
         markdownRenderer: input.markdownRenderer,
         isInlined: true,
         isExpanded,
+        prompt: input.prompt,
         onToggle: input.walkthrough.onToggle,
         onOpen: input.walkthrough.onOpen,
     })}
@@ -779,7 +774,7 @@ function renderWidgetResponse(response) {
     <div class=${classes} jslog=${ifDefined(response.jslogContext ? VisualLogging.section(response.jslogContext) : undefined)}>
       ${response.title ? html `
         <div class="widget-header">
-          <h3 class="widget-name">${response.title}</h3>
+          <h4 class="widget-name">${response.title}</h4>
           <div class="widget-reveal-container">
             ${revealButton}
           </div>
@@ -1150,6 +1145,7 @@ export class ChatMessage extends UI.Widget.Widget {
     message = { entity: "user" /* ChatMessageEntity.USER */, text: '' };
     isLoading = false;
     isReadOnly = false;
+    prompt = '';
     canShowFeedbackForm = false;
     isLastMessage = false;
     isFirstMessage = false;
@@ -1195,6 +1191,7 @@ export class ChatMessage extends UI.Widget.Widget {
             markdownRenderer: this.markdownRenderer,
             isLastMessage: this.isLastMessage,
             isFirstMessage: this.isFirstMessage,
+            prompt: this.prompt,
             shouldShowCSSChangeSummary: this.shouldShowCSSChangeSummary,
             onSuggestionClick: this.onSuggestionClick,
             onRatingClick: this.#handleRateClick.bind(this),
