@@ -20,6 +20,7 @@ export interface FilterState {
         completed?: boolean;
         error?: boolean;
         pending?: boolean;
+        canceled?: boolean;
     };
 }
 export interface FilterMenuButton {

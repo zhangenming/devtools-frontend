@@ -11991,7 +11991,6 @@ var webMCPView_css_default = `/*
     width: 100%;
     box-sizing: border-box;
     border-bottom: 1px solid var(--sys-color-divider);
-    cursor: pointer;
 
     &:hover {
       background-color: var(--sys-color-state-hover-on-subtle);
@@ -12005,16 +12004,20 @@ var webMCPView_css_default = `/*
   .tool-name-container {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
+    align-items: center;
     gap: var(--sys-size-5);
 
+    .tool-icons {
+      display: flex;
+      gap: var(--sys-size-2);
+      align-items: center;
+    }
     /* stylelint-disable-next-line selector-type-no-unknown */
     icon-button {
       flex-shrink: 0;
-      height: 0;
-      overflow: visible;
       display: flex;
       align-items: center;
+      cursor: pointer;
     }
   }
 
@@ -12243,6 +12246,10 @@ var UIStrings30 = {
    */
   copyDescription: "Copy description",
   /**
+   * @description Context menu action to cancel an in-progress tool call
+   */
+  cancelCall: "Cancel",
+  /**
    * @description Text for the header of the tool run section
    */
   runTool: "Run Tool",
@@ -12271,11 +12278,14 @@ function filterToolCalls(toolCalls, filterState) {
   const statusTypes = filterState.statusTypes;
   if (statusTypes) {
     filtered = filtered.filter((call) => {
-      const { completed, error, pending } = statusTypes;
+      const { completed, error, pending, canceled } = statusTypes;
       if (completed && call.result?.status === "Completed") {
         return true;
       }
       if (error && call.result?.status === "Error") {
+        return true;
+      }
+      if (canceled && call.result?.status === "Canceled") {
         return true;
       }
       if (pending && call.result === void 0) {
@@ -12306,59 +12316,45 @@ function filterToolCalls(toolCalls, filterState) {
   return filtered;
 }
 function calculateToolStats(calls) {
-  let total = 0, completed = 0, failed = 0, canceled = 0, inProgress = 0;
+  const stats = /* @__PURE__ */ new Map();
+  const totals = /* @__PURE__ */ new Map();
   for (const call of calls) {
-    total++;
-    if (call.result?.status === "Error") {
-      failed++;
-    } else if (call.result?.status === "Canceled") {
-      canceled++;
-    } else if (call.result?.status === "Completed") {
-      completed++;
-    } else if (call.result === void 0) {
-      inProgress++;
+    let toolStats = stats.get(call.tool);
+    if (!toolStats) {
+      toolStats = /* @__PURE__ */ new Map();
+      stats.set(call.tool, toolStats);
     }
+    toolStats.set(call.result?.status, (toolStats.get(call.result?.status) ?? 0) + 1);
+    totals.set(call.result?.status, (totals.get(call.result?.status) ?? 0) + 1);
   }
-  return { total, completed, failed, canceled, inProgress };
+  return { totals, stats };
+}
+function toolStatsIcon(status) {
+  switch (status) {
+    case "Completed":
+      return { iconName: "check-circle", iconColor: "var(--sys-color-green)" };
+    case "Error":
+      return { iconName: "cross-circle-filled", iconColor: "var(--sys-color-error)" };
+    case "Canceled":
+      return { iconName: "record-stop", iconColor: "var(--sys-color-on-surface-light)" };
+    case void 0:
+      return { iconName: "watch" };
+  }
 }
 function getIconGroupsFromStats(toolStats) {
-  const groups = [];
-  if (toolStats.completed > 0) {
-    groups.push({
-      iconName: "check-circle",
-      iconColor: "var(--sys-color-green)",
-      iconWidth: "var(--sys-size-8)",
-      iconHeight: "var(--sys-size-8)",
-      text: String(toolStats.completed)
-    });
-  }
-  if (toolStats.failed > 0) {
-    groups.push({
-      iconName: "cross-circle-filled",
-      iconColor: "var(--sys-color-error)",
-      iconWidth: "var(--sys-size-8)",
-      iconHeight: "var(--sys-size-8)",
-      text: String(toolStats.failed)
-    });
-  }
-  if (toolStats.canceled > 0) {
-    groups.push({
-      iconName: "record-stop",
-      iconColor: "var(--sys-color-on-surface-light)",
-      iconWidth: "var(--sys-size-8)",
-      iconHeight: "var(--sys-size-8)",
-      text: String(toolStats.canceled)
-    });
-  }
-  if (toolStats.inProgress > 0) {
-    groups.push({
-      iconName: "watch",
-      iconWidth: "var(--sys-size-8)",
-      iconHeight: "var(--sys-size-8)",
-      text: String(toolStats.inProgress)
-    });
-  }
-  return groups;
+  const status = [
+    "Completed",
+    "Error",
+    "Canceled",
+    void 0
+  ];
+  return status.map((status2) => ({
+    ...toolStatsIcon(status2),
+    iconWidth: "var(--sys-size-8)",
+    iconHeight: "var(--sys-size-8)",
+    text: String(toolStats?.get(status2) ?? 0),
+    status: status2
+  })).filter(({ text }) => text !== "0");
 }
 function parsePayload(payload) {
   if (payload === void 0) {
@@ -12390,7 +12386,7 @@ function getJSONEditorParameters(tool) {
 var DEFAULT_VIEW7 = (input, output, target) => {
   const tools = input.tools;
   let editorWidget = null;
-  const stats = calculateToolStats(input.toolCalls);
+  const toolStats = calculateToolStats(input.toolCalls);
   const isFilterActive = Boolean(input.filters.text) || Boolean(input.filters.toolTypes) || Boolean(input.filters.statusTypes);
   const iconName = (call) => {
     switch (call.result?.status) {
@@ -12416,6 +12412,23 @@ var DEFAULT_VIEW7 = (input, output, target) => {
         return i18nString30(UIStrings30.inProgress);
     }
   };
+  const onIconClick = (toolName, status) => {
+    let statusTypes = void 0;
+    if (status === "Completed") {
+      statusTypes = { completed: true };
+    } else if (status === "Error") {
+      statusTypes = { error: true };
+    } else if (status === "Canceled") {
+      statusTypes = { canceled: true };
+    } else if (status === void 0) {
+      statusTypes = { pending: true };
+    }
+    input.onFilterChange({
+      ...input.filters,
+      text: toolName,
+      statusTypes
+    });
+  };
   const onToolContextMenu = (event, tool) => {
     const contextMenu = new UI23.ContextMenu.ContextMenu(event);
     contextMenu.defaultSection().appendItem(i18nString30(UIStrings30.copyName), () => {
@@ -12440,8 +12453,8 @@ var DEFAULT_VIEW7 = (input, output, target) => {
             <div class="toolbar-divider"></div>
             <devtools-toolbar-input type="filter"
                                     placeholder=${i18nString30(UIStrings30.filter)}
-                                    .value=${input.filters.text}
-                                    @change=${(e) => input.onFilterChange({ ...input.filters, text: e.detail })}>
+                                    @change=${(e) => input.onFilterChange({ ...input.filters, text: e.detail })}
+                                    .value=${input.filters.text}>
             </devtools-toolbar-input>
             <div class="toolbar-divider"></div>
             ${input.filterButtons.toolTypes.button.element}
@@ -12490,6 +12503,11 @@ var DEFAULT_VIEW7 = (input, output, target) => {
       const payload = parsePayload(call.input);
       input.onRevealTool(call.tool, payload.valueObject);
     }, { jslogContext: "webmcp.edit-and-run", disabled: isUnregistered });
+    if (call.result === void 0) {
+      contextMenu.defaultSection().appendItem(i18nString30(UIStrings30.cancelCall), () => {
+        call.cancel();
+      }, { jslogContext: "webmcp.cancel-call" });
+    }
   }}>
                       <td>
                         <div class="name-cell">
@@ -12555,13 +12573,19 @@ var DEFAULT_VIEW7 = (input, output, target) => {
           </devtools-split-view>
           <div class="webmcp-toolbar-container" role="toolbar">
             <devtools-toolbar class="webmcp-toolbar" role="presentation" wrappable>
-              <span class="toolbar-text">${i18nString30(UIStrings30.totalCalls, { PH1: stats.total })}</span>
+              <span class="toolbar-text">${i18nString30(UIStrings30.totalCalls, { PH1: input.toolCalls.length })}</span>
               <div class="toolbar-divider"></div>
-              <span class="toolbar-text status-error-text">${i18nString30(UIStrings30.failed, { PH1: stats.failed })}</span>
+              <span class="toolbar-text status-error-text">${i18nString30(UIStrings30.failed, { PH1: toolStats.totals.get(
+    "Error"
+    /* Protocol.WebMCP.InvocationStatus.Error */
+  ) ?? 0 })}</span>
               <div class="toolbar-divider"></div>
-              <span class="toolbar-text status-cancelled-text">${i18nString30(UIStrings30.canceledCount, { PH1: stats.canceled })}</span>
+              <span class="toolbar-text status-cancelled-text">${i18nString30(UIStrings30.canceledCount, { PH1: toolStats.totals.get(
+    "Canceled"
+    /* Protocol.WebMCP.InvocationStatus.Canceled */
+  ) ?? 0 })}</span>
               <div class="toolbar-divider"></div>
-              <span class="toolbar-text">${i18nString30(UIStrings30.inProgressCount, { PH1: stats.inProgress })}</span>
+              <span class="toolbar-text">${i18nString30(UIStrings30.inProgressCount, { PH1: toolStats.totals.get(void 0) ?? 0 })}</span>
             </devtools-toolbar>
           </div>
         ` : html10`
@@ -12585,21 +12609,25 @@ var DEFAULT_VIEW7 = (input, output, target) => {
   })}
           ` : html10`
             <devtools-list class="square-corners">
-              ${tools.map((tool) => {
-    const toolStats = calculateToolStats(input.toolCalls.filter((c) => c.tool === tool));
-    const groups = getIconGroupsFromStats(toolStats);
-    return html10`
+              ${tools.map((tool) => html10`
                     <div class=${Directives4.classMap({ "tool-item": true, selected: tool === input.selectedTool?.tool })}
                          @click=${() => input.onToolSelect(tool)}
                          @contextmenu=${(e) => onToolContextMenu(e, tool)}>
                     <div class="tool-name-container">
                       <div class="tool-name source-code">${tool.name}</div>
-                      ${groups.length > 0 ? html10`<icon-button .data=${{ groups, compact: false }}></icon-button>` : ""}
+                    <div class="tool-icons">
+                      ${getIconGroupsFromStats(toolStats.stats.get(tool)).map((group) => html10`
+                        <icon-button
+                          .data=${{
+    groups: [group],
+    compact: false,
+    clickHandler: () => onIconClick(tool.name, group.status)
+  }}
+                          @click=${(e) => e.stopPropagation()}></icon-button>`)}
+                    </div>
                     </div>
                     <div class="tool-description">${tool.description}</div>
-                  </div>
-                `;
-  })}
+                </div>`)}
             </devtools-list>
           `}
         </div>
@@ -12737,13 +12765,14 @@ var WebMCPView = class _WebMCPView extends UI23.Widget.VBox {
       const current = this.#filterState.statusTypes ?? {};
       const next = { ...current, [key]: !current[key] };
       let statusTypesToPass = next;
-      if (!next.completed && !next.error && !next.pending) {
+      if (!next.completed && !next.error && !next.pending && !next.canceled) {
         statusTypesToPass = void 0;
       }
       this.#handleFilterChange({ ...this.#filterState, statusTypes: statusTypesToPass });
     };
     contextMenu.defaultSection().appendCheckboxItem(i18nString30(UIStrings30.completed), () => toggle4("completed"), { checked: this.#filterState.statusTypes?.["completed"] ?? false, jslogContext: "webmcp.completed" });
     contextMenu.defaultSection().appendCheckboxItem(i18nString30(UIStrings30.error), () => toggle4("error"), { checked: this.#filterState.statusTypes?.["error"] ?? false, jslogContext: "webmcp.error" });
+    contextMenu.defaultSection().appendCheckboxItem(i18nString30(UIStrings30.canceled), () => toggle4("canceled"), { checked: this.#filterState.statusTypes?.["canceled"] ?? false, jslogContext: "webmcp.canceled" });
     contextMenu.defaultSection().appendCheckboxItem(i18nString30(UIStrings30.pending), () => toggle4("pending"), { checked: this.#filterState.statusTypes?.["pending"] ?? false, jslogContext: "webmcp.pending" });
   }
   #webMCPModelAdded(model) {

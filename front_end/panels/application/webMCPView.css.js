@@ -183,7 +183,6 @@ export default `/*
     width: 100%;
     box-sizing: border-box;
     border-bottom: 1px solid var(--sys-color-divider);
-    cursor: pointer;
 
     &:hover {
       background-color: var(--sys-color-state-hover-on-subtle);
@@ -197,16 +196,20 @@ export default `/*
   .tool-name-container {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
+    align-items: center;
     gap: var(--sys-size-5);
 
+    .tool-icons {
+      display: flex;
+      gap: var(--sys-size-2);
+      align-items: center;
+    }
     /* stylelint-disable-next-line selector-type-no-unknown */
     icon-button {
       flex-shrink: 0;
-      height: 0;
-      overflow: visible;
       display: flex;
       align-items: center;
+      cursor: pointer;
     }
   }
 
