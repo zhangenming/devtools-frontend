@@ -46,7 +46,7 @@ const {html, Directives: {ref, ifDefined}} = Lit;
 const lockedString = i18n.i18n.lockedString;
 const {widget} = UI.Widget;
 
-const REPORT_URL = 'https://crbug.com/364805393' as Platform.DevToolsPath.UrlString;
+const REPORT_URL = 'https://crbug.com/508304827' as Platform.DevToolsPath.UrlString;
 const SCROLL_ROUNDING_OFFSET = 1;
 const MAX_NUM_LINES_IN_CODEBLOCK = 11;
 
