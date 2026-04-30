@@ -1247,6 +1247,122 @@ code
         assert.strictEqual(widget?.data.insight, Trace.Insights.Types.InsightKeys.SLOW_CSS_SELECTOR);
         assert.strictEqual(widget?.data.insightData, insightSet.model.SlowCSSSelector);
       });
+
+      it('yields a PERF_INSIGHT widget for LegacyJavaScript', async function() {
+        insightSet.model.LegacyJavaScript = {
+          insightKey: 'LegacyJavaScript',
+          state: 'fail',
+          legacyJavaScriptResults: new Map(),
+        } as unknown as Trace.Insights.Types.InsightModels['LegacyJavaScript'];
+
+        const agent = createAgentForConversation({
+          aidaClient: mockAidaClient([
+            [{
+              explanation: '',
+              functionCalls: [
+                {name: 'getInsightDetails', args: {insightSetId: insightSet.id, insightName: 'LegacyJavaScript'}},
+              ]
+            }],
+            [{explanation: 'done'}]
+          ])
+        });
+
+        const responses = await Array.fromAsync(agent.run('test', {selected: context}));
+        const actions = responses.filter(r => r.type === AiAgent.ResponseType.ACTION);
+        assert.lengthOf(actions, 1);
+        assert.exists(actions[0].widgets);
+        const widget = actions[0].widgets?.find(w => w.name === 'PERF_INSIGHT');
+        assert.exists(widget);
+        assert.strictEqual(widget?.data.insight, Trace.Insights.Types.InsightKeys.LEGACY_JAVASCRIPT);
+        assert.strictEqual(widget?.data.insightData, insightSet.model.LegacyJavaScript);
+      });
+
+      it('yields a PERF_INSIGHT widget for Viewport', async function() {
+        insightSet.model.Viewport = {
+          insightKey: 'Viewport',
+          state: 'fail',
+          mobileOptimized: false,
+        } as unknown as Trace.Insights.Types.InsightModels['Viewport'];
+
+        const agent = createAgentForConversation({
+          aidaClient: mockAidaClient([
+            [{
+              explanation: '',
+              functionCalls: [
+                {name: 'getInsightDetails', args: {insightSetId: insightSet.id, insightName: 'Viewport'}},
+              ]
+            }],
+            [{explanation: 'done'}]
+          ])
+        });
+
+        const responses = await Array.fromAsync(agent.run('test', {selected: context}));
+        const actions = responses.filter(r => r.type === AiAgent.ResponseType.ACTION);
+        assert.lengthOf(actions, 1);
+        assert.exists(actions[0].widgets);
+        const widget = actions[0].widgets?.find(w => w.name === 'PERF_INSIGHT');
+        assert.exists(widget);
+        assert.strictEqual(widget?.data.insight, Trace.Insights.Types.InsightKeys.VIEWPORT);
+        assert.strictEqual(widget?.data.insightData, insightSet.model.Viewport);
+      });
+
+      it('yields a PERF_INSIGHT widget for ModernHTTP', async function() {
+        insightSet.model.ModernHTTP = {
+          insightKey: 'ModernHTTP',
+          state: 'fail',
+          http1Requests: [],
+        } as unknown as Trace.Insights.Types.InsightModels['ModernHTTP'];
+
+        const agent = createAgentForConversation({
+          aidaClient: mockAidaClient([
+            [{
+              explanation: '',
+              functionCalls: [
+                {name: 'getInsightDetails', args: {insightSetId: insightSet.id, insightName: 'ModernHTTP'}},
+              ]
+            }],
+            [{explanation: 'done'}]
+          ])
+        });
+
+        const responses = await Array.fromAsync(agent.run('test', {selected: context}));
+        const actions = responses.filter(r => r.type === AiAgent.ResponseType.ACTION);
+        assert.lengthOf(actions, 1);
+        assert.exists(actions[0].widgets);
+        const widget = actions[0].widgets?.find(w => w.name === 'PERF_INSIGHT');
+        assert.exists(widget);
+        assert.strictEqual(widget?.data.insight, Trace.Insights.Types.InsightKeys.MODERN_HTTP);
+        assert.strictEqual(widget?.data.insightData, insightSet.model.ModernHTTP);
+      });
+
+      it('yields a PERF_INSIGHT widget for CharacterSet', async function() {
+        insightSet.model.CharacterSet = {
+          insightKey: 'CharacterSet',
+          state: 'fail',
+          data: {hasHttpCharset: false, metaCharsetDisposition: 'missing'},
+        } as unknown as Trace.Insights.Types.InsightModels['CharacterSet'];
+
+        const agent = createAgentForConversation({
+          aidaClient: mockAidaClient([
+            [{
+              explanation: '',
+              functionCalls: [
+                {name: 'getInsightDetails', args: {insightSetId: insightSet.id, insightName: 'CharacterSet'}},
+              ]
+            }],
+            [{explanation: 'done'}]
+          ])
+        });
+
+        const responses = await Array.fromAsync(agent.run('test', {selected: context}));
+        const actions = responses.filter(r => r.type === AiAgent.ResponseType.ACTION);
+        assert.lengthOf(actions, 1);
+        assert.exists(actions[0].widgets);
+        const widget = actions[0].widgets?.find(w => w.name === 'PERF_INSIGHT');
+        assert.exists(widget);
+        assert.strictEqual(widget?.data.insight, Trace.Insights.Types.InsightKeys.CHARACTER_SET);
+        assert.strictEqual(widget?.data.insightData, insightSet.model.CharacterSet);
+      });
     });
 
     it('yields a BOTTOM_UP_TREE widget when getDetailedCallTree is called', async function() {

@@ -351,6 +351,38 @@ const UIStringsNotTranslate = {
    * @description Title for the slow CSS selectors widget.
    */
   slowCssSelector: 'Slow CSS selectors',
+  /**
+   * @description Accessible label for the reveal button in the legacy JavaScript widget.
+   */
+  revealLegacyJavaScript: 'Reveal legacy JavaScript',
+  /**
+   * @description Title for the legacy JavaScript widget.
+   */
+  legacyJavaScript: 'Legacy JavaScript',
+  /**
+   * @description Accessible label for the reveal button in the viewport optimization widget.
+   */
+  revealViewport: 'Reveal viewport optimization',
+  /**
+   * @description Title for the viewport optimization widget.
+   */
+  viewport: 'Viewport optimization',
+  /**
+   * @description Accessible label for the reveal button in the modern HTTP usage widget.
+   */
+  revealModernHttp: 'Reveal modern HTTP usage',
+  /**
+   * @description Title for the modern HTTP usage widget.
+   */
+  modernHttp: 'Modern HTTP usage',
+  /**
+   * @description Accessible label for the reveal button in the character set declaration widget.
+   */
+  revealCharacterSet: 'Reveal character set declaration',
+  /**
+   * @description Title for the character set declaration widget.
+   */
+  characterSet: 'Character set declaration',
 } as const;
 
 export interface Step {
@@ -1123,6 +1155,30 @@ const INSIGHT_METADATA: Record<string, {
     accessibleLabel: UIStringsNotTranslate.revealSlowCssSelector,
     title: UIStringsNotTranslate.slowCssSelector,
     jslog: 'slow-css-selector-widget',
+  },
+  [Trace.Insights.Types.InsightKeys.LEGACY_JAVASCRIPT]: {
+    component: TimelineInsights.LegacyJavaScript.LegacyJavaScript,
+    accessibleLabel: UIStringsNotTranslate.revealLegacyJavaScript,
+    title: UIStringsNotTranslate.legacyJavaScript,
+    jslog: 'legacy-javascript-widget',
+  },
+  [Trace.Insights.Types.InsightKeys.VIEWPORT]: {
+    component: TimelineInsights.Viewport.Viewport,
+    accessibleLabel: UIStringsNotTranslate.revealViewport,
+    title: UIStringsNotTranslate.viewport,
+    jslog: 'viewport-widget',
+  },
+  [Trace.Insights.Types.InsightKeys.MODERN_HTTP]: {
+    component: TimelineInsights.ModernHTTP.ModernHTTP,
+    accessibleLabel: UIStringsNotTranslate.revealModernHttp,
+    title: UIStringsNotTranslate.modernHttp,
+    jslog: 'modern-http-widget',
+  },
+  [Trace.Insights.Types.InsightKeys.CHARACTER_SET]: {
+    component: TimelineInsights.CharacterSet.CharacterSet,
+    accessibleLabel: UIStringsNotTranslate.revealCharacterSet,
+    title: UIStringsNotTranslate.characterSet,
+    jslog: 'character-set-widget',
   },
 };
 
