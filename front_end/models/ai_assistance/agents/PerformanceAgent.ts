@@ -235,6 +235,9 @@ const SUPPORTED_INSIGHT_WIDGETS = new Set<Trace.Insights.Types.InsightKeys>([
   Trace.Insights.Types.InsightKeys.DOCUMENT_LATENCY,
   Trace.Insights.Types.InsightKeys.DOM_SIZE,
   Trace.Insights.Types.InsightKeys.DUPLICATE_JAVASCRIPT,
+  Trace.Insights.Types.InsightKeys.IMAGE_DELIVERY,
+  Trace.Insights.Types.InsightKeys.FONT_DISPLAY,
+  Trace.Insights.Types.InsightKeys.SLOW_CSS_SELECTOR,
 ]);
 
 export class PerformanceTraceContext extends ConversationContext<AgentFocus> {

@@ -1157,6 +1157,96 @@ code
         assert.strictEqual(widget?.data.insight, Trace.Insights.Types.InsightKeys.DUPLICATE_JAVASCRIPT);
         assert.strictEqual(widget?.data.insightData, insightSet.model.DuplicatedJavaScript);
       });
+
+      it('yields a PERF_INSIGHT widget for ImageDelivery', async function() {
+        insightSet.model.ImageDelivery = {
+          insightKey: 'ImageDelivery',
+          state: 'fail',
+          optimizableImages: [],
+          wastedBytes: 0,
+        } as unknown as Trace.Insights.Types.InsightModels['ImageDelivery'];
+
+        const agent = createAgentForConversation({
+          aidaClient: mockAidaClient([
+            [{
+              explanation: '',
+              functionCalls: [
+                {name: 'getInsightDetails', args: {insightSetId: insightSet.id, insightName: 'ImageDelivery'}},
+              ]
+            }],
+            [{explanation: 'done'}]
+          ])
+        });
+
+        const responses = await Array.fromAsync(agent.run('test', {selected: context}));
+        const actions = responses.filter(r => r.type === AiAgent.ResponseType.ACTION);
+        assert.lengthOf(actions, 1);
+        assert.exists(actions[0].widgets);
+        const widget = actions[0].widgets?.find(w => w.name === 'PERF_INSIGHT');
+        assert.exists(widget);
+        assert.strictEqual(widget?.data.insight, Trace.Insights.Types.InsightKeys.IMAGE_DELIVERY);
+        assert.strictEqual(widget?.data.insightData, insightSet.model.ImageDelivery);
+      });
+
+      it('yields a PERF_INSIGHT widget for FontDisplay', async function() {
+        insightSet.model.FontDisplay = {
+          insightKey: 'FontDisplay',
+          state: 'fail',
+          fonts: [],
+        } as unknown as Trace.Insights.Types.InsightModels['FontDisplay'];
+
+        const agent = createAgentForConversation({
+          aidaClient: mockAidaClient([
+            [{
+              explanation: '',
+              functionCalls: [
+                {name: 'getInsightDetails', args: {insightSetId: insightSet.id, insightName: 'FontDisplay'}},
+              ]
+            }],
+            [{explanation: 'done'}]
+          ])
+        });
+
+        const responses = await Array.fromAsync(agent.run('test', {selected: context}));
+        const actions = responses.filter(r => r.type === AiAgent.ResponseType.ACTION);
+        assert.lengthOf(actions, 1);
+        assert.exists(actions[0].widgets);
+        const widget = actions[0].widgets?.find(w => w.name === 'PERF_INSIGHT');
+        assert.exists(widget);
+        assert.strictEqual(widget?.data.insight, Trace.Insights.Types.InsightKeys.FONT_DISPLAY);
+        assert.strictEqual(widget?.data.insightData, insightSet.model.FontDisplay);
+      });
+
+      it('yields a PERF_INSIGHT widget for SlowCSSSelector', async function() {
+        insightSet.model.SlowCSSSelector = {
+          insightKey: 'SlowCSSSelector',
+          state: 'fail',
+          totalElapsedMs: 0,
+          totalMatchAttempts: 0,
+          totalMatchCount: 0,
+        } as unknown as Trace.Insights.Types.InsightModels['SlowCSSSelector'];
+
+        const agent = createAgentForConversation({
+          aidaClient: mockAidaClient([
+            [{
+              explanation: '',
+              functionCalls: [
+                {name: 'getInsightDetails', args: {insightSetId: insightSet.id, insightName: 'SlowCSSSelector'}},
+              ]
+            }],
+            [{explanation: 'done'}]
+          ])
+        });
+
+        const responses = await Array.fromAsync(agent.run('test', {selected: context}));
+        const actions = responses.filter(r => r.type === AiAgent.ResponseType.ACTION);
+        assert.lengthOf(actions, 1);
+        assert.exists(actions[0].widgets);
+        const widget = actions[0].widgets?.find(w => w.name === 'PERF_INSIGHT');
+        assert.exists(widget);
+        assert.strictEqual(widget?.data.insight, Trace.Insights.Types.InsightKeys.SLOW_CSS_SELECTOR);
+        assert.strictEqual(widget?.data.insightData, insightSet.model.SlowCSSSelector);
+      });
     });
 
     it('yields a BOTTOM_UP_TREE widget when getDetailedCallTree is called', async function() {

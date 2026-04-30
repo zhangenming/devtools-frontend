@@ -327,6 +327,30 @@ const UIStringsNotTranslate = {
    * @description Title for the duplicated JavaScript widget.
    */
   duplicateJavaScript: 'Duplicated JavaScript',
+  /**
+   * @description Accessible label for the reveal button in the image delivery widget.
+   */
+  revealImageDelivery: 'Reveal image delivery',
+  /**
+   * @description Title for the image delivery widget.
+   */
+  imageDelivery: 'Image delivery',
+  /**
+   * @description Accessible label for the reveal button in the font display widget.
+   */
+  revealFontDisplay: 'Reveal font display',
+  /**
+   * @description Title for the font display widget.
+   */
+  fontDisplay: 'Font display',
+  /**
+   * @description Accessible label for the reveal button in the slow CSS selectors widget.
+   */
+  revealSlowCssSelector: 'Reveal slow CSS selectors',
+  /**
+   * @description Title for the slow CSS selectors widget.
+   */
+  slowCssSelector: 'Slow CSS selectors',
 } as const;
 
 export interface Step {
@@ -1081,6 +1105,24 @@ const INSIGHT_METADATA: Record<string, {
     accessibleLabel: UIStringsNotTranslate.revealDuplicateJavaScript,
     title: UIStringsNotTranslate.duplicateJavaScript,
     jslog: 'duplicate-javascript-widget',
+  },
+  [Trace.Insights.Types.InsightKeys.IMAGE_DELIVERY]: {
+    component: TimelineInsights.ImageDelivery.ImageDelivery,
+    accessibleLabel: UIStringsNotTranslate.revealImageDelivery,
+    title: UIStringsNotTranslate.imageDelivery,
+    jslog: 'image-delivery-widget',
+  },
+  [Trace.Insights.Types.InsightKeys.FONT_DISPLAY]: {
+    component: TimelineInsights.FontDisplay.FontDisplay,
+    accessibleLabel: UIStringsNotTranslate.revealFontDisplay,
+    title: UIStringsNotTranslate.fontDisplay,
+    jslog: 'font-display-widget',
+  },
+  [Trace.Insights.Types.InsightKeys.SLOW_CSS_SELECTOR]: {
+    component: TimelineInsights.SlowCSSSelector.SlowCSSSelector,
+    accessibleLabel: UIStringsNotTranslate.revealSlowCssSelector,
+    title: UIStringsNotTranslate.slowCssSelector,
+    jslog: 'slow-css-selector-widget',
   },
 };
 
