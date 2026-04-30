@@ -1069,6 +1069,94 @@ code
         assert.strictEqual(widget?.data.insight, Trace.Insights.Types.InsightKeys.INP_BREAKDOWN);
         assert.strictEqual(widget?.data.insightData, insightSet.model.INPBreakdown);
       });
+
+      it('yields a PERF_INSIGHT widget for DocumentLatency', async function() {
+        insightSet.model.DocumentLatency = {
+          insightKey: 'DocumentLatency',
+          state: 'fail',
+        } as unknown as Trace.Insights.Types.InsightModels['DocumentLatency'];
+
+        const agent = createAgentForConversation({
+          aidaClient: mockAidaClient([
+            [{
+              explanation: '',
+              functionCalls: [
+                {name: 'getInsightDetails', args: {insightSetId: insightSet.id, insightName: 'DocumentLatency'}},
+              ]
+            }],
+            [{explanation: 'done'}]
+          ])
+        });
+
+        const responses = await Array.fromAsync(agent.run('test', {selected: context}));
+        const actions = responses.filter(r => r.type === AiAgent.ResponseType.ACTION);
+        assert.lengthOf(actions, 1);
+        assert.exists(actions[0].widgets);
+        const widget = actions[0].widgets?.find(w => w.name === 'PERF_INSIGHT');
+        assert.exists(widget);
+        assert.strictEqual(widget?.data.insight, Trace.Insights.Types.InsightKeys.DOCUMENT_LATENCY);
+        assert.strictEqual(widget?.data.insightData, insightSet.model.DocumentLatency);
+      });
+
+      it('yields a PERF_INSIGHT widget for DOMSize', async function() {
+        insightSet.model.DOMSize = {
+          insightKey: 'DOMSize',
+          state: 'fail',
+          largeLayoutUpdates: [],
+          largeStyleRecalcs: [],
+        } as unknown as Trace.Insights.Types.InsightModels['DOMSize'];
+
+        const agent = createAgentForConversation({
+          aidaClient: mockAidaClient([
+            [{
+              explanation: '',
+              functionCalls: [
+                {name: 'getInsightDetails', args: {insightSetId: insightSet.id, insightName: 'DOMSize'}},
+              ]
+            }],
+            [{explanation: 'done'}]
+          ])
+        });
+
+        const responses = await Array.fromAsync(agent.run('test', {selected: context}));
+        const actions = responses.filter(r => r.type === AiAgent.ResponseType.ACTION);
+        assert.lengthOf(actions, 1);
+        assert.exists(actions[0].widgets);
+        const widget = actions[0].widgets?.find(w => w.name === 'PERF_INSIGHT');
+        assert.exists(widget);
+        assert.strictEqual(widget?.data.insight, Trace.Insights.Types.InsightKeys.DOM_SIZE);
+        assert.strictEqual(widget?.data.insightData, insightSet.model.DOMSize);
+      });
+
+      it('yields a PERF_INSIGHT widget for DuplicatedJavaScript', async function() {
+        insightSet.model.DuplicatedJavaScript = {
+          insightKey: 'DuplicatedJavaScript',
+          state: 'fail',
+          duplicationGroupedByNodeModules: new Map(),
+          wastedBytes: 0,
+        } as unknown as Trace.Insights.Types.InsightModels['DuplicatedJavaScript'];
+
+        const agent = createAgentForConversation({
+          aidaClient: mockAidaClient([
+            [{
+              explanation: '',
+              functionCalls: [
+                {name: 'getInsightDetails', args: {insightSetId: insightSet.id, insightName: 'DuplicatedJavaScript'}},
+              ]
+            }],
+            [{explanation: 'done'}]
+          ])
+        });
+
+        const responses = await Array.fromAsync(agent.run('test', {selected: context}));
+        const actions = responses.filter(r => r.type === AiAgent.ResponseType.ACTION);
+        assert.lengthOf(actions, 1);
+        assert.exists(actions[0].widgets);
+        const widget = actions[0].widgets?.find(w => w.name === 'PERF_INSIGHT');
+        assert.exists(widget);
+        assert.strictEqual(widget?.data.insight, Trace.Insights.Types.InsightKeys.DUPLICATE_JAVASCRIPT);
+        assert.strictEqual(widget?.data.insightData, insightSet.model.DuplicatedJavaScript);
+      });
     });
 
     it('yields a BOTTOM_UP_TREE widget when getDetailedCallTree is called', async function() {

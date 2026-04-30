@@ -303,6 +303,30 @@ const UIStringsNotTranslate = {
    * @description Title for the INP breakdown widget.
    */
   inpBreakdown: 'INP breakdown',
+  /**
+   * @description Accessible label for the reveal button in the document latency widget.
+   */
+  revealDocumentLatency: 'Reveal document latency',
+  /**
+   * @description Title for the document latency widget.
+   */
+  documentLatency: 'Document latency',
+  /**
+   * @description Accessible label for the reveal button in the DOM size widget.
+   */
+  revealDomSize: 'Reveal DOM size',
+  /**
+   * @description Title for the DOM size widget.
+   */
+  domSize: 'DOM size',
+  /**
+   * @description Accessible label for the reveal button in the duplicated JavaScript widget.
+   */
+  revealDuplicateJavaScript: 'Reveal duplicated JavaScript',
+  /**
+   * @description Title for the duplicated JavaScript widget.
+   */
+  duplicateJavaScript: 'Duplicated JavaScript',
 } as const;
 
 export interface Step {
@@ -1039,6 +1063,24 @@ const INSIGHT_METADATA: Record<string, {
     accessibleLabel: UIStringsNotTranslate.revealInpBreakdown,
     title: UIStringsNotTranslate.inpBreakdown,
     jslog: 'inp-breakdown-widget',
+  },
+  [Trace.Insights.Types.InsightKeys.DOCUMENT_LATENCY]: {
+    component: TimelineInsights.DocumentLatency.DocumentLatency,
+    accessibleLabel: UIStringsNotTranslate.revealDocumentLatency,
+    title: UIStringsNotTranslate.documentLatency,
+    jslog: 'document-latency-widget',
+  },
+  [Trace.Insights.Types.InsightKeys.DOM_SIZE]: {
+    component: TimelineInsights.DOMSize.DOMSize,
+    accessibleLabel: UIStringsNotTranslate.revealDomSize,
+    title: UIStringsNotTranslate.domSize,
+    jslog: 'dom-size-widget',
+  },
+  [Trace.Insights.Types.InsightKeys.DUPLICATE_JAVASCRIPT]: {
+    component: TimelineInsights.DuplicatedJavaScript.DuplicatedJavaScript,
+    accessibleLabel: UIStringsNotTranslate.revealDuplicateJavaScript,
+    title: UIStringsNotTranslate.duplicateJavaScript,
+    jslog: 'duplicate-javascript-widget',
   },
 };
 

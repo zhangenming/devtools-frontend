@@ -171,7 +171,7 @@ Note: if the user asks a specific question about the trace (such as "What is my 
   - \`nav-to-lcp\` (navigation to LCP)
   - \`lcp-ttfb\` (LCP TTFB phase)
   - \`lcp-render-delay\` (LCP render delay phase)
-  - Insight names: \`LCPBreakdown\`, \`CLSCulprits\`, \`RenderBlocking\`, \`NetworkDependencyTree\`, \`ImageDelivery\`, \`FontDisplay\`, \`ThirdParties\`, \`ForcedReflow\`, \`Cache\`, \`DOMSize\`, \`INPBreakdown\`
+  - Insight names: \`LCPBreakdown\`, \`INPBreakdown\`, \`CLSCulprits\`, \`ThirdParties\`, \`DocumentLatency\`, \`DOMSize\`, \`DuplicatedJavaScript\`, \`FontDisplay\`, \`ForcedReflow\`, \`ImageDelivery\`, \`LCPDiscovery\`, \`LegacyJavaScript\`, \`NetworkDependencyTree\`, \`RenderBlocking\`, \`SlowCSSSelector\`, \`Viewport\`, \`ModernHTTP\`, \`Cache\`, \`CharacterSet\`
   - Navigation IDs: \`NAVIGATION_0\`, \`NAVIGATION_1\`, etc.
 - Use \`getEventByKey\` to get data on a specific trace event. This is great for root-cause analysis or validating any assumptions.
 - Provide clear, actionable recommendations. Avoid technical jargon unless necessary, and explain any technical terms used.
@@ -232,6 +232,9 @@ const SUPPORTED_INSIGHT_WIDGETS = new Set<Trace.Insights.Types.InsightKeys>([
   Trace.Insights.Types.InsightKeys.FORCED_REFLOW,
   Trace.Insights.Types.InsightKeys.CACHE,
   Trace.Insights.Types.InsightKeys.INP_BREAKDOWN,
+  Trace.Insights.Types.InsightKeys.DOCUMENT_LATENCY,
+  Trace.Insights.Types.InsightKeys.DOM_SIZE,
+  Trace.Insights.Types.InsightKeys.DUPLICATE_JAVASCRIPT,
 ]);
 
 export class PerformanceTraceContext extends ConversationContext<AgentFocus> {
