@@ -222,28 +222,6 @@ enum ScorePriority {
   DEFAULT = 1,
 }
 
-const SUPPORTED_INSIGHT_WIDGETS = new Set<Trace.Insights.Types.InsightKeys>([
-  Trace.Insights.Types.InsightKeys.LCP_BREAKDOWN,
-  Trace.Insights.Types.InsightKeys.RENDER_BLOCKING,
-  Trace.Insights.Types.InsightKeys.LCP_DISCOVERY,
-  Trace.Insights.Types.InsightKeys.CLS_CULPRITS,
-  Trace.Insights.Types.InsightKeys.NETWORK_DEPENDENCY_TREE,
-  Trace.Insights.Types.InsightKeys.THIRD_PARTIES,
-  Trace.Insights.Types.InsightKeys.FORCED_REFLOW,
-  Trace.Insights.Types.InsightKeys.CACHE,
-  Trace.Insights.Types.InsightKeys.INP_BREAKDOWN,
-  Trace.Insights.Types.InsightKeys.DOCUMENT_LATENCY,
-  Trace.Insights.Types.InsightKeys.DOM_SIZE,
-  Trace.Insights.Types.InsightKeys.DUPLICATE_JAVASCRIPT,
-  Trace.Insights.Types.InsightKeys.IMAGE_DELIVERY,
-  Trace.Insights.Types.InsightKeys.FONT_DISPLAY,
-  Trace.Insights.Types.InsightKeys.SLOW_CSS_SELECTOR,
-  Trace.Insights.Types.InsightKeys.LEGACY_JAVASCRIPT,
-  Trace.Insights.Types.InsightKeys.VIEWPORT,
-  Trace.Insights.Types.InsightKeys.MODERN_HTTP,
-  Trace.Insights.Types.InsightKeys.CHARACTER_SET,
-]);
-
 export class PerformanceTraceContext extends ConversationContext<AgentFocus> {
   static fromParsedTrace(parsedTrace: Trace.TraceModel.ParsedTrace): PerformanceTraceContext {
     return new PerformanceTraceContext(AgentFocus.fromParsedTrace(parsedTrace));
@@ -561,7 +539,7 @@ export class PerformanceAgent extends AiAgent<AgentFocus> {
     // Case 2: Insight -> PERF_INSIGHT widget
     if (focus.insight) {
       const insightKey = focus.insight.insightKey;
-      if (Trace.Insights.Common.isInsightKey(insightKey) && SUPPORTED_INSIGHT_WIDGETS.has(insightKey)) {
+      if (Trace.Insights.Common.isInsightKey(insightKey)) {
         widgets.push({
           name: 'PERF_INSIGHT',
           data: {
@@ -1034,7 +1012,7 @@ export class PerformanceAgent extends AiAgent<AgentFocus> {
         }
 
         const insightKey = params.insightName;
-        if (Trace.Insights.Common.isInsightKey(insightKey) && SUPPORTED_INSIGHT_WIDGETS.has(insightKey)) {
+        if (Trace.Insights.Common.isInsightKey(insightKey)) {
           widgets.push({
             name: 'PERF_INSIGHT',
             data: {
