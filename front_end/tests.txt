@@ -412,6 +412,7 @@ panels/console/ConsoleView.test.js
 panels/console/ConsoleViewMessage.test.js
 panels/console/ConsoleViewport.test.js
 panels/console/PromptBuilder.test.js
+panels/console/SymbolizedErrorWidget.test.js
 panels/console_counters/console_counters.test.js
 panels/coverage/CoverageDecorationManager.test.js
 panels/coverage/CoverageListView.test.js
