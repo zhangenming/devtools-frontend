@@ -665,7 +665,6 @@ export var DevtoolsExperiments;
     DevtoolsExperiments[DevtoolsExperiments["timeline-invalidation-tracking"] = 26] = "timeline-invalidation-tracking";
     DevtoolsExperiments[DevtoolsExperiments["instrumentation-breakpoints"] = 61] = "instrumentation-breakpoints";
     DevtoolsExperiments[DevtoolsExperiments["use-source-map-scopes"] = 76] = "use-source-map-scopes";
-    DevtoolsExperiments[DevtoolsExperiments["timeline-debug-mode"] = 93] = "timeline-debug-mode";
     DevtoolsExperiments[DevtoolsExperiments["durable-messages"] = 110] = "durable-messages";
     DevtoolsExperiments[DevtoolsExperiments["jpeg-xl"] = 111] = "jpeg-xl";
     /* eslint-enable @typescript-eslint/naming-convention */

@@ -6978,7 +6978,7 @@ var TimelinePanel = class _TimelinePanel extends Common10.ObjectWrapper.eventMix
   #instantiateNewModel() {
     const config = Trace22.Types.Configuration.defaults();
     config.showAllEvents = Common10.Settings.Settings.instance().moduleSetting("timeline-show-all-events").get();
-    config.debugMode = Root3.Runtime.experiments.isEnabled(Root3.ExperimentNames.ExperimentName.TIMELINE_DEBUG_MODE);
+    config.debugMode = Common10.Settings.Settings.instance().moduleSetting("timeline-debug-mode").get();
     const traceEngineModel = Trace22.TraceModel.Model.createWithAllHandlers(config);
     traceEngineModel.addEventListener(Trace22.TraceModel.ModelUpdateEvent.eventName, (e) => {
       const updateEvent = e;
@@ -9343,15 +9343,8 @@ var eventDispatchDesciptors;
 var colorGenerator;
 var { SamplesIntegrator } = Trace23.Helpers.SamplesIntegrator;
 var TimelineUIUtils = class _TimelineUIUtils {
-  /**
-   * use getGetDebugModeEnabled() to query this variable.
-   */
-  static debugModeEnabled = void 0;
   static getGetDebugModeEnabled() {
-    if (_TimelineUIUtils.debugModeEnabled === void 0) {
-      _TimelineUIUtils.debugModeEnabled = Root4.Runtime.experiments.isEnabled(Root4.ExperimentNames.ExperimentName.TIMELINE_DEBUG_MODE);
-    }
-    return _TimelineUIUtils.debugModeEnabled;
+    return Common11.Settings.Settings.instance().moduleSetting("timeline-debug-mode").get();
   }
   static frameDisplayName(frame) {
     const maybeResolvedData = SourceMapsResolver3.SourceMapsResolver.resolvedCodeLocationForCallFrame(frame);
@@ -10154,7 +10147,7 @@ var TimelineUIUtils = class _TimelineUIUtils {
     if (Trace23.Types.Events.isUserTiming(event) || Trace23.Types.Extensions.isSyntheticExtensionEntry(event) || Trace23.Types.Events.isProfileCall(event) || initiator || initiatorFor || hasStackTrace || parsedTrace?.data.Invalidations.invalidationsForEvent.get(event)) {
       await _TimelineUIUtils.generateCauses(event, contentHelper, parsedTrace);
     }
-    if (Root4.Runtime.experiments.isEnabled(Root4.ExperimentNames.ExperimentName.TIMELINE_DEBUG_MODE)) {
+    if (_TimelineUIUtils.getGetDebugModeEnabled()) {
       _TimelineUIUtils.renderEventJson(event, contentHelper);
     }
     const stats = {};

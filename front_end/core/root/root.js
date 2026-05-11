@@ -59,7 +59,6 @@ var ExperimentName;
   ExperimentName2["TIMELINE_INVALIDATION_TRACKING"] = "timeline-invalidation-tracking";
   ExperimentName2["INSTRUMENTATION_BREAKPOINTS"] = "instrumentation-breakpoints";
   ExperimentName2["USE_SOURCE_MAP_SCOPES"] = "use-source-map-scopes";
-  ExperimentName2["TIMELINE_DEBUG_MODE"] = "timeline-debug-mode";
   ExperimentName2["DURABLE_MESSAGES"] = "durable-messages";
   ExperimentName2["JPEG_XL"] = "jpeg-xl";
 })(ExperimentName || (ExperimentName = {}));

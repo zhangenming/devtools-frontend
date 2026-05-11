@@ -515,7 +515,6 @@ export declare enum DevtoolsExperiments {
     'timeline-invalidation-tracking' = 26,
     'instrumentation-breakpoints' = 61,
     'use-source-map-scopes' = 76,
-    'timeline-debug-mode' = 93,
     'durable-messages' = 110,
     'jpeg-xl' = 111,
     MAX_VALUE = 112
