@@ -323,8 +323,6 @@ export class MainImpl {
             docLink: 'https://developer.chrome.com/blog/new-in-devtools-92/#protocol-monitor',
         });
         this.#migrateValueFromLegacyToHostExperiment(Root.ExperimentNames.ExperimentName.PROTOCOL_MONITOR, protocolMonitorExperiment);
-        // Timeline
-        Root.Runtime.experiments.register(Root.ExperimentNames.ExperimentName.TIMELINE_INVALIDATION_TRACKING, 'Performance panel: invalidation tracking');
         // Debugging
         Root.Runtime.experiments.register(Root.ExperimentNames.ExperimentName.INSTRUMENTATION_BREAKPOINTS, 'Instrumentation breakpoints');
         Root.Runtime.experiments.register(Root.ExperimentNames.ExperimentName.USE_SOURCE_MAP_SCOPES, 'Use scope information from source maps');

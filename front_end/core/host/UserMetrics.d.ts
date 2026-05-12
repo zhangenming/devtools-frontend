@@ -512,7 +512,6 @@ export declare const enum IssueOpener {
 export declare enum DevtoolsExperiments {
     'capture-node-creation-stacks' = 1,
     'protocol-monitor' = 13,
-    'timeline-invalidation-tracking' = 26,
     'instrumentation-breakpoints' = 61,
     'use-source-map-scopes' = 76,
     'durable-messages' = 110,

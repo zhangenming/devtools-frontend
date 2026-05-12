@@ -9352,7 +9352,7 @@ var StylesSidebarPane = class _StylesSidebarPane extends Common5.ObjectWrapper.e
     if (this.#aiCodeCompletionSummaryToolbar) {
       return;
     }
-    this.#aiCodeCompletionSummaryToolbar = new PanelsCommon2.AiCodeCompletionSummaryToolbar({
+    this.#aiCodeCompletionSummaryToolbar = new PanelsCommon2.AiCodeCompletionSummaryToolbar.AiCodeCompletionSummaryToolbar({
       citationsTooltipId: CITATIONS_TOOLTIP_ID,
       disclaimerTooltipId: DISCLAIMER_TOOLTIP_ID,
       spinnerTooltipId: SPINNER_TOOLTIP_ID,

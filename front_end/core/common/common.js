@@ -5410,7 +5410,7 @@ var VersionController = class _VersionController {
   static GLOBAL_VERSION_SETTING_NAME = "inspectorVersion";
   static SYNCED_VERSION_SETTING_NAME = "syncedInspectorVersion";
   static LOCAL_VERSION_SETTING_NAME = "localInspectorVersion";
-  static CURRENT_VERSION = 45;
+  static CURRENT_VERSION = 46;
   #settings;
   #globalVersionSetting;
   #syncedVersionSetting;
@@ -6103,6 +6103,19 @@ var VersionController = class _VersionController {
       try {
         const timelineDebugModeSetting = this.#settings.moduleSetting("timeline-debug-mode");
         timelineDebugModeSetting.set(timelineDebugModeExperimentEnabled);
+      } catch {
+      }
+    }
+  }
+  updateVersionFrom45To46() {
+    const timelineInvalidationTrackingExperimentEnabled = Root3.Runtime.experiments.getValueFromStorage("timeline-invalidation-tracking");
+    if (timelineInvalidationTrackingExperimentEnabled !== void 0) {
+      if (this.#settings.syncedStorage.has("timeline-invalidation-tracking")) {
+        return;
+      }
+      try {
+        const timelineInvalidationTrackingSetting = this.#settings.moduleSetting("timeline-invalidation-tracking");
+        timelineInvalidationTrackingSetting.set(timelineInvalidationTrackingExperimentEnabled);
       } catch {
       }
     }

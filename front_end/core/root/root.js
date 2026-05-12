@@ -56,7 +56,6 @@ var ExperimentName;
   ExperimentName2["ALL"] = "*";
   ExperimentName2["CAPTURE_NODE_CREATION_STACKS"] = "capture-node-creation-stacks";
   ExperimentName2["PROTOCOL_MONITOR"] = "protocol-monitor";
-  ExperimentName2["TIMELINE_INVALIDATION_TRACKING"] = "timeline-invalidation-tracking";
   ExperimentName2["INSTRUMENTATION_BREAKPOINTS"] = "instrumentation-breakpoints";
   ExperimentName2["USE_SOURCE_MAP_SCOPES"] = "use-source-map-scopes";
   ExperimentName2["DURABLE_MESSAGES"] = "durable-messages";
