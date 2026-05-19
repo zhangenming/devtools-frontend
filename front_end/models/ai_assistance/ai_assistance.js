@@ -1693,10 +1693,10 @@ function formatError(message) {
 var SideEffectError = class extends Error {
 };
 function getErrorStackOnThePage() {
-  return { stack: this.stack, message: this.message };
+  return { stack: "", message: this.message };
 }
 function stringifyObjectOnThePage() {
-  const seenBefore = /* @__PURE__ */ new WeakMap();
+  const seenBefore = /* @__PURE__ */ new Map();
   return JSON.stringify(this, function replacer(key, value) {
     if (typeof value === "object" && value !== null) {
       if (seenBefore.has(value)) {
@@ -1733,13 +1733,15 @@ async function stringifyRemoteObject(object, functionDeclaration) {
       return `${object.description}`;
     case "object": {
       if (object.subtype === "error") {
-        const res2 = await object.callFunctionJSON(getErrorStackOnThePage, []);
+        const res2 = await object.callFunctionJSON(getErrorStackOnThePage, [], { throwOnSideEffect: true });
         if (!res2) {
           throw new Error("Could not stringify the object" + object);
         }
         return EvaluateAction.stringifyError(res2, functionDeclaration);
       }
-      const res = await object.callFunction(stringifyObjectOnThePage);
+      const res = await object.callFunction(stringifyObjectOnThePage, void 0, {
+        throwOnSideEffect: true
+      });
       if (!res.object || res.object.type !== "string") {
         throw new Error("Could not stringify the object" + object);
       }
@@ -8776,7 +8778,13 @@ var ContextSelectionAgent = class _ContextSelectionAgent extends AiAgent {
         }
         return {
           context: new FileContext(file),
-          description: "User selected a source file"
+          description: "User selected a source file",
+          widgets: [{
+            name: "SOURCE_FILE",
+            data: {
+              uiSourceCode: file
+            }
+          }]
         };
       }
     });

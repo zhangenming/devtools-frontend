@@ -17734,10 +17734,10 @@ var RemoteObject = class _RemoteObject {
   get className() {
     return null;
   }
-  callFunction(_functionDeclaration, _args) {
+  callFunction(_functionDeclaration, _args, _params) {
     throw new Error("Not implemented");
   }
-  callFunctionJSON(_functionDeclaration, _args) {
+  callFunctionJSON(_functionDeclaration, _args, _params) {
     throw new Error("Not implemented");
   }
   arrayBufferByteLength() {
@@ -17965,12 +17965,13 @@ var RemoteObjectImpl = class extends RemoteObject {
     }
     return void 0;
   }
-  async callFunction(functionDeclaration, args) {
+  async callFunction(functionDeclaration, args, params) {
     const response = await this.#runtimeAgent.invoke_callFunctionOn({
       objectId: this.#objectId,
       functionDeclaration: functionDeclaration.toString(),
       arguments: args,
-      silent: true
+      silent: true,
+      throwOnSideEffect: params?.throwOnSideEffect
     });
     if (response.getError()) {
       return { object: null, wasThrown: false };
@@ -17980,13 +17981,14 @@ var RemoteObjectImpl = class extends RemoteObject {
       wasThrown: Boolean(response.exceptionDetails)
     };
   }
-  async callFunctionJSON(functionDeclaration, args) {
+  async callFunctionJSON(functionDeclaration, args, params) {
     const response = await this.#runtimeAgent.invoke_callFunctionOn({
       objectId: this.#objectId,
       functionDeclaration: functionDeclaration.toString(),
       arguments: args,
       silent: true,
-      returnByValue: true
+      returnByValue: true,
+      throwOnSideEffect: params?.throwOnSideEffect
     });
     if (response.getError() || response.exceptionDetails) {
       return null;
