@@ -713,6 +713,7 @@ __export(UIUtils_exports, {
   modifiedFloatNumber: () => modifiedFloatNumber,
   openLinkExternallyLabel: () => openLinkExternallyLabel,
   registerRenderer: () => registerRenderer,
+  resetElementsBeingEditedForTest: () => resetElementsBeingEditedForTest,
   resetMeasuredScrollbarWidthForTest: () => resetMeasuredScrollbarWidthForTest,
   runCSSAnimationOnce: () => runCSSAnimationOnce,
   setTitle: () => setTitle,
@@ -15223,6 +15224,9 @@ function markBeingEdited(element, value) {
     elementsBeingEdited.delete(element);
   }
   return true;
+}
+function resetElementsBeingEditedForTest() {
+  elementsBeingEdited.clear();
 }
 var elementsBeingEdited = /* @__PURE__ */ new Set();
 var numberRegex = /^(-?(?:\d+(?:\.\d+)?|\.\d+))$/;
