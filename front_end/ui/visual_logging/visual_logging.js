@@ -823,6 +823,7 @@ var knownContextValues = /* @__PURE__ */ new Set([
   "code-whisperer",
   "collapse",
   "collapse-children",
+  "collapse-non-contributing-css-rules",
   "collapsed-files",
   "color",
   "color-eye-dropper",

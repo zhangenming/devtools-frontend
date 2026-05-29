@@ -7796,6 +7796,9 @@
   "panels/elements/elements-meta.ts | captureAreaScreenshot": {
     "message": "Capture area screenshot"
   },
+  "panels/elements/elements-meta.ts | collapseNonContributingCSSRules": {
+    "message": "Collapse non-contributing CSS rules"
+  },
   "panels/elements/elements-meta.ts | copyStyles": {
     "message": "Copy styles"
   },
