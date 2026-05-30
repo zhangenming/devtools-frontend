@@ -4827,6 +4827,7 @@ var generatedProperties = [
     "name": "text-emphasis-style"
   },
   {
+    "inherited": true,
     "name": "text-fit"
   },
   {

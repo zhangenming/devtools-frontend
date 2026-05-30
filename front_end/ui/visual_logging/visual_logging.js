@@ -2815,6 +2815,7 @@ var knownContextValues = /* @__PURE__ */ new Set([
   "network-overview",
   "network-record-film-strip-setting",
   "network-request",
+  "network-request-general-headers-widget",
   "network-resource-type-filters",
   "network-settings",
   "network-show-blocked-cookies-only-setting",
