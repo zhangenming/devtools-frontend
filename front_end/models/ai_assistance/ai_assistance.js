@@ -1297,6 +1297,12 @@ var ConversationContext = class {
     return;
   }
 };
+var CrossOriginError = class extends Error {
+  constructor() {
+    super("Cross-origin navigation detected");
+    this.name = "CrossOriginError";
+  }
+};
 var AiAgent = class {
   #sessionId;
   #aidaClient;
@@ -1569,13 +1575,6 @@ var AiAgent = class {
             ...options,
             explanation: textResponse
           });
-          if ("result" in result && result.result === "BLOCKED_CROSS_ORIGIN") {
-            yield this.#createErrorResponse(
-              "cross-origin"
-              /* ErrorType.CROSS_ORIGIN */
-            );
-            break;
-          }
           if (options.signal?.aborted) {
             yield this.#createErrorResponse(
               "abort"
@@ -1601,6 +1600,13 @@ var AiAgent = class {
           };
           request = this.buildRequest(query, Host2.AidaClient.Role.ROLE_UNSPECIFIED);
         } catch (err) {
+          if (err instanceof CrossOriginError) {
+            yield this.#createErrorResponse(
+              "cross-origin"
+              /* ErrorType.CROSS_ORIGIN */
+            );
+            break;
+          }
           debugLog("Error handling function call", err);
           yield this.#createErrorResponse(
             "unknown"
@@ -1661,7 +1667,14 @@ var AiAgent = class {
         };
       }
     }
+    const isOriginBlocked = () => {
+      const allowedOriginResult = this.#allowedOrigin?.();
+      return Boolean(allowedOriginResult && "blocked" in allowedOriginResult);
+    };
     let result = await call.handler(args, options);
+    if (isOriginBlocked()) {
+      throw new CrossOriginError();
+    }
     if ("requiresApproval" in result) {
       if (code) {
         yield {
@@ -1697,16 +1710,16 @@ var AiAgent = class {
           result: "Error: User denied code execution with side effects."
         };
       }
-      const allowedOriginResult = this.#allowedOrigin?.();
-      if (allowedOriginResult && "blocked" in allowedOriginResult) {
-        return {
-          result: "BLOCKED_CROSS_ORIGIN"
-        };
+      if (isOriginBlocked()) {
+        throw new CrossOriginError();
       }
       result = await call.handler(args, {
         ...options,
         approved: true
       });
+      if (isOriginBlocked()) {
+        throw new CrossOriginError();
+      }
     }
     if ("result" in result) {
       yield {
@@ -6869,7 +6882,18 @@ ${result}`,
         const result = this.#formatter.formatFunctionCode(code);
         const key = `getFunctionCode('${args.scriptUrl}', ${args.line}, ${args.column})`;
         this.#cacheFunctionResult(focus, key, result);
-        return { result: { result } };
+        return {
+          result: { result },
+          widgets: [{
+            name: "SOURCE_CODE",
+            data: {
+              url: args.scriptUrl,
+              line: args.line,
+              column: args.column,
+              code: code.code
+            }
+          }]
+        };
       }
     });
     const isFresh = Tracing.FreshRecording.Tracker.instance().recordingIsFresh(parsedTrace);
@@ -6914,7 +6938,16 @@ ${result}`,
         }
         const key = `getResourceContent(${args.url})`;
         this.#cacheFunctionResult(focus, key, content);
-        return { result: { content } };
+        return {
+          result: { content },
+          widgets: [{
+            name: "SOURCE_CODE",
+            data: {
+              url: args.url,
+              code: content
+            }
+          }]
+        };
       }
     });
     if (!context.external) {
@@ -7749,7 +7782,7 @@ You aim to help developers of all levels, prioritizing teaching web concepts as 
 
 # Considerations
 * Determine what is the domain of the question - styling, network, sources, performance or other part of DevTools.
-* For questions about web performance metrics (e.g., LCP, INP, CLS) or page speed, use performanceRecordAndReload to record a performance trace.
+* For questions about performance (e.g., general performance issues, page speed, performance metrics like LCP, INP, CLS), use performanceRecordAndReload to record a performance trace.
 * Proactively try to gather additional data. If a select specific data can be selected, select one.
 * Always try select single specific context before answering the question.
 * Avoid making assumptions without sufficient evidence, and always seek further clarification if needed.
@@ -7934,6 +7967,7 @@ var ContextSelectionAgent = class _ContextSelectionAgent extends AiAgent {
         }
         const origin = allowedOriginResult.origin;
         const files = [];
+        const uiSourceCodes = [];
         for (const file of _ContextSelectionAgent.getUISourceCodes()) {
           const fileUrl = file.url();
           const fileOrigin = Common7.ParsedURL.ParsedURL.extractOrigin(fileUrl);
@@ -7944,9 +7978,16 @@ var ContextSelectionAgent = class _ContextSelectionAgent extends AiAgent {
             file: file.fullDisplayName(),
             id: _ContextSelectionAgent.uiSourceCodeId.get(file)
           });
+          uiSourceCodes.push(file);
         }
         return {
-          result: files
+          result: files,
+          widgets: [{
+            name: "SOURCE_FILES_LIST",
+            data: {
+              uiSourceCodes
+            }
+          }]
         };
       }
     });
@@ -8005,7 +8046,7 @@ var ContextSelectionAgent = class _ContextSelectionAgent extends AiAgent {
       }
     });
     this.declareFunction("performanceRecordAndReload", {
-      description: "Records a new performance trace. Use this to measure and debug performance metrics and Core Web Vitals like Largest Contentful Paint (LCP), Interaction to Next Paint (INP), and Cumulative Layout Shift (CLS).",
+      description: "Records a new performance trace. Use this to measure, analyze, and debug page performance, general performance issues, performance metrics, and Core Web Vitals like Largest Contentful Paint (LCP), Interaction to Next Paint (INP), and Cumulative Layout Shift (CLS).",
       parameters: {
         type: 6,
         description: "",
@@ -8037,7 +8078,7 @@ var ContextSelectionAgent = class _ContextSelectionAgent extends AiAgent {
       return mode === "snapshot" ? "snapshot" : "navigation";
     };
     this.declareFunction("runLighthouseAudits", {
-      description: "Records a Lighthouse audit on the current page. Use this to debug accessibility, SEO, and best practices. (For performance metrics like LCP, use performanceRecordAndReload instead).",
+      description: "Records a Lighthouse audit on the current page. Use this to debug accessibility, SEO, and best practices. (For any performance-related questions or performance issues, do NOT use this; use performanceRecordAndReload instead).",
       parameters: {
         type: 6,
         description: "",
@@ -9542,42 +9583,86 @@ Generate a concise label (max 60 chars, single line) describing the *user-visibl
 var StorageAgent_exports = {};
 __export(StorageAgent_exports, {
   StorageAgent: () => StorageAgent,
-  StorageContext: () => StorageContext
+  StorageContext: () => StorageContext,
+  resolveDOMStorages: () => resolveDOMStorages
 });
+import * as Common9 from "./../../core/common/common.js";
 import * as Host14 from "./../../core/host/host.js";
 import * as i18n15 from "./../../core/i18n/i18n.js";
 import * as Root14 from "./../../core/root/root.js";
 import * as SDK9 from "./../../core/sdk/sdk.js";
+
+// gen/front_end/models/ai_assistance/StorageItem.js
+var StorageItem_exports = {};
+__export(StorageItem_exports, {
+  DOMStorageItem: () => DOMStorageItem,
+  StorageItem: () => StorageItem
+});
+var StorageItem = class {
+  primaryTargetOrigin;
+  origin;
+  constructor(primaryTargetOrigin, origin) {
+    this.primaryTargetOrigin = primaryTargetOrigin;
+    this.origin = origin;
+  }
+};
+var DOMStorageItem = class extends StorageItem {
+  storageKey;
+  type;
+  key;
+  constructor(primaryTargetOrigin, origin, storageKey, type, key) {
+    super(primaryTargetOrigin, origin);
+    this.storageKey = storageKey;
+    this.type = type;
+    this.key = key;
+  }
+};
+
+// gen/front_end/models/ai_assistance/agents/StorageAgent.js
 var lockedString6 = i18n15.i18n.lockedString;
 var preamble10 = `You are a Senior Software Engineer specializing in state audit and storage analysis within Chrome DevTools. Your mission is to help developers debug storage-related issues faster by analyzing the evidence in LocalStorage and SessionStorage.
 
-You have access to the site's storage using tools like \`listStorageKeys\` and \`getStorageValues\` to analyze storage state.
+ You have access to the site's storage using tools like \`listPageOrigins\`, \`listStorageKeys\`, and \`getStorageValues\`.
 
-# Goals
+ # Goals
 
-1.  **Explain Purpose**: Identify what specific storage entries are for.
-2.  **Understand Application State**: Help users inspect, understand, and audit the state stored in their browser storage, and how it relates to their application's behavior or potential issues (such as state mismatch or drift).
+ 1.  **Explain Purpose**: Identify what specific storage entries are for.
+ 2.  **Understand Application State**: Help users inspect, understand, and audit the state stored in browser storage, and how it relates to application behavior or issues (such as state mismatch/drift).
+ 3.  **Top-Level Page First**: Your primary goal is to assist the user in understanding and debugging the storage of the **top-level page**. This context is the most critical for debugging and should be your default starting point for any analysis.
 
-# Tools & Workflow
+ # Tools & Workflow
 
--   Use \`listStorageKeys\` to survey the keys available for Local or Session storage.
--   Use \`getStorageValues\` to access the values of specific Local or Session storage keys.
--   **CRITICAL**: Only access storage values when the keys/names are not enough, and if you have a good reason to access them.
+ -   **Prioritize Top-Level Context**: Always initiate your investigation from the top-level page's storage. Explicitly state if you are analyzing storage from a different context (e.g., an iframe).
+ -   **Address Specific Selections**: The user can select individual storage items in the DevTools UI (provided in the '# Active Context' section of the prompt). If the query is about a selected item (e.g., "Why is this key set?"), focus your response on that specific item.
+ -   **Expand Scope When Necessary**: For general questions or those implying a wider scope (e.g., "Check all storages," "Are there related cookies on subdomains?"), proactively use your tools to explore other relevant storage contexts, including iframes and different origins.
+ -   **Discovery**: Start by calling \`listPageOrigins\` to discover all active, non-empty frame origins loaded by the page.
+ -   **Storage Partitioning (LocalStorage / SessionStorage)**:
+     -   Use \`listStorageKeys\` to survey keys. The results are grouped into **partitions** characterized by unique \`storageKey\` strings.
+     -   Be aware that the same origin can have multiple storage partitions depending on frame ancestry.
+     -   Use \`getStorageValues\` to inspect specific keys. The results are grouped into an array of partition \`items\` matching the requested keys under their unique \`storageKey\`.
+ -   **Active Context**: Start by inspecting the active context's origin (provided in the '# Active Context' section of the prompt).
+ -   **Value Minimization**: Only request values using \`getStorageValues\` when key names and metadata alone are insufficient, and you have a clear hypothesis.
 
-If the user asks a question that requires an investigation of a problem, use this structure for answering:
+ # Considerations
 
--   If available, point out the root cause(s) of the problem.
-    -   Example: "**Root Cause**: The UI theme is resetting because the 'uiTheme' local storage key is set to an invalid value."
--   If applicable, list actionable solution suggestion(s) in order of impact:
-    -   Example: "**Suggestion**: Clear the 'uiTheme' local storage key or set it to 'light' or 'dark'."
-
-# Considerations
-
--   **Raw Evidence**: Treat storage data as "raw evidence". Do not make assumptions.
--   **Dynamic State**: Storage values may change over time as the user interacts with the page. ALWAYS re-request values using the \`getStorageValues\` tool when you need to inspect them, even if you have already requested them in the past. Do NOT rely on previously cached values in your memory.
--   **Brevity**: Use the precision of Strunk & White, the brevity of Hemingway, and the simple clarity of Vonnegut. Keep answers short and actionable.
--   **CRITICAL**: You are a storage debugging assistant. NEVER provide answers to questions of unrelated topics such as legal advice, financial advice, personal opinions, medical advice, religion, race, politics, sexuality, gender, or any other non web-development topics. Answer "Sorry, I can't answer that. I'm best at questions about debugging web pages." to such questions.
-`;
+ -   **Strictly Read-Only**: You cannot write, clear, delete, or edit storage.
+ -   **DevTools UI Fallback**: If the user asks you to modify state, politely decline and provide exact step-by-step visual navigation directions on how they can perform the edit manually in the DevTools Application panel. Do NOT supply Console scripts.
+ -   **Raw Evidence**: Treat storage data as raw evidence. Do not make assumptions about values without reading them first.
+ -   **Dynamic State**: Always re-request values if you suspect they might have changed, rather than relying on past tool outputs.
+ -   **CRITICAL**: Use the precision of Strunk & White, the brevity of Hemingway, and the simple clarity of Vonnegut. Don't add repeated information, and keep the whole answer short.
+ -   **CRITICAL**: You are a storage debugging assistant. NEVER answer unrelated topics (legal, financial, race, sexuality medical, religion, politics). If asked, respond: "Sorry, I can't answer that. I'm best at questions about debugging web pages."
+ `;
+function isSamePrimaryPageOrigin(context) {
+  const primaryPageTarget = SDK9.TargetManager.TargetManager.instance().primaryPageTarget();
+  return isSamePageOrigin(primaryPageTarget, context);
+}
+function isSamePageOrigin(target, context) {
+  if (!target || !context) {
+    return false;
+  }
+  const pageOrigin = Common9.ParsedURL.ParsedURL.extractOrigin(target.inspectedURL());
+  return pageOrigin !== "" && context.isOriginAllowed(pageOrigin);
+}
 var StorageContext = class extends ConversationContext {
   #item;
   constructor(item) {
@@ -9585,16 +9670,16 @@ var StorageContext = class extends ConversationContext {
     this.#item = item;
   }
   getOrigin() {
-    return this.#item.origin;
+    return this.#item.primaryTargetOrigin;
   }
   getItem() {
     return this.#item;
   }
   getTitle() {
-    if (this.#item.key) {
-      return `${this.#item.storageType}: ${this.#item.key}`;
+    if (this.#item instanceof DOMStorageItem) {
+      return `${this.#item.key ? `entry: ${this.#item.key}` : "storage:"} ${this.#item.origin}`;
     }
-    return `Storage for ${this.#item.origin}`;
+    return `Storage: ${this.getOrigin()}`;
   }
 };
 var StorageAgent = class _StorageAgent extends AiAgent {
@@ -9613,8 +9698,41 @@ var StorageAgent = class _StorageAgent extends AiAgent {
   }
   constructor(opts) {
     super(opts);
+    this.declareFunction("listPageOrigins", {
+      description: "Lists all active, non-empty frame origins loaded by the page. Use this first to discover what other targets/iframes exist on the page for querying their storage.",
+      parameters: {
+        type: 6,
+        description: "",
+        nullable: false,
+        properties: {},
+        required: []
+      },
+      displayInfoFromArgs: () => {
+        return {
+          title: lockedString6("Listing page origins"),
+          action: "listPageOrigins()"
+        };
+      },
+      handler: async () => {
+        if (!isSamePrimaryPageOrigin(this.context)) {
+          return { error: "No origin available or not allowed." };
+        }
+        const origins = /* @__PURE__ */ new Set();
+        for (const frame of SDK9.ResourceTreeModel.ResourceTreeModel.frames()) {
+          if (!isSamePageOrigin(frame.resourceTreeModel().target().outermostTarget(), this.context)) {
+            continue;
+          }
+          const origin = frame.securityOrigin;
+          if (!origin || origins.has(origin)) {
+            continue;
+          }
+          origins.add(origin);
+        }
+        return { result: { origins: Array.from(origins) } };
+      }
+    });
     this.declareFunction("listStorageKeys", {
-      description: "Lists all keys for a given storage type for the current origin.",
+      description: "Lists all keys for a given storage type for the requested origin. Returns keys grouped by storage partition.",
       parameters: {
         type: 6,
         description: "",
@@ -9624,31 +9742,50 @@ var StorageAgent = class _StorageAgent extends AiAgent {
             type: 1,
             description: "Storage type: localStorage or sessionStorage",
             nullable: false
+          },
+          origin: {
+            type: 1,
+            description: "Specific origin to list keys for.",
+            nullable: false
+          },
+          storageKey: {
+            type: 1,
+            description: "Optional. Specific storageKey to to list keys for.",
+            nullable: true
           }
         },
-        required: ["type"]
+        required: ["type", "origin"]
       },
       displayInfoFromArgs: (args) => {
         return {
           title: lockedString6("Reading storage keys"),
-          action: `listStorageKeys('${args.type}')`
+          action: `listStorageKeys('${args.type}', '${args.origin}')`
         };
       },
       handler: async (args) => {
-        const storageOrError = this.getDOMStorage(args.type);
-        if ("error" in storageOrError) {
-          return storageOrError;
+        if (!isSamePrimaryPageOrigin(this.context)) {
+          return { error: "No origin available or not allowed." };
         }
-        const items = await storageOrError.storage.getItems();
-        if (!items) {
-          return { result: JSON.stringify({ keys: [] }) };
+        const storages = resolveDOMStorages(this.context, args.type, args.origin, args.storageKey);
+        const keyAndItems = await Promise.all(storages.map(async (storage) => {
+          const items = await storage.getItems();
+          return { storageKey: storage.storageKey, items };
+        }));
+        const partitionsResult = [];
+        for (const { storageKey, items } of keyAndItems) {
+          if (!items) {
+            continue;
+          }
+          const keys = items.map(([key]) => key);
+          if (keys.length > 0) {
+            partitionsResult.push({ storageKey, keys });
+          }
         }
-        const keys = items.map((item) => item[0]);
-        return { result: JSON.stringify({ keys }) };
+        return { result: { partitions: partitionsResult } };
       }
     });
     this.declareFunction("getStorageValues", {
-      description: "Retrieve specific string values from storage for requested keys.",
+      description: "Retrieve specific string values from storage partitions for requested keys.",
       parameters: {
         type: 6,
         description: "",
@@ -9664,89 +9801,83 @@ var StorageAgent = class _StorageAgent extends AiAgent {
             description: "A list of keys to retrieve values for.",
             items: { type: 1, description: "A storage key." },
             nullable: false
+          },
+          origin: {
+            type: 1,
+            description: "Specific origin to get values for.",
+            nullable: false
+          },
+          storageKey: {
+            type: 1,
+            description: "Optional. Specific storageKey partition to get values for.",
+            nullable: true
           }
         },
-        required: ["type", "keys"]
+        required: ["type", "keys", "origin"]
       },
       displayInfoFromArgs: (args) => {
         return {
           title: lockedString6("Reading storage values"),
-          action: `getStorageValues('${args.type}', ${JSON.stringify(args.keys)})`
+          action: `getStorageValues('${args.type}', ${JSON.stringify(args.keys)}, '${args.origin}'${args.storageKey ? `, '${args.storageKey}'` : ""})`
         };
       },
       handler: async (args, options) => {
+        if (!isSamePrimaryPageOrigin(this.context)) {
+          return { error: "No origin available or not allowed." };
+        }
+        const storages = resolveDOMStorages(this.context, args.type, args.origin, args.storageKey);
+        if (storages.length === 0) {
+          return { error: "No matching storage partitions found." };
+        }
         if (options?.approved !== true) {
           const keyString = args.keys.map((k) => `\`${k}\``).join(", ");
+          const uniqueTargetOrigins = Array.from(new Set(storages.map((storage) => {
+            const parsed = SDK9.StorageKeyManager.parseStorageKey(storage.storageKey || "");
+            return parsed.origin;
+          })));
+          const targetsDesc = uniqueTargetOrigins.join(", ");
           return {
             requiresApproval: true,
-            description: lockedString6(`The AI wants to access the value(s) of ${args.type} keys ${keyString}.`)
+            description: lockedString6(`The AI wants to access the value(s) of ${args.type} keys ${keyString} on ${targetsDesc}.`)
           };
         }
-        const storageOrError = this.getDOMStorage(args.type);
-        if ("error" in storageOrError) {
-          return storageOrError;
+        const itemsResult = [];
+        const MAX_VALUE_SIZE = 1e4;
+        const keyAndItems = await Promise.all(storages.map(async (storage) => {
+          const items = await storage.getItems();
+          return { storageKey: storage.storageKey, items };
+        }));
+        for (const { storageKey, items } of keyAndItems) {
+          if (!items) {
+            continue;
+          }
+          const itemMap = new Map(items);
+          const storageValues = {};
+          for (const key of args.keys) {
+            const value = itemMap.get(key);
+            if (value === void 0) {
+              continue;
+            }
+            const truncatedValue = value.length > MAX_VALUE_SIZE ? value.substring(0, MAX_VALUE_SIZE) + "... <truncated>" : value;
+            storageValues[key] = truncatedValue;
+          }
+          itemsResult.push({ storageKey, values: storageValues });
         }
-        const items = await storageOrError.storage.getItems();
-        if (!items) {
-          return { result: JSON.stringify({ items: {} }) };
-        }
-        const itemMap = new Map(items);
-        const resultRecord = {};
-        for (const key of args.keys) {
-          resultRecord[key] = itemMap.get(key) ?? null;
-        }
-        return { result: JSON.stringify({ items: resultRecord }) };
+        return { result: { items: itemsResult } };
       }
     });
   }
-  getDOMStorage(type) {
-    const origin = this.context?.getOrigin();
-    if (!origin) {
-      return { error: "No origin available." };
+  static #formatContext(item) {
+    const primaryTargetOrigin = `Primary target: ${item.primaryTargetOrigin}`;
+    if (item instanceof DOMStorageItem) {
+      return `${primaryTargetOrigin}
+User-selected Context: DOM Storage
+ Type: ${item.type}
+StorageKey: ${item.storageKey}
+Origin: ${item.origin}${item.key ? `
+Key: ${item.key}` : ""}`;
     }
-    const storageKey = this.context?.getItem().storageKey;
-    const isLocalStorage = type === "localStorage";
-    if (storageKey) {
-      const domStorageModels = SDK9.TargetManager.TargetManager.instance().models(SDK9.DOMStorageModel.DOMStorageModel);
-      for (const domStorageModel2 of domStorageModels) {
-        domStorageModel2.enable();
-        const storage2 = domStorageModel2.storageForId({ storageKey, isLocalStorage });
-        if (storage2) {
-          return { storage: storage2 };
-        }
-      }
-      return { error: `Storage not found for key ${storageKey} and type ${type}` };
-    }
-    const target = SDK9.TargetManager.TargetManager.instance().primaryPageTarget();
-    if (!target) {
-      return { error: "No primary page target found." };
-    }
-    const domStorageModel = target.model(SDK9.DOMStorageModel.DOMStorageModel);
-    if (!domStorageModel) {
-      return { error: "DOMStorageModel not found." };
-    }
-    domStorageModel.enable();
-    const storages = domStorageModel.storages();
-    const storage = storages.find((s) => {
-      const storageKey2 = s.storageKey;
-      if (!storageKey2) {
-        return false;
-      }
-      const parsedKey = SDK9.StorageKeyManager.parseStorageKey(storageKey2);
-      return parsedKey.origin === origin && s.isLocalStorage === isLocalStorage;
-    });
-    if (!storage) {
-      return { error: `Storage not found for origin ${origin} and type ${type}` };
-    }
-    return { storage };
-  }
-  static #formatContext(origin, item) {
-    if (item.storageType && item.key) {
-      return `Storage Type: ${item.storageType}
-Origin: ${origin}
-Key: ${item.key}`;
-    }
-    return `Origin: ${origin}`;
+    return primaryTargetOrigin;
   }
   async *handleContextDetails(context) {
     if (!context) {
@@ -9757,7 +9888,7 @@ Key: ${item.key}`;
       details: [
         {
           title: "Selected Storage Context",
-          text: _StorageAgent.#formatContext(context.getOrigin(), context.getItem())
+          text: _StorageAgent.#formatContext(context.getItem())
         }
       ]
     };
@@ -9767,9 +9898,111 @@ Key: ${item.key}`;
       return query;
     }
     return `# Active Context
-${_StorageAgent.#formatContext(context.getOrigin(), context.getItem())}
+${_StorageAgent.#formatContext(context.getItem())}
 
 ${query}`;
+  }
+};
+function resolveDOMStorages(context, type, origin, storageKey) {
+  const resolvedStorages = [];
+  const isLocalStorage = type === "localStorage";
+  const domStorageModels = SDK9.TargetManager.TargetManager.instance().models(SDK9.DOMStorageModel.DOMStorageModel);
+  for (const domStorageModel of domStorageModels) {
+    if (!isSamePageOrigin(domStorageModel.target().outermostTarget(), context)) {
+      continue;
+    }
+    for (const storage of domStorageModel.storages()) {
+      if (storage.isLocalStorage !== isLocalStorage) {
+        continue;
+      }
+      const currentStorageKey = storage.storageKey;
+      if (!currentStorageKey) {
+        continue;
+      }
+      if (storageKey) {
+        if (storageKey === currentStorageKey) {
+          const parsedKey2 = SDK9.StorageKeyManager.parseStorageKey(currentStorageKey);
+          if (parsedKey2.origin === origin) {
+            resolvedStorages.push(storage);
+          }
+        }
+        continue;
+      }
+      const parsedKey = SDK9.StorageKeyManager.parseStorageKey(currentStorageKey);
+      if (parsedKey.origin === origin) {
+        resolvedStorages.push(storage);
+      }
+    }
+  }
+  return resolvedStorages;
+}
+
+// gen/front_end/models/ai_assistance/AiAgent2.js
+var AiAgent2_exports = {};
+__export(AiAgent2_exports, {
+  AiAgent2: () => AiAgent2
+});
+import * as Host15 from "./../../core/host/host.js";
+
+// gen/front_end/models/ai_assistance/skills/styling.skill.js
+var skill = {
+  "name": "styling",
+  "description": "Helping with CSS and styling",
+  "allowedTools": [],
+  "instructions": "You are a CSS expert helping the user style elements."
+};
+
+// gen/front_end/models/ai_assistance/skills/SkillRegistry.js
+var SKILLS = {
+  styling: skill
+};
+
+// gen/front_end/models/ai_assistance/AiAgent2.js
+var AiAgent2 = class extends AiAgent {
+  preamble = "You are a unified AI assistant in Chrome DevTools. You can learn skills to help the user.";
+  clientFeature = Host15.AidaClient.ClientFeature.CHROME_STYLING_AGENT;
+  // Placeholder
+  userTier = "TESTERS";
+  get options() {
+    return {};
+  }
+  #activeSkills = /* @__PURE__ */ new Set();
+  async *handleContextDetails(_select) {
+    yield {
+      type: "context",
+      details: [{
+        title: "Status",
+        text: "Minimal agent initialized."
+      }]
+    };
+  }
+  async learnSkill(names) {
+    let response = "";
+    for (const name of names) {
+      debugLog(`AiAgent2: Attempting to load skill ${name}`);
+      if (this.#activeSkills.has(name)) {
+        debugLog(`AiAgent2: Skill ${name} is already loaded`);
+        response += `Skill ${name} is already loaded.
+`;
+        continue;
+      }
+      const skillObj = SKILLS[name];
+      if (skillObj) {
+        this.#activeSkills.add(name);
+        debugLog(`AiAgent2: Skill ${name} loaded successfully`);
+        response += `Skill ${name} loaded. Instructions:
+${skillObj.instructions}
+`;
+      } else {
+        debugLog(`AiAgent2: Failed to load skill ${name}`);
+        response += `Failed to load skill ${name}.
+`;
+      }
+    }
+    return response.trim();
+  }
+  get activeSkills() {
+    return this.#activeSkills;
   }
 };
 
@@ -9782,8 +10015,8 @@ __export(AiConversation_exports, {
   NOT_FOUND_IMAGE_DATA: () => NOT_FOUND_IMAGE_DATA,
   generateContextDetailsMarkdown: () => generateContextDetailsMarkdown
 });
-import * as Common10 from "./../../core/common/common.js";
-import * as Host15 from "./../../core/host/host.js";
+import * as Common11 from "./../../core/common/common.js";
+import * as Host16 from "./../../core/host/host.js";
 import * as Platform5 from "./../../core/platform/platform.js";
 import * as Root15 from "./../../core/root/root.js";
 import * as SDK10 from "./../../core/sdk/sdk.js";
@@ -9796,22 +10029,22 @@ __export(AiHistoryStorage_exports, {
   MAX_RECENT_PROMPTS_COUNT: () => MAX_RECENT_PROMPTS_COUNT,
   RECENT_PROMPTS_SIZE_LIMIT: () => RECENT_PROMPTS_SIZE_LIMIT
 });
-import * as Common9 from "./../../core/common/common.js";
+import * as Common10 from "./../../core/common/common.js";
 var instance = null;
 var DEFAULT_MAX_STORAGE_SIZE = 50 * 1024 * 1024;
 var MAX_RECENT_PROMPTS_COUNT = 20;
 var RECENT_PROMPTS_SIZE_LIMIT = 100 * 1024;
-var AiHistoryStorage = class _AiHistoryStorage extends Common9.ObjectWrapper.ObjectWrapper {
+var AiHistoryStorage = class _AiHistoryStorage extends Common10.ObjectWrapper.ObjectWrapper {
   #historySetting;
   #imageHistorySettings;
   #recentPromptsSetting;
-  #mutex = new Common9.Mutex.Mutex();
+  #mutex = new Common10.Mutex.Mutex();
   #maxStorageSize;
   constructor(maxStorageSize = DEFAULT_MAX_STORAGE_SIZE) {
     super();
-    this.#historySetting = Common9.Settings.Settings.instance().createSetting("ai-assistance-history-entries", []);
-    this.#imageHistorySettings = Common9.Settings.Settings.instance().createSetting("ai-assistance-history-images", []);
-    this.#recentPromptsSetting = Common9.Settings.Settings.instance().createSetting("ai-assistance-recent-prompts", []);
+    this.#historySetting = Common10.Settings.Settings.instance().createSetting("ai-assistance-history-entries", []);
+    this.#imageHistorySettings = Common10.Settings.Settings.instance().createSetting("ai-assistance-history-images", []);
+    this.#recentPromptsSetting = Common10.Settings.Settings.instance().createSetting("ai-assistance-recent-prompts", []);
     this.#maxStorageSize = maxStorageSize;
   }
   clearForTest() {
@@ -9989,7 +10222,7 @@ var AiConversation = class _AiConversation {
   #onInspectElement;
   #networkTimeCalculator;
   constructor(options) {
-    const { type, data = [], id = crypto.randomUUID(), isReadOnly = true, aidaClient = new Host15.AidaClient.AidaClient(), changeManager, isExternal = false, performanceRecordAndReload, onInspectElement, networkTimeCalculator, lighthouseRecording } = options;
+    const { type, data = [], id = crypto.randomUUID(), isReadOnly = true, aidaClient = new Host16.AidaClient.AidaClient(), changeManager, isExternal = false, performanceRecordAndReload, onInspectElement, networkTimeCalculator, lighthouseRecording } = options;
     this.#changeManager = changeManager;
     this.#aidaClient = aidaClient;
     this.#performanceRecordAndReload = performanceRecordAndReload;
@@ -10359,7 +10592,7 @@ function isAiAssistanceContextSelectionAgentEnabled() {
 function getPrimaryPageOrigin() {
   const target = SDK10.TargetManager.TargetManager.instance().primaryPageTarget();
   const inspectedURL = target?.inspectedURL();
-  return inspectedURL ? new Common10.ParsedURL.ParsedURL(inspectedURL).securityOrigin() : void 0;
+  return inspectedURL ? new Common11.ParsedURL.ParsedURL(inspectedURL).securityOrigin() : void 0;
 }
 
 // gen/front_end/models/ai_assistance/BuiltInAi.js
@@ -10367,11 +10600,11 @@ var BuiltInAi_exports = {};
 __export(BuiltInAi_exports, {
   BuiltInAi: () => BuiltInAi
 });
-import * as Common11 from "./../../core/common/common.js";
-import * as Host16 from "./../../core/host/host.js";
+import * as Common12 from "./../../core/common/common.js";
+import * as Host17 from "./../../core/host/host.js";
 import * as Root16 from "./../../core/root/root.js";
 var builtInAiInstance;
-var BuiltInAi = class _BuiltInAi extends Common11.ObjectWrapper.ObjectWrapper {
+var BuiltInAi = class _BuiltInAi extends Common12.ObjectWrapper.ObjectWrapper {
   #availability = null;
   #hasGpu;
   #consoleInsightsSession;
@@ -10549,31 +10782,31 @@ Your instructions are as follows:
     if (this.#hasGpu) {
       switch (this.#availability) {
         case "unavailable":
-          Host16.userMetrics.builtInAiAvailability(
+          Host17.userMetrics.builtInAiAvailability(
             0
             /* Host.UserMetrics.BuiltInAiAvailability.UNAVAILABLE_HAS_GPU */
           );
           break;
         case "downloadable":
-          Host16.userMetrics.builtInAiAvailability(
+          Host17.userMetrics.builtInAiAvailability(
             1
             /* Host.UserMetrics.BuiltInAiAvailability.DOWNLOADABLE_HAS_GPU */
           );
           break;
         case "downloading":
-          Host16.userMetrics.builtInAiAvailability(
+          Host17.userMetrics.builtInAiAvailability(
             2
             /* Host.UserMetrics.BuiltInAiAvailability.DOWNLOADING_HAS_GPU */
           );
           break;
         case "available":
-          Host16.userMetrics.builtInAiAvailability(
+          Host17.userMetrics.builtInAiAvailability(
             3
             /* Host.UserMetrics.BuiltInAiAvailability.AVAILABLE_HAS_GPU */
           );
           break;
         case "disabled":
-          Host16.userMetrics.builtInAiAvailability(
+          Host17.userMetrics.builtInAiAvailability(
             4
             /* Host.UserMetrics.BuiltInAiAvailability.DISABLED_HAS_GPU */
           );
@@ -10582,55 +10815,37 @@ Your instructions are as follows:
     } else {
       switch (this.#availability) {
         case "unavailable":
-          Host16.userMetrics.builtInAiAvailability(
+          Host17.userMetrics.builtInAiAvailability(
             5
             /* Host.UserMetrics.BuiltInAiAvailability.UNAVAILABLE_NO_GPU */
           );
           break;
         case "downloadable":
-          Host16.userMetrics.builtInAiAvailability(
+          Host17.userMetrics.builtInAiAvailability(
             6
             /* Host.UserMetrics.BuiltInAiAvailability.DOWNLOADABLE_NO_GPU */
           );
           break;
         case "downloading":
-          Host16.userMetrics.builtInAiAvailability(
+          Host17.userMetrics.builtInAiAvailability(
             7
             /* Host.UserMetrics.BuiltInAiAvailability.DOWNLOADING_NO_GPU */
           );
           break;
         case "available":
-          Host16.userMetrics.builtInAiAvailability(
+          Host17.userMetrics.builtInAiAvailability(
             8
             /* Host.UserMetrics.BuiltInAiAvailability.AVAILABLE_NO_GPU */
           );
           break;
         case "disabled":
-          Host16.userMetrics.builtInAiAvailability(
+          Host17.userMetrics.builtInAiAvailability(
             9
             /* Host.UserMetrics.BuiltInAiAvailability.DISABLED_NO_GPU */
           );
           break;
       }
     }
-  }
-};
-
-// gen/front_end/models/ai_assistance/StorageItem.js
-var StorageItem_exports = {};
-__export(StorageItem_exports, {
-  StorageItem: () => StorageItem
-});
-var StorageItem = class {
-  origin;
-  storageKey;
-  storageType;
-  key;
-  constructor(data) {
-    this.origin = data.origin;
-    this.storageKey = data.storageKey;
-    this.storageType = data.storageType;
-    this.key = data.key;
   }
 };
 export {
@@ -10640,6 +10855,7 @@ export {
   AccessibilityAgent_exports as AccessibilityAgent,
   AgentProject_exports as AgentProject,
   AiAgent_exports as AiAgent,
+  AiAgent2_exports as AiAgent2,
   AiConversation_exports as AiConversation,
   AiHistoryStorage_exports as AiHistoryStorage,
   AiUtils_exports as AiUtils,

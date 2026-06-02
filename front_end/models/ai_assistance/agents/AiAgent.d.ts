@@ -1,4 +1,5 @@
 import * as Host from '../../../core/host/host.js';
+import type { UrlString } from '../../../core/platform/DevToolsPath.js';
 import type * as SDK from '../../../core/sdk/sdk.js';
 import type * as Protocol from '../../../generated/protocol.js';
 import type * as LHModel from '../../lighthouse/lighthouse.js';
@@ -243,6 +244,12 @@ export interface SourceFileAiWidget {
         uiSourceCode: Workspace.UISourceCode.UISourceCode;
     };
 }
+export interface SourceFilesListAiWidget {
+    name: 'SOURCE_FILES_LIST';
+    data: {
+        uiSourceCodes: Workspace.UISourceCode.UISourceCode[];
+    };
+}
 export interface LighthouseReportAiWidget {
     name: 'LIGHTHOUSE_REPORT';
     data: {
@@ -263,7 +270,16 @@ export interface NetworkRequestGeneralHeadersAiWidget {
         request: SDK.NetworkRequest.NetworkRequest;
     };
 }
-export type AiWidget = ComputedStyleAiWidget | CoreVitalsAiWidget | StylePropertiesAiWidget | DomTreeAiWidget | PerformanceTraceAiWidget | PerfInsightAiWidget | TimelineRangeSummaryAiWidget | BottomUpTreeAiWidget | SourceFileAiWidget | LighthouseReportAiWidget | TimelineEventSummaryAiWidget | NetworkRequestGeneralHeadersAiWidget;
+export interface SourceCodeAiWidget {
+    name: 'SOURCE_CODE';
+    data: {
+        url: UrlString;
+        code: string;
+        line?: number;
+        column?: number;
+    };
+}
+export type AiWidget = ComputedStyleAiWidget | CoreVitalsAiWidget | StylePropertiesAiWidget | DomTreeAiWidget | PerformanceTraceAiWidget | PerfInsightAiWidget | TimelineRangeSummaryAiWidget | BottomUpTreeAiWidget | SourceFileAiWidget | LighthouseReportAiWidget | TimelineEventSummaryAiWidget | NetworkRequestGeneralHeadersAiWidget | SourceCodeAiWidget | SourceFilesListAiWidget;
 export type FunctionCallHandlerResult<Result> = {
     requiresApproval: true;
     /**
