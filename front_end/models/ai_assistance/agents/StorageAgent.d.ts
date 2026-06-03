@@ -5,7 +5,7 @@ import { type AgentOptions, AiAgent, type ContextResponse, ConversationContext, 
 export declare class StorageContext extends ConversationContext<StorageItem> {
     #private;
     constructor(item: StorageItem);
-    getOrigin(): string;
+    getURL(): string;
     getItem(): StorageItem;
     getTitle(): string;
 }

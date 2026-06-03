@@ -7534,6 +7534,10 @@ var UIStringsNotTranslate7 = {
    */
   inputPlaceholderForNoContextBranded: "Ask Gemini",
   /**
+   * @description Placeholder text for the chat UI input when AIAgent2 is enabled.
+   */
+  inputPlaceholderForV2: "Ask a question (AIAgent2 enabled)",
+  /**
    * @description Disclaimer text right after the chat input.
    */
   inputDisclaimerForStyling: "Chat messages and any data the inspected page can access via Web APIs are sent to Google and may be seen by human reviewers to improve this feature. This is an experimental AI feature and won\u2019t always get it right.",
@@ -8391,6 +8395,9 @@ var AiAssistancePanel = class _AiAssistancePanel extends UI11.Panel.Panel {
   #getChatInputPlaceholder() {
     if (!this.#conversation) {
       return i18nString6(UIStrings6.followTheSteps);
+    }
+    if (Root8.Runtime.hostConfig.devToolsAiV2Architecture?.enabled) {
+      return lockedString8(UIStringsNotTranslate7.inputPlaceholderForV2);
     }
     if (this.#conversation && this.#conversation.isBlockedByOrigin) {
       return lockedString8(UIStringsNotTranslate7.crossOriginError);

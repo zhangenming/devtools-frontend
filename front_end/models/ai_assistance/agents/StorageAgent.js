@@ -58,7 +58,7 @@ export class StorageContext extends ConversationContext {
         super();
         this.#item = item;
     }
-    getOrigin() {
+    getURL() {
         return this.#item.primaryTargetOrigin;
     }
     getItem() {

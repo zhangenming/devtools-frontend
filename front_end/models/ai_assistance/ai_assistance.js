@@ -1253,17 +1253,45 @@ var AiAgent_exports = {};
 __export(AiAgent_exports, {
   AiAgent: () => AiAgent,
   ConversationContext: () => ConversationContext,
-  MAX_STEPS: () => MAX_STEPS,
-  isOpaqueOrigin: () => isOpaqueOrigin
+  MAX_STEPS: () => MAX_STEPS
 });
 import * as Host2 from "./../../core/host/host.js";
 import * as Root2 from "./../../core/root/root.js";
-var MAX_SUGGESTION_LENGTH = 200;
+
+// gen/front_end/models/ai_assistance/AiOrigins.js
+var AiOrigins_exports = {};
+__export(AiOrigins_exports, {
+  areOriginsEquivalent: () => areOriginsEquivalent,
+  extractContextOrigin: () => extractContextOrigin,
+  isOpaqueOrigin: () => isOpaqueOrigin
+});
+import * as Common4 from "./../../core/common/common.js";
 function isOpaqueOrigin(origin) {
   return origin === "null" || origin === "data:" || origin.startsWith("about") || origin.startsWith("detached");
 }
+function extractContextOrigin(contextURL) {
+  if (isOpaqueOrigin(contextURL)) {
+    return contextURL;
+  }
+  if (contextURL.startsWith("trace-")) {
+    return contextURL;
+  }
+  return Common4.ParsedURL.ParsedURL.extractOrigin(contextURL);
+}
+function areOriginsEquivalent(origin1, origin2) {
+  if (isOpaqueOrigin(origin1) || isOpaqueOrigin(origin2)) {
+    return false;
+  }
+  return origin1 === origin2;
+}
+
+// gen/front_end/models/ai_assistance/agents/AiAgent.js
+var MAX_SUGGESTION_LENGTH = 200;
 var MAX_STEPS = 10;
 var ConversationContext = class {
+  getOrigin() {
+    return extractContextOrigin(this.getURL());
+  }
   /**
    * Returns true if this data context (e.g., a DOM node or Network Request) is
    * allowed to be included in a conversation that is locked to the provided
@@ -1277,14 +1305,11 @@ var ConversationContext = class {
    * If undefined, the conversation has not yet been locked to an origin.
    */
   isOriginAllowed(establishedOrigin) {
-    const dataOrigin = this.getOrigin();
-    if (isOpaqueOrigin(dataOrigin)) {
-      return false;
-    }
+    const origin = this.getOrigin();
     if (!establishedOrigin) {
-      return true;
+      return !isOpaqueOrigin(origin);
     }
-    return dataOrigin === establishedOrigin;
+    return areOriginsEquivalent(origin, establishedOrigin);
   }
   /**
    * This method is called at the start of `AiAgent.run`.
@@ -2258,8 +2283,8 @@ var AccessibilityContext = class extends ConversationContext {
   #url() {
     return this.#lh.finalUrl ?? this.#lh.finalDisplayedUrl;
   }
-  getOrigin() {
-    return new URL(this.#url()).origin;
+  getURL() {
+    return this.#url();
   }
   getItem() {
     return this.#lh;
@@ -3134,8 +3159,8 @@ var FileContext = class extends ConversationContext {
     super();
     this.#file = file;
   }
-  getOrigin() {
-    return new URL(this.#file.url()).origin;
+  getURL() {
+    return this.#file.url();
   }
   getItem() {
     return this.#file;
@@ -3195,7 +3220,6 @@ __export(NetworkAgent_exports, {
   NetworkAgent: () => NetworkAgent,
   RequestContext: () => RequestContext
 });
-import * as Common4 from "./../../core/common/common.js";
 import * as Host6 from "./../../core/host/host.js";
 import * as i18n7 from "./../../core/i18n/i18n.js";
 import * as Root6 from "./../../core/root/root.js";
@@ -3275,13 +3299,13 @@ var RequestContext = class extends ConversationContext {
     this.#calculator = calculator;
   }
   /**
-   * Note: this is not the literal origin of the network request. This origin
+   * Note: this is not the literal origin of the network request. This URL
    * is used to determine when we should force the user to start a new AI
    * conversation when the context changes. We allow a single AI conversation to
    * inspect all network requests that were made for that given target URL.
    */
-  getOrigin() {
-    return Common4.ParsedURL.ParsedURL.extractOrigin(this.#request.documentURL);
+  getURL() {
+    return this.#request.documentURL;
   }
   getItem() {
     return this.#request;
@@ -5720,12 +5744,9 @@ var AgentFocus = class _AgentFocus {
   }
   lookupEvent(key) {
     try {
-      return this.eventsSerializer.eventForKey(key, this.#data.parsedTrace);
-    } catch (err) {
-      if (err.toString().includes("Unknown trace event") || err.toString().includes("Unknown profile call")) {
-        return null;
-      }
-      throw err;
+      return this.eventsSerializer.eventForKey(key, this.#data.parsedTrace) ?? null;
+    } catch {
+      return null;
     }
   }
   /**
@@ -5932,10 +5953,11 @@ var PerformanceTraceContext = class _PerformanceTraceContext extends Conversatio
     super();
     this.#focus = focus;
   }
-  getOrigin() {
+  getURL() {
+    const url = this.#focus.parsedTrace.data.Meta.mainFrameURL;
     try {
-      const url = new URL(this.#focus.parsedTrace.data.Meta.mainFrameURL);
-      return url.origin;
+      new URL(url);
+      return url;
     } catch {
       const { min, max } = this.#focus.parsedTrace.data.Meta.traceBounds;
       return `trace-${min}-${max}`;
@@ -7216,12 +7238,12 @@ var NodeContext = class extends ConversationContext {
     super();
     this.#node = node;
   }
-  getOrigin() {
+  getURL() {
     const ownerDocument = this.#node.ownerDocument;
     if (!ownerDocument) {
       return "detached";
     }
-    return new URL(ownerDocument.documentURL).origin;
+    return ownerDocument.documentURL;
   }
   getItem() {
     return this.#node;
@@ -7777,19 +7799,26 @@ ${await _StylingAgent.describeElement(selectedElement.getItem())}
 // gen/front_end/models/ai_assistance/agents/ContextSelectionAgent.js
 var lockedString5 = i18n13.i18n.lockedString;
 var preamble6 = `
-You are a Web Development Assistant integrated into Chrome DevTools. Your tone is educational, supportive, and technically precise.
-You aim to help developers of all levels, prioritizing teaching web concepts as the primary entry point for any solution.
+You are an advanced Web Development Assistant and AI routing agent integrated into Chrome DevTools. Your tone is educational, supportive, and technically precise. You aim to help developers of all levels, prioritizing teaching web concepts as the primary entry point for any solution.
+
+Your role is to understand the user's query, identify the appropriate specialized agent to handle it, and select the relevant context from the page to assist that agent.
+
+# Workflow
+1.  **Analyze**: Understand the user's intent and what they are trying to achieve.
+2.  **Classify**: Determine which specialized agent is best suited for the task (e.g., StylingAgent for CSS/styling issues, NetworkAgent for network requests, FileAgent for source files, PerformanceAgent for performance details, AccessibilityAgent for accessibility reports, or StorageAgent for storage issues).
+3.  **Gather Context**: Identify what information the specialized agent will need. Proactively use your tools to find and select this context (e.g., finding the relevant DOM node, network request, file, or performance trace). Always try to select a single specific context before answering the question.
+4.  **Delegate**: Once context is selected, hand over to the specialized agent. If you are unable to delegate or gather more information, provide a comprehensive guide on how to fix the issue using Chrome DevTools, explaining how and why, or suggest any panel/flow that may help.
 
 # Considerations
 * Determine what is the domain of the question - styling, network, sources, performance or other part of DevTools.
 * For questions about performance (e.g., general performance issues, page speed, performance metrics like LCP, INP, CLS), use performanceRecordAndReload to record a performance trace.
-* Proactively try to gather additional data. If a select specific data can be selected, select one.
-* Always try select single specific context before answering the question.
+* Proactively try to gather additional data. If a specific piece of data can be selected, select it.
+* Always try to select a single specific context before answering the question.
 * Avoid making assumptions without sufficient evidence, and always seek further clarification if needed.
 * When presenting solutions, clearly distinguish between the primary cause and contributing factors.
 * Please answer only if you are sure about the answer. Otherwise, explain why you're not able to answer.
 * If you are unable to gather more information provide a comprehensive guide to how to fix the issue using Chrome DevTools and explain how and why.
-* You can suggest any panel or flow in Chrome DevTools that may help the user out
+* You can suggest any panel or flow in Chrome DevTools that may help the user out.
 
 # Formatting Guidelines
 * Use Markdown for all code snippets.
@@ -7797,7 +7826,7 @@ You aim to help developers of all levels, prioritizing teaching web concepts as 
 * **CRITICAL**: Use the precision of Strunk & White, the brevity of Hemingway, and the simple clarity of Vonnegut. Don't add repeated information, and keep the whole answer short.
 
 * **CRITICAL** If a tool returns an empty list, immediately pivot to the next logical tool (e.g., from sources to network).
-* **CRITICAL** Always exhaust all possible way to find and select context from different domains.
+* **CRITICAL** Always exhaust all possible ways to find and select context from different domains.
 * **CRITICAL** NEVER write full Python programs - you should only write individual statements that invoke a single function from the provided library.
 * **CRITICAL** NEVER output text before a function call. Always do a function call first.
 * **CRITICAL** You are a debugging assistant in DevTools. NEVER provide answers to questions of unrelated topics such as legal advice, financial advice, personal opinions, medical advice, religion, race, politics, sexuality, gender, or any other non web-development topics. Answer "Sorry, I can't answer that. I'm best at questions about debugging web pages." to such questions.
@@ -8304,7 +8333,7 @@ var ConversationSummaryContext = class extends ConversationContext {
     super();
     this.#conversation = conversation;
   }
-  getOrigin() {
+  getURL() {
     return "devtools://ai-assistance";
   }
   getItem() {
@@ -8456,7 +8485,7 @@ var GreenDevContext = class extends ConversationContext {
     super();
     this.#context = context;
   }
-  getOrigin() {
+  getURL() {
     return "devtools://ai-assistance";
   }
   getItem() {
@@ -9669,7 +9698,7 @@ var StorageContext = class extends ConversationContext {
     super();
     this.#item = item;
   }
-  getOrigin() {
+  getURL() {
     return this.#item.primaryTargetOrigin;
   }
   getItem() {
@@ -9959,14 +9988,60 @@ var SKILLS = {
 
 // gen/front_end/models/ai_assistance/AiAgent2.js
 var AiAgent2 = class extends AiAgent {
+  // TODO: The static preamble is a placeholder and will eventually live server-side.
   preamble = "You are a unified AI assistant in Chrome DevTools. You can learn skills to help the user.";
   clientFeature = Host15.AidaClient.ClientFeature.CHROME_STYLING_AGENT;
   // Placeholder
   userTier = "TESTERS";
+  #skillsInjected = false;
   get options() {
     return {};
   }
   #activeSkills = /* @__PURE__ */ new Set();
+  constructor(opts) {
+    super(opts);
+    const skillsList = Object.keys(SKILLS).join(", ");
+    this.declareFunction("learnSkills", {
+      description: `Load skills to help with the task. Available skills: ${skillsList}.`,
+      parameters: {
+        type: 6,
+        description: "Parameters for learning skills",
+        properties: {
+          skills: {
+            type: 5,
+            items: {
+              type: 1,
+              description: "Skill name"
+            },
+            description: "List of skill names to load"
+          }
+        },
+        required: ["skills"]
+      },
+      displayInfoFromArgs: (args) => {
+        return {
+          title: `Learning skills: ${args.skills.join(", ")}`
+        };
+      },
+      handler: async (args) => {
+        const result = await this.learnSkill(args.skills);
+        return { result };
+      }
+    });
+  }
+  async enhanceQuery(query) {
+    if (this.#skillsInjected) {
+      return query;
+    }
+    this.#skillsInjected = true;
+    const skillsManifest = Object.entries(SKILLS).map(([name, skill2]) => `- ${name}: ${skill2.description}`).join("\n");
+    return `Available skills:
+${skillsManifest}
+
+You must call \`learnSkills\` to load a skill before you can use it.
+
+User query: ${query}`;
+  }
   async *handleContextDetails(_select) {
     yield {
       type: "context",
@@ -9995,7 +10070,7 @@ ${skillObj.instructions}
 `;
       } else {
         debugLog(`AiAgent2: Failed to load skill ${name}`);
-        response += `Failed to load skill ${name}.
+        response += `Failed to load skill ${name}. Valid skills are: ${Object.keys(SKILLS).join(", ")}.
 `;
       }
     }
@@ -10458,35 +10533,24 @@ ${item.text.trim()}`);
       allowedOrigin: this.allowedOrigin,
       history
     };
+    this.#agent = Root15.Runtime.hostConfig.devToolsAiV2Architecture?.enabled ? new AiAgent2(options) : this.#createV1Agent(type, options);
+  }
+  #createV1Agent(type, options) {
     switch (type) {
-      case "freestyler": {
-        this.#agent = new StylingAgent(options);
-        break;
-      }
-      case "drjones-network-request": {
-        this.#agent = new NetworkAgent(options);
-        break;
-      }
-      case "drjones-file": {
-        this.#agent = new FileAgent(options);
-        break;
-      }
-      case "drjones-performance-full": {
-        this.#agent = new PerformanceAgent(options);
-        break;
-      }
-      case "accessibility": {
-        this.#agent = new AccessibilityAgent(options);
-        break;
-      }
-      case "storage": {
-        this.#agent = new StorageAgent(options);
-        break;
-      }
-      case "none": {
-        this.#agent = new ContextSelectionAgent(options);
-        break;
-      }
+      case "freestyler":
+        return new StylingAgent(options);
+      case "drjones-network-request":
+        return new NetworkAgent(options);
+      case "drjones-file":
+        return new FileAgent(options);
+      case "drjones-performance-full":
+        return new PerformanceAgent(options);
+      case "accessibility":
+        return new AccessibilityAgent(options);
+      case "storage":
+        return new StorageAgent(options);
+      case "none":
+        return new ContextSelectionAgent(options);
       default:
         Platform5.assertNever(type, "Unknown conversation type");
     }
@@ -10858,6 +10922,7 @@ export {
   AiAgent2_exports as AiAgent2,
   AiConversation_exports as AiConversation,
   AiHistoryStorage_exports as AiHistoryStorage,
+  AiOrigins_exports as AiOrigins,
   AiUtils_exports as AiUtils,
   BuiltInAi_exports as BuiltInAi,
   ChangeManager_exports as ChangeManager,
