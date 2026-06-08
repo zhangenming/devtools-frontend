@@ -473,11 +473,11 @@ function defaultView(input, output, target) {
     }
     // clang-format on
 }
-function createNodeContext(node) {
+function createDOMNodeContext(node) {
     if (!node) {
         return null;
     }
-    return new AiAssistanceModel.StylingAgent.NodeContext(node);
+    return new AiAssistanceModel.DOMNodeContext.DOMNodeContext(node);
 }
 function createFileContext(file) {
     if (!file) {
@@ -919,7 +919,7 @@ export class AiAssistancePanel extends UI.Panel.Panel {
         this.#viewOutput.chatView?.focusTextInput();
         void this.#handleAidaAvailabilityChange();
         this.#selectedElement =
-            createNodeContext(selectedElementFilter(UI.Context.Context.instance().flavor(SDK.DOMModel.DOMNode)));
+            createDOMNodeContext(selectedElementFilter(UI.Context.Context.instance().flavor(SDK.DOMModel.DOMNode)));
         this.#selectedRequest =
             createRequestContext(UI.Context.Context.instance().flavor(SDK.NetworkRequest.NetworkRequest));
         this.#selectedPerformanceTrace =
@@ -980,7 +980,7 @@ export class AiAssistancePanel extends UI.Panel.Panel {
         if (this.#selectedElement?.getItem() === ev.data) {
             return;
         }
-        this.#selectedElement = createNodeContext(selectedElementFilter(ev.data));
+        this.#selectedElement = createDOMNodeContext(selectedElementFilter(ev.data));
         this.#updateConversationState(this.#conversation);
     };
     #handleStorageItemFlavorChange = (ev) => {
@@ -1401,7 +1401,7 @@ export class AiAssistancePanel extends UI.Panel.Panel {
         if (data instanceof AiAssistanceModel.FileAgent.FileContext) {
             this.#selectedFile = data;
         }
-        else if (data instanceof AiAssistanceModel.StylingAgent.NodeContext) {
+        else if (data instanceof AiAssistanceModel.DOMNodeContext.DOMNodeContext) {
             this.#selectedElement = data;
         }
         else if (data instanceof AiAssistanceModel.NetworkAgent.RequestContext) {

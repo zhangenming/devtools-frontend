@@ -1849,7 +1849,7 @@ function getContextRemoveLabel(context) {
   if (context instanceof AiAssistanceModel4.FileAgent.FileContext) {
     return lockedString3(UIStringsNotTranslate3.removeContextFile);
   }
-  if (context instanceof AiAssistanceModel4.StylingAgent.NodeContext) {
+  if (context instanceof AiAssistanceModel4.DOMNodeContext.DOMNodeContext) {
     return lockedString3(UIStringsNotTranslate3.removeContextElement);
   }
   if (context instanceof AiAssistanceModel4.NetworkAgent.RequestContext) {
@@ -1992,7 +1992,7 @@ var DEFAULT_VIEW2 = (input, _output, target) => {
     disabled: !input.isContextSelected
   })}
                       >
-                        ${input.context instanceof AiAssistanceModel4.StylingAgent.NodeContext ? html5`
+                        ${input.context instanceof AiAssistanceModel4.DOMNodeContext.DOMNodeContext ? html5`
                               <devtools-widget
                                 class="title"
                                 ${widget2(PanelsCommon2.DOMLinkifier.DOMNodeLink, {
@@ -7827,11 +7827,11 @@ function defaultView(input, output, target) {
     `, target);
   }
 }
-function createNodeContext(node) {
+function createDOMNodeContext(node) {
   if (!node) {
     return null;
   }
-  return new AiAssistanceModel8.StylingAgent.NodeContext(node);
+  return new AiAssistanceModel8.DOMNodeContext.DOMNodeContext(node);
 }
 function createFileContext(file) {
   if (!file) {
@@ -8235,7 +8235,7 @@ var AiAssistancePanel = class _AiAssistancePanel extends UI11.Panel.Panel {
     this.#viewOutput.chatView?.restoreScrollPosition();
     this.#viewOutput.chatView?.focusTextInput();
     void this.#handleAidaAvailabilityChange();
-    this.#selectedElement = createNodeContext(selectedElementFilter(UI11.Context.Context.instance().flavor(SDK6.DOMModel.DOMNode)));
+    this.#selectedElement = createDOMNodeContext(selectedElementFilter(UI11.Context.Context.instance().flavor(SDK6.DOMModel.DOMNode)));
     this.#selectedRequest = createRequestContext(UI11.Context.Context.instance().flavor(SDK6.NetworkRequest.NetworkRequest));
     this.#selectedPerformanceTrace = createPerformanceTraceContext(UI11.Context.Context.instance().flavor(AiAssistanceModel8.AIContext.AgentFocus));
     this.#selectedFile = createFileContext(UI11.Context.Context.instance().flavor(Workspace8.UISourceCode.UISourceCode));
@@ -8290,7 +8290,7 @@ var AiAssistancePanel = class _AiAssistancePanel extends UI11.Panel.Panel {
     if (this.#selectedElement?.getItem() === ev.data) {
       return;
     }
-    this.#selectedElement = createNodeContext(selectedElementFilter(ev.data));
+    this.#selectedElement = createDOMNodeContext(selectedElementFilter(ev.data));
     this.#updateConversationState(this.#conversation);
   };
   #handleStorageItemFlavorChange = (ev) => {
@@ -8701,7 +8701,7 @@ var AiAssistancePanel = class _AiAssistancePanel extends UI11.Panel.Panel {
   #handleConversationContextChange = (data) => {
     if (data instanceof AiAssistanceModel8.FileAgent.FileContext) {
       this.#selectedFile = data;
-    } else if (data instanceof AiAssistanceModel8.StylingAgent.NodeContext) {
+    } else if (data instanceof AiAssistanceModel8.DOMNodeContext.DOMNodeContext) {
       this.#selectedElement = data;
     } else if (data instanceof AiAssistanceModel8.NetworkAgent.RequestContext) {
       this.#selectedRequest = data;
