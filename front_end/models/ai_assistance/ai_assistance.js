@@ -1321,6 +1321,20 @@ var ConversationContext = class {
   async getSuggestions() {
     return;
   }
+  /**
+   * Returns a detailed description of the context item for inclusion in the AI model prompt.
+   * Currently only used by AiAgent2.
+   */
+  async getPromptDetails() {
+    return null;
+  }
+  /**
+   * Returns a list of context details to display to the user in the UI.
+   * Currently only used by AiAgent2.
+   */
+  async getUserFacingDetails() {
+    return null;
+  }
 };
 var CrossOriginError = class extends Error {
   constructor() {
@@ -2279,6 +2293,11 @@ If the user asks a question that requires an investigation of a problem, use thi
     - [Suggestion 1]
     - [Suggestion 2]
 `;
+var SECURITY_WARNING = `**CRITICAL CONSTRAINT**: This Lighthouse report was imported from a file and is static.
+You do NOT have access to the inspected page.
+Tools like \`executeJavaScript\`, \`getStyles\`, or \`runAccessibilityAudits\` are disabled.
+Do NOT attempt to use them or instruct the user that you will use them.
+Rely ONLY on the static report data below.`;
 var AccessibilityContext = class extends ConversationContext {
   #lh;
   constructor(report) {
@@ -2395,6 +2414,44 @@ var AccessibilityAgent = class extends AiAgent {
     return node;
   }
   #declareFunctions() {
+    const isImported = this.context?.getItem().isImported;
+    this.declareFunction("getLighthouseAudits", {
+      description: "Returns the audits for a specific Lighthouse category. Use this to get more information about the performance, accessibility, best-practices, or seo audits.",
+      parameters: {
+        type: 6,
+        description: "",
+        nullable: false,
+        properties: {
+          categoryId: {
+            type: 1,
+            description: 'The category of audits to retrieve. Valid values are "performance", "accessibility", "best-practices", "seo".',
+            nullable: false
+          }
+        },
+        required: ["categoryId"]
+      },
+      displayInfoFromArgs: (params) => {
+        return {
+          title: i18n5.i18n.lockedString(`Getting Lighthouse audits for ${params.categoryId}`),
+          action: `getLighthouseAudits('${params.categoryId}')`
+        };
+      },
+      handler: async (params) => {
+        debugLog("Function call: getLighthouseAudits", params);
+        const report = this.context?.getItem();
+        if (!report) {
+          return { error: "No Lighthouse report available." };
+        }
+        const audits = new LighthouseFormatter().audits(report, params.categoryId);
+        return {
+          result: { audits },
+          widgets: [{ name: "LIGHTHOUSE_REPORT", data: { report } }]
+        };
+      }
+    });
+    if (isImported) {
+      return;
+    }
     this.declareFunction("executeJavaScript", executeJavaScriptFunction(this.#javascriptExecutor));
     this.declareFunction("runAccessibilityAudits", {
       description: "Triggers new Lighthouse accessibility audits in snapshot mode. Use this if the user has made changes to the page and you want to re-evaluate the accessibility audits.",
@@ -2435,40 +2492,6 @@ var AccessibilityAgent = class extends AiAgent {
         return {
           result: { audits },
           widgets: [{ name: "LIGHTHOUSE_REPORT", data: { report, snapshotReport: true } }]
-        };
-      }
-    });
-    this.declareFunction("getLighthouseAudits", {
-      description: "Returns the audits for a specific Lighthouse category. Use this to get more information about the performance, accessibility, best-practices, or seo audits.",
-      parameters: {
-        type: 6,
-        description: "",
-        nullable: false,
-        properties: {
-          categoryId: {
-            type: 1,
-            description: 'The category of audits to retrieve. Valid values are "performance", "accessibility", "best-practices", "seo".',
-            nullable: false
-          }
-        },
-        required: ["categoryId"]
-      },
-      displayInfoFromArgs: (params) => {
-        return {
-          title: i18n5.i18n.lockedString(`Getting Lighthouse audits for ${params.categoryId}`),
-          action: `getLighthouseAudits('${params.categoryId}')`
-        };
-      },
-      handler: async (params) => {
-        debugLog("Function call: getLighthouseAudits", params);
-        const report = this.context?.getItem();
-        if (!report) {
-          return { error: "No Lighthouse report available." };
-        }
-        const audits = new LighthouseFormatter().audits(report, params.categoryId);
-        return {
-          result: { audits },
-          widgets: [{ name: "LIGHTHOUSE_REPORT", data: { report } }]
         };
       }
     });
@@ -2639,10 +2662,15 @@ ${audits}`;
     if (lhr) {
       this.#declareFunctions();
     }
-    const enhancedQuery = lhr ? `${this.#getInitialPayload(lhr)}
+    let enhancedQuery = lhr ? `${this.#getInitialPayload(lhr)}
 # User request:
 
 ` : "";
+    if (lhr?.getItem().isImported) {
+      enhancedQuery = `${SECURITY_WARNING}
+
+${enhancedQuery}`;
+    }
     return `${enhancedQuery}${query}`;
   }
   #createContextDetails(lhr) {
@@ -2659,7 +2687,7 @@ __export(ContextSelectionAgent_exports, {
 });
 import * as Common8 from "./../../core/common/common.js";
 import * as Host8 from "./../../core/host/host.js";
-import * as i18n11 from "./../../core/i18n/i18n.js";
+import * as i18n13 from "./../../core/i18n/i18n.js";
 import * as Root8 from "./../../core/root/root.js";
 import * as Logs3 from "./../logs/logs.js";
 import * as NetworkTimeCalculator3 from "./../network_time_calculator/network_time_calculator.js";
@@ -2670,6 +2698,14 @@ var DOMNodeContext_exports = {};
 __export(DOMNodeContext_exports, {
   DOMNodeContext: () => DOMNodeContext
 });
+import * as i18n7 from "./../../core/i18n/i18n.js";
+var UIStringsNotTranslate = {
+  /**
+   * @description Heading text for context details of DevTools AI Agent.
+   */
+  dataUsed: "Data used"
+};
+var lockedString2 = i18n7.i18n.lockedString;
 var DOMNodeContext = class extends ConversationContext {
   #node;
   constructor(node) {
@@ -2730,6 +2766,104 @@ var DOMNodeContext = class extends ConversationContext {
       ];
     }
     return;
+  }
+  async getPromptDetails() {
+    return `# Inspected element
+
+${await this.describe()}`;
+  }
+  async getUserFacingDetails() {
+    return [
+      {
+        title: lockedString2(UIStringsNotTranslate.dataUsed),
+        text: await this.describe()
+      }
+    ];
+  }
+  async describe() {
+    const element = this.#node;
+    let output = `* Element's uid is ${element.backendNodeId()}.
+* Its selector is \`${element.simpleSelector()}\``;
+    const childNodes = await element.getChildNodesPromise();
+    if (childNodes) {
+      const textChildNodes = childNodes.filter((childNode) => childNode.nodeType() === Node.TEXT_NODE);
+      const elementChildNodes = childNodes.filter((childNode) => childNode.nodeType() === Node.ELEMENT_NODE);
+      switch (elementChildNodes.length) {
+        case 0:
+          output += "\n* It doesn't have any child element nodes";
+          break;
+        case 1:
+          output += `
+* It only has 1 child element node: \`${elementChildNodes[0].simpleSelector()}\``;
+          break;
+        default:
+          output += `
+* It has ${elementChildNodes.length} child element nodes: ${elementChildNodes.map((node) => `\`${node.simpleSelector()}\` (uid=${node.backendNodeId()})`).join(", ")}`;
+      }
+      switch (textChildNodes.length) {
+        case 0:
+          output += "\n* It doesn't have any child text nodes";
+          break;
+        case 1:
+          output += "\n* It only has 1 child text node";
+          break;
+        default:
+          output += `
+* It has ${textChildNodes.length} child text nodes`;
+      }
+    }
+    if (element.nextSibling) {
+      const elementOrNodeElementNodeText = element.nextSibling.nodeType() === Node.ELEMENT_NODE ? `an element (uid=${element.nextSibling.backendNodeId()})` : "a non element";
+      output += `
+* It has a next sibling and it is ${elementOrNodeElementNodeText} node`;
+    }
+    if (element.previousSibling) {
+      const elementOrNodeElementNodeText = element.previousSibling.nodeType() === Node.ELEMENT_NODE ? `an element (uid=${element.previousSibling.backendNodeId()})` : "a non element";
+      output += `
+* It has a previous sibling and it is ${elementOrNodeElementNodeText} node`;
+    }
+    if (element.isInShadowTree()) {
+      output += "\n* It is in a shadow DOM tree.";
+    }
+    const parentNode = element.parentNode;
+    if (parentNode) {
+      const parentChildrenNodes = await parentNode.getChildNodesPromise();
+      output += `
+* Its parent's selector is \`${parentNode.simpleSelector()}\` (uid=${parentNode.backendNodeId()})`;
+      const elementOrNodeElementNodeText = parentNode.nodeType() === Node.ELEMENT_NODE ? "an element" : "a non element";
+      output += `
+* Its parent is ${elementOrNodeElementNodeText} node`;
+      if (parentNode.isShadowRoot()) {
+        output += "\n* Its parent is a shadow root.";
+      }
+      if (parentChildrenNodes) {
+        const childElementNodes = parentChildrenNodes.filter((siblingNode) => siblingNode.nodeType() === Node.ELEMENT_NODE);
+        switch (childElementNodes.length) {
+          case 0:
+            break;
+          case 1:
+            output += "\n* Its parent has only 1 child element node";
+            break;
+          default:
+            output += `
+* Its parent has ${childElementNodes.length} child element nodes: ${childElementNodes.map((node) => `\`${node.simpleSelector()}\` (uid=${node.backendNodeId()})`).join(", ")}`;
+            break;
+        }
+        const siblingTextNodes = parentChildrenNodes.filter((siblingNode) => siblingNode.nodeType() === Node.TEXT_NODE);
+        switch (siblingTextNodes.length) {
+          case 0:
+            break;
+          case 1:
+            output += "\n* Its parent has only 1 child text node";
+            break;
+          default:
+            output += `
+* Its parent has ${siblingTextNodes.length} child text nodes: ${siblingTextNodes.map((node) => `\`${node.simpleSelector()}\``).join(", ")}`;
+            break;
+        }
+      }
+    }
+    return output.trim();
   }
 };
 
@@ -3288,7 +3422,7 @@ __export(NetworkAgent_exports, {
   RequestContext: () => RequestContext
 });
 import * as Host6 from "./../../core/host/host.js";
-import * as i18n7 from "./../../core/i18n/i18n.js";
+import * as i18n9 from "./../../core/i18n/i18n.js";
 import * as Root6 from "./../../core/root/root.js";
 var preamble3 = `You are the most advanced network request debugging assistant integrated into Chrome DevTools.
 The user selected a network request in the browser's DevTools Network Panel and sends a query to understand the request.
@@ -3334,7 +3468,7 @@ Request Status: 200 OK
 
 This request aims to retrieve a list of products matching the search query "laptop" within the "electronics" category. The successful 200 OK status confirms that the server fulfilled the request and returned the relevant data.
 `;
-var UIStringsNotTranslate = {
+var UIStringsNotTranslate2 = {
   /**
    * @description Heading text for the block that shows the network request details.
    */
@@ -3356,7 +3490,7 @@ var UIStringsNotTranslate = {
    */
   requestInitiatorChain: "Request initiator chain"
 };
-var lockedString2 = i18n7.i18n.lockedString;
+var lockedString3 = i18n9.i18n.lockedString;
 var RequestContext = class extends ConversationContext {
   #request;
   #calculator;
@@ -3427,25 +3561,25 @@ async function createContextDetailsForNetworkAgent(selectedNetworkRequest) {
   const request = selectedNetworkRequest.getItem();
   const formatter = new NetworkRequestFormatter(request, selectedNetworkRequest.calculator);
   const requestContextDetail = {
-    title: lockedString2(UIStringsNotTranslate.request),
-    text: lockedString2(UIStringsNotTranslate.requestUrl) + ": " + request.url() + "\n\n" + formatter.formatRequestHeaders()
+    title: lockedString3(UIStringsNotTranslate2.request),
+    text: lockedString3(UIStringsNotTranslate2.requestUrl) + ": " + request.url() + "\n\n" + formatter.formatRequestHeaders()
   };
   const responseBody = await formatter.formatResponseBody();
   const responseBodyString = responseBody ? `
 
 ${responseBody}` : "";
   const responseContextDetail = {
-    title: lockedString2(UIStringsNotTranslate.response),
+    title: lockedString3(UIStringsNotTranslate2.response),
     text: formatter.formatResponseHeaders() + responseBodyString + `
 
 ${formatter.formatStatus()}${formatter.formatFailureReasons()}`
   };
   const timingContextDetail = {
-    title: lockedString2(UIStringsNotTranslate.timing),
+    title: lockedString3(UIStringsNotTranslate2.timing),
     text: formatter.formatNetworkRequestTiming()
   };
   const initiatorChainContextDetail = {
-    title: lockedString2(UIStringsNotTranslate.requestInitiatorChain),
+    title: lockedString3(UIStringsNotTranslate2.requestInitiatorChain),
     text: formatter.formatRequestInitiatorChain()
   };
   return [
@@ -3465,7 +3599,7 @@ __export(PerformanceAgent_exports, {
 });
 import * as Common7 from "./../../core/common/common.js";
 import * as Host7 from "./../../core/host/host.js";
-import * as i18n9 from "./../../core/i18n/i18n.js";
+import * as i18n11 from "./../../core/i18n/i18n.js";
 import * as Platform4 from "./../../core/platform/platform.js";
 import * as Root7 from "./../../core/root/root.js";
 import * as SDK6 from "./../../core/sdk/sdk.js";
@@ -5854,7 +5988,12 @@ var UIStringsNotTranslated = {
    */
   mainThreadActivity: "Investigating main thread activity"
 };
-var lockedString3 = i18n9.i18n.lockedString;
+var lockedString4 = i18n11.i18n.lockedString;
+var SECURITY_WARNING2 = `**CRITICAL CONSTRAINT**: This performance trace was loaded from a file and is static.
+You do NOT have access to the live page.
+The tool \`getFunctionCode\` is disabled.
+Do NOT attempt to use it or instruct the user that you will use it.
+Rely only on the trace data and other available tools.`;
 var GREEN_DEV_ANNOTATIONS_INSTRUCTIONS = `
 - CRITICAL: You also have access to functions called addElementAnnotation and addNeworkRequestAnnotation,
 which should be used to highlight elements and network requests (respectively).
@@ -6015,7 +6154,6 @@ var PerformanceTraceContext = class _PerformanceTraceContext extends Conversatio
     return new _PerformanceTraceContext(AgentFocus.fromCallTree(callTree));
   }
   #focus;
-  external = false;
   constructor(focus) {
     super();
     this.#focus = focus;
@@ -6185,7 +6323,7 @@ var PerformanceAgent = class extends AiAgent {
    * so we can show it in the disclosure UI. This is cleared and then populated
    * on each prompt.
    */
-  #additionalSelectionsForQuery = [];
+  #additionalSelectionsForDisclosure = [];
   get clientFeature() {
     return Host7.AidaClient.ClientFeature.CHROME_PERFORMANCE_FULL_AGENT;
   }
@@ -6211,7 +6349,7 @@ var PerformanceAgent = class extends AiAgent {
       }
       contextDisclosure.push(fact.text);
     }
-    contextDisclosure.push(...this.#additionalSelectionsForQuery);
+    contextDisclosure.push(...this.#additionalSelectionsForDisclosure);
     const focus = context.getItem();
     const widgets = this.#getWidgetsForFocus(focus);
     yield {
@@ -6382,14 +6520,22 @@ ${contextString}
 `);
       }
     }
-    this.#additionalSelectionsForQuery = selected;
+    const isFresh = Tracing.FreshRecording.Tracker.instance().recordingIsFresh(focus.parsedTrace);
     if (!selected.length) {
-      return query;
+      this.#additionalSelectionsForDisclosure = [];
+      const finalQuery2 = query;
+      return isFresh ? finalQuery2 : `${SECURITY_WARNING2}
+
+${finalQuery2}`;
     }
     selected.push(`# User query
 
 ${query}`);
-    return selected.join("");
+    this.#additionalSelectionsForDisclosure = [...selected];
+    const finalQuery = selected.join("");
+    return isFresh ? finalQuery : `${SECURITY_WARNING2}
+
+${finalQuery}`;
   }
   async *run(initialQuery, options) {
     const focus = options.selected?.getItem();
@@ -6468,9 +6614,7 @@ ${text}`, metadata: { source: "devtools", score: ScorePriority.REQUIRED } });
   }
   async #addFacts(context) {
     const focus = context.getItem();
-    if (!context.external) {
-      this.addFact(this.#notExternalExtraPreambleFact);
-    }
+    this.addFact(this.#notExternalExtraPreambleFact);
     const annotationsEnabled = Annotations3.AnnotationRepository.annotationsEnabled();
     if (annotationsEnabled) {
       this.addFact(this.#greenDevAnnotationsFact);
@@ -6491,7 +6635,7 @@ ${text}`, metadata: { source: "devtools", score: ScorePriority.REQUIRED } });
       }
       this.#formatter = new PerformanceTraceFormatter(focus);
       this.#formatter.resolveFunctionCode = async (url, line, column) => {
-        if (!target) {
+        if (!target || !isFresh) {
           return null;
         }
         return await SourceMapScopes.FunctionCodeResolver.getFunctionCodeFromLocation(target, url, line, column, { contextLength: 200, contextLineLength: 5, appendProfileData: true });
@@ -6560,6 +6704,7 @@ ${result}`,
   #declareFunctions(context) {
     const focus = context.getItem();
     const { parsedTrace } = focus;
+    const isFresh = Tracing.FreshRecording.Tracker.instance().recordingIsFresh(parsedTrace);
     this.declareFunction("getInsightDetails", {
       description: "Returns detailed information about a specific insight of an insight set. Use this before commenting on any specific issue to get more information.",
       parameters: {
@@ -6582,7 +6727,7 @@ ${result}`,
       },
       displayInfoFromArgs: (params) => {
         return {
-          title: lockedString3(`Investigating insight ${params.insightName}`),
+          title: lockedString4(`Investigating insight ${params.insightName}`),
           action: `getInsightDetails('${params.insightSetId}', '${params.insightName}')`
         };
       },
@@ -6670,7 +6815,7 @@ ${result}`,
         required: ["eventKey"]
       },
       displayInfoFromArgs: (params) => {
-        return { title: lockedString3("Looking at trace event"), action: `getEventByKey('${params.eventKey}')` };
+        return { title: lockedString4("Looking at trace event"), action: `getEventByKey('${params.eventKey}')` };
       },
       handler: async (params) => {
         debugLog("Function call: getEventByKey", params);
@@ -6678,34 +6823,7 @@ ${result}`,
         if (!event) {
           return { error: "Invalid eventKey" };
         }
-        let details;
-        if (Trace6.Types.Events.isSyntheticNetworkRequest(event)) {
-          const eventToSerialize = {
-            ...event,
-            args: {
-              ...event.args,
-              data: {
-                ...event.args.data,
-                responseHeaders: event.args.data.responseHeaders ? sanitizeHeaders(event.args.data.responseHeaders) : null
-              }
-            }
-          };
-          details = JSON.stringify(eventToSerialize);
-        } else if (Trace6.Types.Events.isResourceReceiveResponse(event)) {
-          const eventToSerialize = {
-            ...event,
-            args: {
-              ...event.args,
-              data: {
-                ...event.args.data,
-                headers: event.args.data.headers ? sanitizeHeaders(event.args.data.headers) : void 0
-              }
-            }
-          };
-          details = JSON.stringify(eventToSerialize);
-        } else {
-          details = JSON.stringify(event);
-        }
+        const details = formatEventForAI(event);
         const key = `getEventByKey('${params.eventKey}')`;
         this.#cacheFunctionResult(focus, key, details);
         return {
@@ -6747,7 +6865,7 @@ ${result}`,
       displayInfoFromArgs: (args) => {
         const labelName = getLabelName(args.label, focus);
         return {
-          title: lockedString3(`${UIStringsNotTranslated.mainThreadActivity}: ${labelName}`),
+          title: lockedString4(`${UIStringsNotTranslated.mainThreadActivity}: ${labelName}`),
           action: `getMainThreadTrackSummaryByLabel('${args.label}')`
         };
       },
@@ -6785,7 +6903,7 @@ ${result}`,
         const min = args.min ?? parsedTrace.data.Meta.traceBounds.min;
         const max = args.max ?? parsedTrace.data.Meta.traceBounds.max;
         return {
-          title: lockedString3(UIStringsNotTranslated.networkActivitySummary),
+          title: lockedString4(UIStringsNotTranslated.networkActivitySummary),
           action: `getNetworkTrackSummary({min: ${min}, max: ${max}})`
         };
       },
@@ -6829,7 +6947,7 @@ ${result}`,
         required: ["eventKey"]
       },
       displayInfoFromArgs: (args) => {
-        return { title: lockedString3("Looking at call tree"), action: `getDetailedCallTree('${args.eventKey}')` };
+        return { title: lockedString4("Looking at call tree"), action: `getDetailedCallTree('${args.eventKey}')` };
       },
       handler: async (args) => {
         debugLog("Function call: getDetailedCallTree");
@@ -6920,75 +7038,76 @@ ${result}`,
         }
       });
     }
-    this.declareFunction("getFunctionCode", {
-      description: "Returns the code for a function defined at the given location. The result is annotated with the runtime performance of each line of code.",
-      parameters: {
-        type: 6,
-        description: "",
-        nullable: false,
-        properties: {
-          scriptUrl: {
-            type: 1,
-            description: "The url of the function.",
-            nullable: false
-          },
-          line: {
-            type: 3,
-            description: "The line number where the function is defined.",
-            nullable: false
-          },
-          column: {
-            type: 3,
-            description: "The column number where the function is defined.",
-            nullable: false
-          }
-        },
-        required: ["scriptUrl", "line", "column"]
-      },
-      displayInfoFromArgs: (args) => {
-        return {
-          title: lockedString3("Looking up function code"),
-          action: `getFunctionCode('${args.scriptUrl}', ${args.line}, ${args.column})`
-        };
-      },
-      handler: async (args) => {
-        debugLog("Function call: getFunctionCode");
-        if (args.line === void 0) {
-          return { error: "Missing arg: line" };
-        }
-        if (args.column === void 0) {
-          return { error: "Missing arg: column" };
-        }
-        if (!this.#formatter) {
-          throw new Error("missing formatter");
-        }
-        const target = SDK6.TargetManager.TargetManager.instance().primaryPageTarget();
-        if (!target) {
-          throw new Error("missing target");
-        }
-        const url = args.scriptUrl;
-        const code = await this.#formatter.resolveFunctionCodeAtLocation(url, args.line, args.column);
-        if (!code) {
-          return { error: "Could not find code" };
-        }
-        const result = this.#formatter.formatFunctionCode(code);
-        const key = `getFunctionCode('${args.scriptUrl}', ${args.line}, ${args.column})`;
-        this.#cacheFunctionResult(focus, key, result);
-        return {
-          result: { result },
-          widgets: [{
-            name: "SOURCE_CODE",
-            data: {
-              url: args.scriptUrl,
-              line: args.line,
-              column: args.column,
-              code: code.code
+    if (isFresh) {
+      this.declareFunction("getFunctionCode", {
+        description: "Returns the code for a function defined at the given location. The result is annotated with the runtime performance of each line of code.",
+        parameters: {
+          type: 6,
+          description: "",
+          nullable: false,
+          properties: {
+            scriptUrl: {
+              type: 1,
+              description: "The url of the function.",
+              nullable: false
+            },
+            line: {
+              type: 3,
+              description: "The line number where the function is defined.",
+              nullable: false
+            },
+            column: {
+              type: 3,
+              description: "The column number where the function is defined.",
+              nullable: false
             }
-          }]
-        };
-      }
-    });
-    const isFresh = Tracing.FreshRecording.Tracker.instance().recordingIsFresh(parsedTrace);
+          },
+          required: ["scriptUrl", "line", "column"]
+        },
+        displayInfoFromArgs: (args) => {
+          return {
+            title: lockedString4("Looking up function code"),
+            action: `getFunctionCode('${args.scriptUrl}', ${args.line}, ${args.column})`
+          };
+        },
+        handler: async (args) => {
+          debugLog("Function call: getFunctionCode");
+          if (args.line === void 0) {
+            return { error: "Missing arg: line" };
+          }
+          if (args.column === void 0) {
+            return { error: "Missing arg: column" };
+          }
+          if (!this.#formatter) {
+            throw new Error("missing formatter");
+          }
+          const target = SDK6.TargetManager.TargetManager.instance().primaryPageTarget();
+          if (!target) {
+            throw new Error("missing target");
+          }
+          const url = args.scriptUrl;
+          const code = await this.#formatter.resolveFunctionCodeAtLocation(url, args.line, args.column);
+          if (!code) {
+            return { error: "Could not find code" };
+          }
+          const result = this.#formatter.formatFunctionCode(code);
+          const key = `getFunctionCode('${args.scriptUrl}', ${args.line}, ${args.column})`;
+          this.#cacheFunctionResult(focus, key, result);
+          return {
+            result: { result },
+            widgets: [{
+              name: "SOURCE_CODE",
+              data: {
+                url: args.scriptUrl,
+                line: args.line,
+                column: args.column,
+                code: code.code
+              }
+            }]
+          };
+        }
+      });
+    }
     const isTraceApp = Root7.Runtime.Runtime.isTraceApp();
     this.declareFunction("getResourceContent", {
       description: "Returns the content of the resource with the given url. Only use this for text resource types. This function is helpful for getting script contents in order to further analyze main thread activity and suggest code improvements. When analyzing the main thread activity, always call this function to get more detail. Always call this function when asked to provide specifics about what is happening in the code. Never ask permission to call this function, just do it.",
@@ -7006,7 +7125,7 @@ ${result}`,
         required: ["url"]
       },
       displayInfoFromArgs: (args) => {
-        return { title: lockedString3("Looking at resource content"), action: `getResourceContent('${args.url}')` };
+        return { title: lockedString4("Looking at resource content"), action: `getResourceContent('${args.url}')` };
       },
       handler: async (args) => {
         debugLog("Function call: getResourceContent");
@@ -7042,46 +7161,44 @@ ${result}`,
         };
       }
     });
-    if (!context.external) {
-      this.declareFunction("selectEventByKey", {
-        description: "Selects the event in the flamechart for the user. If the user asks to show them something, it's likely a good idea to call this function.",
-        parameters: {
-          type: 6,
-          description: "",
-          nullable: false,
-          properties: {
-            eventKey: {
-              type: 1,
-              description: "The key for the event.",
-              nullable: false
-            }
-          },
-          required: ["eventKey"]
-        },
-        displayInfoFromArgs: (params) => {
-          return { title: lockedString3("Selecting event"), action: `selectEventByKey('${params.eventKey}')` };
-        },
-        handler: async (params) => {
-          debugLog("Function call: selectEventByKey", params);
-          const event = focus.lookupEvent(params.eventKey);
-          if (!event) {
-            return { error: "Invalid eventKey" };
+    this.declareFunction("selectEventByKey", {
+      description: "Selects the event in the flamechart for the user. If the user asks to show them something, it's likely a good idea to call this function.",
+      parameters: {
+        type: 6,
+        description: "",
+        nullable: false,
+        properties: {
+          eventKey: {
+            type: 1,
+            description: "The key for the event.",
+            nullable: false
           }
-          const revealable = new SDK6.TraceObject.RevealableEvent(event);
-          await Common7.Revealer.reveal(revealable);
-          return {
-            result: { success: true },
-            widgets: [{
-              name: "TIMELINE_EVENT_SUMMARY",
-              data: {
-                event,
-                parsedTrace
-              }
-            }]
-          };
+        },
+        required: ["eventKey"]
+      },
+      displayInfoFromArgs: (params) => {
+        return { title: lockedString4("Selecting event"), action: `selectEventByKey('${params.eventKey}')` };
+      },
+      handler: async (params) => {
+        debugLog("Function call: selectEventByKey", params);
+        const event = focus.lookupEvent(params.eventKey);
+        if (!event) {
+          return { error: "Invalid eventKey" };
         }
-      });
-    }
+        const revealable = new SDK6.TraceObject.RevealableEvent(event);
+        await Common7.Revealer.reveal(revealable);
+        return {
+          result: { success: true },
+          widgets: [{
+            name: "TIMELINE_EVENT_SUMMARY",
+            data: {
+              event,
+              parsedTrace
+            }
+          }]
+        };
+      }
+    });
   }
   #getBoundsForLabel(label, focus) {
     const { parsedTrace } = focus;
@@ -7181,9 +7298,65 @@ ${result}`,
     return void 0;
   }
 };
+function formatEventForAI(event) {
+  if (Trace6.Types.Events.isSyntheticNetworkRequest(event)) {
+    return JSON.stringify({
+      ...event,
+      args: {
+        ...event.args,
+        data: {
+          ...event.args.data,
+          responseHeaders: event.args.data.responseHeaders ? sanitizeHeaders(event.args.data.responseHeaders) : null
+        }
+      }
+    });
+  }
+  if (Trace6.Types.Events.isResourceReceiveResponse(event)) {
+    return JSON.stringify({
+      ...event,
+      args: {
+        ...event.args,
+        data: {
+          ...event.args.data,
+          headers: event.args.data.headers ? sanitizeHeaders(event.args.data.headers) : void 0
+        }
+      }
+    });
+  }
+  if (Trace6.Types.Events.isRundownScriptSource(event)) {
+    const safeData = {
+      isolate: event.args.data.isolate,
+      scriptId: event.args.data.scriptId,
+      length: event.args.data.length
+    };
+    return JSON.stringify({
+      ...event,
+      args: {
+        ...event.args,
+        data: safeData
+      }
+    });
+  }
+  if (Trace6.Types.Events.isRundownScriptSourceLarge(event)) {
+    const safeData = {
+      isolate: event.args.data.isolate,
+      scriptId: event.args.data.scriptId,
+      splitIndex: event.args.data.splitIndex,
+      splitCount: event.args.data.splitCount
+    };
+    return JSON.stringify({
+      ...event,
+      args: {
+        ...event.args,
+        data: safeData
+      }
+    });
+  }
+  return JSON.stringify(event);
+}
 
 // gen/front_end/models/ai_assistance/agents/ContextSelectionAgent.js
-var lockedString4 = i18n11.i18n.lockedString;
+var lockedString5 = i18n13.i18n.lockedString;
 var preamble5 = `
 You are an advanced Web Development Assistant and AI routing agent integrated into Chrome DevTools. Your tone is educational, supportive, and technically precise. You aim to help developers of all levels, prioritizing teaching web concepts as the primary entry point for any solution.
 
@@ -7256,7 +7429,7 @@ var ContextSelectionAgent = class _ContextSelectionAgent extends AiAgent {
       },
       displayInfoFromArgs: () => {
         return {
-          title: lockedString4("Listing network requests"),
+          title: lockedString5("Listing network requests"),
           action: "listNetworkRequest()"
         };
       },
@@ -7285,8 +7458,8 @@ var ContextSelectionAgent = class _ContextSelectionAgent extends AiAgent {
             id: request.requestId(),
             url: request.url(),
             statusCode: request.statusCode,
-            duration: i18n11.TimeUtilities.secondsToString(request.duration),
-            transferSize: i18n11.ByteUtilities.formatBytesToKb(request.transferSize)
+            duration: i18n13.TimeUtilities.secondsToString(request.duration),
+            transferSize: i18n13.ByteUtilities.formatBytesToKb(request.transferSize)
           });
         }
         if (requests.length === 0) {
@@ -7316,7 +7489,7 @@ var ContextSelectionAgent = class _ContextSelectionAgent extends AiAgent {
       },
       displayInfoFromArgs: (args) => {
         return {
-          title: lockedString4("Getting network request"),
+          title: lockedString5("Getting network request"),
           action: `selectNetworkRequest(${args.id})`
         };
       },
@@ -7369,7 +7542,7 @@ var ContextSelectionAgent = class _ContextSelectionAgent extends AiAgent {
       },
       displayInfoFromArgs: () => {
         return {
-          title: lockedString4("Listing source requests"),
+          title: lockedString5("Listing source requests"),
           action: "listSourceFiles()"
         };
       },
@@ -7423,7 +7596,7 @@ var ContextSelectionAgent = class _ContextSelectionAgent extends AiAgent {
       },
       displayInfoFromArgs: (args) => {
         return {
-          title: lockedString4("Getting source file"),
+          title: lockedString5("Getting source file"),
           action: `selectSourceFile(${args.id})`
         };
       },
@@ -7544,7 +7717,7 @@ var ContextSelectionAgent = class _ContextSelectionAgent extends AiAgent {
       },
       displayInfoFromArgs: () => {
         return {
-          title: lockedString4("Select an element on the page or in the Elements panel")
+          title: lockedString5("Select an element on the page or in the Elements panel")
         };
       },
       handler: async (_params, options) => {
@@ -9005,7 +9178,7 @@ __export(StorageAgent_exports, {
 });
 import * as Common10 from "./../../core/common/common.js";
 import * as Host13 from "./../../core/host/host.js";
-import * as i18n13 from "./../../core/i18n/i18n.js";
+import * as i18n15 from "./../../core/i18n/i18n.js";
 import * as Root13 from "./../../core/root/root.js";
 import * as SDK8 from "./../../core/sdk/sdk.js";
 
@@ -9044,7 +9217,7 @@ var CookieItem = class extends StorageItem {
 };
 
 // gen/front_end/models/ai_assistance/agents/StorageAgent.js
-var lockedString5 = i18n13.i18n.lockedString;
+var lockedString6 = i18n15.i18n.lockedString;
 var preamble9 = `You are a Senior Software Engineer specializing in state audit and storage analysis within Chrome DevTools. Your mission is to help developers debug storage-related issues faster by analyzing the evidence in LocalStorage, SessionStorage, and Cookies.
 
  You have access to the site's storage using tools like \`listPageOrigins\`, \`listStorageKeys\`, \`getStorageValues\`, \`listCookies\`, and \`getCookieValues\`.
@@ -9142,7 +9315,7 @@ var StorageAgent = class _StorageAgent extends AiAgent {
       },
       displayInfoFromArgs: () => {
         return {
-          title: lockedString5("Listing page origins"),
+          title: lockedString6("Listing page origins"),
           action: "listPageOrigins()"
         };
       },
@@ -9191,7 +9364,7 @@ var StorageAgent = class _StorageAgent extends AiAgent {
       },
       displayInfoFromArgs: (args) => {
         return {
-          title: lockedString5("Reading storage keys"),
+          title: lockedString6("Reading storage keys"),
           action: `listStorageKeys('${args.type}', '${args.origin}')`
         };
       },
@@ -9250,7 +9423,7 @@ var StorageAgent = class _StorageAgent extends AiAgent {
       },
       displayInfoFromArgs: (args) => {
         return {
-          title: lockedString5("Reading storage values"),
+          title: lockedString6("Reading storage values"),
           action: `getStorageValues('${args.type}', ${JSON.stringify(args.keys)}, '${args.origin}'${args.storageKey ? `, '${args.storageKey}'` : ""})`
         };
       },
@@ -9271,7 +9444,7 @@ var StorageAgent = class _StorageAgent extends AiAgent {
           const targetsDesc = uniqueTargetOrigins.join(", ");
           return {
             requiresApproval: true,
-            description: lockedString5(`The AI wants to access the value(s) of ${args.type} keys ${keyString} on ${targetsDesc}.`)
+            description: lockedString6(`The AI wants to access the value(s) of ${args.type} keys ${keyString} on ${targetsDesc}.`)
           };
         }
         const itemsResult = [];
@@ -9315,7 +9488,7 @@ var StorageAgent = class _StorageAgent extends AiAgent {
       },
       displayInfoFromArgs: (args) => {
         return {
-          title: lockedString5("Reading cookies"),
+          title: lockedString6("Reading cookies"),
           action: `listCookies('${args.origin}')`
         };
       },
@@ -9356,7 +9529,7 @@ var StorageAgent = class _StorageAgent extends AiAgent {
       },
       displayInfoFromArgs: (args) => {
         return {
-          title: lockedString5("Reading cookie values and metadata"),
+          title: lockedString6("Reading cookie values and metadata"),
           action: `getCookieValues(${JSON.stringify(args.cookieNames)}, '${args.origin}')`
         };
       },
@@ -9372,7 +9545,7 @@ var StorageAgent = class _StorageAgent extends AiAgent {
         if (options?.approved !== true) {
           return {
             requiresApproval: true,
-            description: lockedString5(`The AI wants to access the value(s) and metadata of cookie(s) ${args.cookieNames.map((name) => `\`${name}\``).join(", ")} on ${args.origin}.`)
+            description: lockedString6(`The AI wants to access the value(s) and metadata of cookie(s) ${args.cookieNames.map((name) => `\`${name}\``).join(", ")} on ${args.origin}.`)
           };
         }
         const cookies = await getCookiesForDomain(target, args.origin);
@@ -9508,7 +9681,6 @@ __export(StylingAgent_exports, {
   StylingAgent: () => StylingAgent
 });
 import * as Host15 from "./../../core/host/host.js";
-import * as i18n15 from "./../../core/i18n/i18n.js";
 import * as Root14 from "./../../core/root/root.js";
 import * as SDK10 from "./../../core/sdk/sdk.js";
 import * as Greendev2 from "./../greendev/greendev.js";
@@ -9648,13 +9820,6 @@ var ToolRegistry = class {
 };
 
 // gen/front_end/models/ai_assistance/agents/StylingAgent.js
-var UIStringsNotTranslate2 = {
-  /**
-   * @description Heading text for context details of Freestyler agent.
-   */
-  dataUsed: "Data used"
-};
-var lockedString6 = i18n15.i18n.lockedString;
 var preamble10 = `You are the most advanced CSS/DOM/HTML debugging assistant integrated into Chrome DevTools.
 You always suggest considering the best web development practices and the newest platform features such as view transitions.
 The user selected a DOM element in the browser's DevTools and sends a query about the page or the selected DOM element.
@@ -9754,7 +9919,7 @@ var MULTIMODAL_ENHANCEMENT_PROMPTS = {
   ]: promptForUploadedImage + considerationsForMultimodalInputEvaluation
 };
 var AI_ASSISTANCE_FILTER_REGEX = `\\.${AI_ASSISTANCE_CSS_CLASS_NAME}-.*&`;
-var StylingAgent = class _StylingAgent extends AiAgent {
+var StylingAgent = class extends AiAgent {
   preamble = preamble10;
   clientFeature = Host15.AidaClient.ClientFeature.CHROME_STYLING_AGENT;
   get userTier() {
@@ -9862,90 +10027,6 @@ var StylingAgent = class _StylingAgent extends AiAgent {
         return await this.activateDeviceEmulation(params.deviceName, params.visionDeficiency);
       }
     });
-  }
-  static async describeElement(element) {
-    let output = `* Element's uid is ${element.backendNodeId()}.
-* Its selector is \`${element.simpleSelector()}\``;
-    const childNodes = await element.getChildNodesPromise();
-    if (childNodes) {
-      const textChildNodes = childNodes.filter((childNode) => childNode.nodeType() === Node.TEXT_NODE);
-      const elementChildNodes = childNodes.filter((childNode) => childNode.nodeType() === Node.ELEMENT_NODE);
-      switch (elementChildNodes.length) {
-        case 0:
-          output += "\n* It doesn't have any child element nodes";
-          break;
-        case 1:
-          output += `
-* It only has 1 child element node: \`${elementChildNodes[0].simpleSelector()}\``;
-          break;
-        default:
-          output += `
-* It has ${elementChildNodes.length} child element nodes: ${elementChildNodes.map((node) => `\`${node.simpleSelector()}\` (uid=${node.backendNodeId()})`).join(", ")}`;
-      }
-      switch (textChildNodes.length) {
-        case 0:
-          output += "\n* It doesn't have any child text nodes";
-          break;
-        case 1:
-          output += "\n* It only has 1 child text node";
-          break;
-        default:
-          output += `
-* It has ${textChildNodes.length} child text nodes`;
-      }
-    }
-    if (element.nextSibling) {
-      const elementOrNodeElementNodeText = element.nextSibling.nodeType() === Node.ELEMENT_NODE ? `an element (uid=${element.nextSibling.backendNodeId()})` : "a non element";
-      output += `
-* It has a next sibling and it is ${elementOrNodeElementNodeText} node`;
-    }
-    if (element.previousSibling) {
-      const elementOrNodeElementNodeText = element.previousSibling.nodeType() === Node.ELEMENT_NODE ? `an element (uid=${element.previousSibling.backendNodeId()})` : "a non element";
-      output += `
-* It has a previous sibling and it is ${elementOrNodeElementNodeText} node`;
-    }
-    if (element.isInShadowTree()) {
-      output += "\n* It is in a shadow DOM tree.";
-    }
-    const parentNode = element.parentNode;
-    if (parentNode) {
-      const parentChildrenNodes = await parentNode.getChildNodesPromise();
-      output += `
-* Its parent's selector is \`${parentNode.simpleSelector()}\` (uid=${parentNode.backendNodeId()})`;
-      const elementOrNodeElementNodeText = parentNode.nodeType() === Node.ELEMENT_NODE ? "an element" : "a non element";
-      output += `
-* Its parent is ${elementOrNodeElementNodeText} node`;
-      if (parentNode.isShadowRoot()) {
-        output += "\n* Its parent is a shadow root.";
-      }
-      if (parentChildrenNodes) {
-        const childElementNodes = parentChildrenNodes.filter((siblingNode) => siblingNode.nodeType() === Node.ELEMENT_NODE);
-        switch (childElementNodes.length) {
-          case 0:
-            break;
-          case 1:
-            output += "\n* Its parent has only 1 child element node";
-            break;
-          default:
-            output += `
-* Its parent has ${childElementNodes.length} child element nodes: ${childElementNodes.map((node) => `\`${node.simpleSelector()}\` (uid=${node.backendNodeId()})`).join(", ")}`;
-            break;
-        }
-        const siblingTextNodes = parentChildrenNodes.filter((siblingNode) => siblingNode.nodeType() === Node.TEXT_NODE);
-        switch (siblingTextNodes.length) {
-          case 0:
-            break;
-          case 1:
-            output += "\n* Its parent has only 1 child text node";
-            break;
-          default:
-            output += `
-* Its parent has ${siblingTextNodes.length} child text nodes: ${siblingTextNodes.map((node) => `\`${node.simpleSelector()}\``).join(", ")}`;
-            break;
-        }
-      }
-    }
-    return output.trim();
   }
   #getSelectedNode() {
     return this.context?.getItem() ?? null;
@@ -10131,16 +10212,15 @@ var StylingAgent = class _StylingAgent extends AiAgent {
     return void 0;
   }
   async *handleContextDetails(selectedElement) {
-    if (!selectedElement) {
-      return;
+    if (selectedElement) {
+      const details = await selectedElement.getUserFacingDetails();
+      if (details) {
+        yield {
+          type: "context",
+          details
+        };
+      }
     }
-    yield {
-      type: "context",
-      details: [{
-        title: lockedString6(UIStringsNotTranslate2.dataUsed),
-        text: await _StylingAgent.describeElement(selectedElement.getItem())
-      }]
-    };
   }
   async preRun() {
     this.#currentTurnId++;
@@ -10155,9 +10235,8 @@ var StylingAgent = class _StylingAgent extends AiAgent {
       multimodalInputEnhancementQuery = emulationInstructions + "\n" + multimodalInputEnhancementQuery;
       this.#hasAddedEmulationInstructions = true;
     }
-    const elementEnchancementQuery = selectedElement ? `# Inspected element
-
-${await _StylingAgent.describeElement(selectedElement.getItem())}
+    const promptDetails = selectedElement ? await selectedElement.getPromptDetails() : null;
+    const elementEnchancementQuery = promptDetails ? `${promptDetails}
 
 # User request
 
@@ -10177,8 +10256,10 @@ import * as Host16 from "./../../core/host/host.js";
 var skill = {
   "name": "styling",
   "description": "Helping with CSS and styling",
-  "allowedTools": [],
-  "instructions": "You are a CSS expert helping the user style elements."
+  "allowedTools": [
+    "getStyles"
+  ],
+  "instructions": 'You are a CSS/DOM/HTML debugging assistant.\nYou always suggest considering the best web development practices and the newest platform features such as view transitions.\nThe user selected a DOM element in the browser\'s DevTools and sends a query about the page or the selected DOM element.\nFirst, examine the provided context, then use the getStyles function to gather additional context and resolve the user request.\n\n# Considerations\n\n* Meticulously investigate all potential causes for the observed behavior before moving on. Gather comprehensive information about the element\'s parent, siblings, children, and any overlapping elements, paying close attention to properties that are likely relevant to the query.\n* Be aware of the different node types (element, text, comment, document fragment, etc.) and their properties. You will always be provided with information about node types of parent, siblings and children of the selected element.\n* Avoid making assumptions without sufficient evidence, and always seek further clarification if needed.\n* Always explore multiple possible explanations for the observed behavior before settling on a conclusion.\n* When presenting solutions, clearly distinguish between the primary cause and contributing factors.\n* Please answer only if you are sure about the answer. Otherwise, explain why you\'re not able to answer.\n* When answering, always consider MULTIPLE possible solutions.\n* When answering, remember to consider CSS concepts such as the CSS cascade, explicit and implicit stacking contexts and various CSS layout types.\n* Use the getStyles function available to you to investigate and fulfill the user request.\n* ALWAYS OUTPUT a list of follow-up queries at the end of your text response. The format is SUGGESTIONS: ["suggestion1", "suggestion2", "suggestion3"]. Make sure that the array and the `SUGGESTIONS: ` text is in the same line.\n* Use the precision of Strunk & White, the brevity of Hemingway, and the simple clarity of Vonnegut. Don\'t add repeated information, and keep the whole answer short.\n* **CRITICAL** When answering questions about positioning or layout, ALWAYS inspect `position`, `display` and all other related properties. You MUST provide a specific list of CSS property names when calling getStyles. Do not use generic values like "all" or "*".\n* **CRITICAL** You are a CSS/DOM/HTML debugging assistant. NEVER provide answers to questions of unrelated topics such as legal advice, financial advice, personal opinions, medical advice, religion, race, politics, sexuality, gender, or any other non web-development topics. Answer "Sorry, I can\'t answer that. I\'m best at questions about debugging web pages." to such questions.\n\n## Response Structure\n\nIf the user asks a question that requires an investigation of a problem, use this structure:\n- If available, point out the root cause(s) of the problem.\n  - Example: "**Root Cause**: The page is slow because of [reason]."\n    - Example: "**Root Causes**:"\n      - [Reason 1]\n      - [Reason 2]\n- if applicable, list actionable solution suggestion(s) in order of impact:\n  - Example: "**Suggestion**: [Suggestion 1]\n    - Example: "**Suggestions**:"\n      - [Suggestion 1]\n      - [Suggestion 2]'
 };
 
 // gen/front_end/models/ai_assistance/skills/SkillRegistry.js
@@ -10187,6 +10268,9 @@ var SKILLS = {
 };
 
 // gen/front_end/models/ai_assistance/AiAgent2.js
+var SKILL_DISPLAY_NAMES = {
+  styling: "CSS and styling"
+};
 var AiAgent2 = class extends AiAgent {
   // TODO: The static preamble is a placeholder and will eventually live server-side.
   preamble = "You are a unified AI assistant in Chrome DevTools. You can learn skills to help the user.";
@@ -10198,8 +10282,10 @@ var AiAgent2 = class extends AiAgent {
     return {};
   }
   #activeSkills = /* @__PURE__ */ new Set();
+  #declaredTools = /* @__PURE__ */ new Set();
   constructor(opts) {
     super(opts);
+    this.#declaredTools.add("learnSkills");
     const skillsList = Object.keys(SKILLS).join(", ");
     this.declareFunction("learnSkills", {
       description: `Load skills to help with the task. Available skills: ${skillsList}.`,
@@ -10219,8 +10305,12 @@ var AiAgent2 = class extends AiAgent {
         required: ["skills"]
       },
       displayInfoFromArgs: (args) => {
+        const isSingular = args.skills.length === 1;
+        const prefix = isSingular ? "Learning skill" : "Learning skills";
+        const names = args.skills.map((name) => SKILL_DISPLAY_NAMES[name] ?? name).join(", ");
         return {
-          title: `Learning skills: ${args.skills.join(", ")}`
+          title: `${prefix}: ${names}`,
+          action: `learnSkills(${args.skills.map((name) => `'${name}'`).join(", ")})`
         };
       },
       handler: async (args) => {
@@ -10229,30 +10319,47 @@ var AiAgent2 = class extends AiAgent {
       }
     });
   }
-  async enhanceQuery(query) {
+  async enhanceQuery(query, selected = null, _multimodalInputType) {
+    let enhancedQuery = query;
+    if (selected) {
+      const promptDetails = await selected.getPromptDetails();
+      if (promptDetails) {
+        enhancedQuery = `${promptDetails}
+
+# User request
+
+QUERY: ${query}`;
+      }
+    }
     if (this.#skillsInjected) {
-      return query;
+      return enhancedQuery;
     }
     this.#skillsInjected = true;
-    const skillsManifest = Object.entries(SKILLS).map(([name, skill2]) => `- ${name}: ${skill2.description}`).join("\n");
+    const skillsManifest = Object.entries(this.getSkills()).map(([name, skill2]) => `- ${name}: ${skill2.description}`).join("\n");
     return `Available skills:
 ${skillsManifest}
 
 You must call \`learnSkills\` to load a skill before you can use it.
 
-User query: ${query}`;
+User query: ${enhancedQuery}`;
   }
-  async *handleContextDetails(_select) {
-    yield {
-      type: "context",
-      details: [{
-        title: "Status",
-        text: "Minimal agent initialized."
-      }]
-    };
+  async *handleContextDetails(selected) {
+    if (selected) {
+      const details = await selected.getUserFacingDetails();
+      if (details) {
+        yield {
+          type: "context",
+          details
+        };
+      }
+    }
+  }
+  getSkills() {
+    return SKILLS;
   }
   async learnSkill(names) {
     let response = "";
+    const skills = this.getSkills();
     for (const name of names) {
       debugLog(`AiAgent2: Attempting to load skill ${name}`);
       if (this.#activeSkills.has(name)) {
@@ -10261,20 +10368,45 @@ User query: ${query}`;
 `;
         continue;
       }
-      const skillObj = SKILLS[name];
+      const skillObj = skills[name];
       if (skillObj) {
         this.#activeSkills.add(name);
         debugLog(`AiAgent2: Skill ${name} loaded successfully`);
         response += `Skill ${name} loaded. Instructions:
 ${skillObj.instructions}
 `;
+        for (const toolName of skillObj.allowedTools) {
+          const tool = ToolRegistry.get(toolName);
+          if (tool) {
+            this.#declareTool(tool);
+          }
+        }
       } else {
         debugLog(`AiAgent2: Failed to load skill ${name}`);
-        response += `Failed to load skill ${name}. Valid skills are: ${Object.keys(SKILLS).join(", ")}.
+        response += `Failed to load skill ${name}. Valid skills are: ${Object.keys(skills).join(", ")}.
 `;
       }
     }
     return response.trim();
+  }
+  /**
+   * Declares a tool to be available to the agent model, verifying first that
+   * it hasn't already been declared to prevent duplicate declaration errors.
+   */
+  #declareTool(tool) {
+    if (this.#declaredTools.has(tool.name)) {
+      debugLog(`AiAgent2: Tool ${tool.name} is already declared`);
+      return;
+    }
+    this.#declaredTools.add(tool.name);
+    this.declareFunction(tool.name, {
+      description: tool.description,
+      parameters: tool.parameters,
+      displayInfoFromArgs: tool.displayInfoFromArgs,
+      handler: (args) => tool.handler(args, {
+        conversationContext: this.context ?? null
+      })
+    });
   }
   get activeSkills() {
     return this.#activeSkills;

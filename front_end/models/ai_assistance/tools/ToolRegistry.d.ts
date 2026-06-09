@@ -1,5 +1,5 @@
 import { GetStylesTool } from './GetStyles.js';
-import { type BaseTool } from './Tool.js';
+import { type Tool } from './Tool.js';
 /**
  * Plain object registry containing concrete instantiated tools.
  * Keep this type concrete (no type-erasure) to preserve exact tool types.
@@ -21,5 +21,5 @@ export declare class ToolRegistry {
     /**
      * Fallback retrieval signature for general or runtime string lookups.
      */
-    static get(name: string): BaseTool | undefined;
+    static get(name: string): Tool | undefined;
 }

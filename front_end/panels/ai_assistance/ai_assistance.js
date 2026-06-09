@@ -7681,18 +7681,19 @@ async function getEmptyStateSuggestions(conversation) {
 function getMarkdownRenderer(conversation) {
   const context = conversation?.selectedContext;
   if (context instanceof AiAssistanceModel8.PerformanceAgent.PerformanceTraceContext) {
-    if (!context.external) {
-      const focus = context.getItem();
-      return new PerformanceAgentMarkdownRenderer(focus.parsedTrace.data.Meta.mainFrameId, focus.lookupEvent.bind(focus));
-    }
-  } else if (conversation?.type === "drjones-performance-full") {
+    const focus = context.getItem();
+    return new PerformanceAgentMarkdownRenderer(focus.parsedTrace.data.Meta.mainFrameId, focus.lookupEvent.bind(focus));
+  }
+  if (conversation?.type === "drjones-performance-full") {
     return new PerformanceAgentMarkdownRenderer();
-  } else if (Greendev.Prototypes.instance().isEnabled("emulationCapabilities") && conversation?.type === "freestyler" && SDK6.TargetManager.TargetManager.instance().primaryPageTarget()?.model(SDK6.DOMModel.DOMModel)) {
+  }
+  if (Greendev.Prototypes.instance().isEnabled("emulationCapabilities") && conversation?.type === "freestyler" && SDK6.TargetManager.TargetManager.instance().primaryPageTarget()?.model(SDK6.DOMModel.DOMModel)) {
     const domModel = SDK6.TargetManager.TargetManager.instance().primaryPageTarget()?.model(SDK6.DOMModel.DOMModel);
     const resourceTreeModel = domModel?.target().model(SDK6.ResourceTreeModel.ResourceTreeModel);
     const mainFrameId = resourceTreeModel?.mainFrame?.id;
     return new StylingAgentMarkdownRenderer(mainFrameId);
-  } else if (conversation?.type === "accessibility") {
+  }
+  if (conversation?.type === "accessibility") {
     const domModel = SDK6.TargetManager.TargetManager.instance().primaryPageTarget()?.model(SDK6.DOMModel.DOMModel);
     const mainDocumentURL = domModel?.existingDocument()?.documentURL;
     return new AccessibilityAgentMarkdownRenderer(mainDocumentURL);
@@ -8578,6 +8579,11 @@ var AiAssistancePanel = class _AiAssistancePanel extends UI11.Panel.Panel {
       case "drjones.sources-panel-context": {
         Host7.userMetrics.actionTaken(Host7.UserMetrics.Action.AiAssistanceOpenedFromSourcesPanel);
         targetConversationType = "drjones-file";
+        break;
+      }
+      case "ai-assistance.storage-floating-button": {
+        Host7.userMetrics.actionTaken(Host7.UserMetrics.Action.AiAssistanceOpenedFromStoragePanelFloatingButton);
+        targetConversationType = "storage";
         break;
       }
     }

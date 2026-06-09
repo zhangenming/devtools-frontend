@@ -309,16 +309,14 @@ async function getEmptyStateSuggestions(conversation) {
 function getMarkdownRenderer(conversation) {
     const context = conversation?.selectedContext;
     if (context instanceof AiAssistanceModel.PerformanceAgent.PerformanceTraceContext) {
-        if (!context.external) {
-            const focus = context.getItem();
-            return new PerformanceAgentMarkdownRenderer(focus.parsedTrace.data.Meta.mainFrameId, focus.lookupEvent.bind(focus));
-        }
+        const focus = context.getItem();
+        return new PerformanceAgentMarkdownRenderer(focus.parsedTrace.data.Meta.mainFrameId, focus.lookupEvent.bind(focus));
     }
-    else if (conversation?.type === "drjones-performance-full" /* AiAssistanceModel.AiHistoryStorage.ConversationType.PERFORMANCE */) {
+    if (conversation?.type === "drjones-performance-full" /* AiAssistanceModel.AiHistoryStorage.ConversationType.PERFORMANCE */) {
         // Handle historical conversations (can't linkify anything).
         return new PerformanceAgentMarkdownRenderer();
     }
-    else if (Greendev.Prototypes.instance().isEnabled('emulationCapabilities') &&
+    if (Greendev.Prototypes.instance().isEnabled('emulationCapabilities') &&
         conversation?.type === "freestyler" /* AiAssistanceModel.AiHistoryStorage.ConversationType.STYLING */ &&
         SDK.TargetManager.TargetManager.instance().primaryPageTarget()?.model(SDK.DOMModel.DOMModel)) {
         const domModel = SDK.TargetManager.TargetManager.instance().primaryPageTarget()?.model(SDK.DOMModel.DOMModel);
@@ -326,7 +324,7 @@ function getMarkdownRenderer(conversation) {
         const mainFrameId = resourceTreeModel?.mainFrame?.id;
         return new StylingAgentMarkdownRenderer(mainFrameId);
     }
-    else if (conversation?.type === "accessibility" /* AiAssistanceModel.AiHistoryStorage.ConversationType.ACCESSIBILITY */) {
+    if (conversation?.type === "accessibility" /* AiAssistanceModel.AiHistoryStorage.ConversationType.ACCESSIBILITY */) {
         const domModel = SDK.TargetManager.TargetManager.instance().primaryPageTarget()?.model(SDK.DOMModel.DOMModel);
         const mainDocumentURL = domModel?.existingDocument()?.documentURL;
         return new AccessibilityAgentMarkdownRenderer(mainDocumentURL);
@@ -1276,6 +1274,11 @@ export class AiAssistancePanel extends UI.Panel.Panel {
             case 'drjones.sources-panel-context': {
                 Host.userMetrics.actionTaken(Host.UserMetrics.Action.AiAssistanceOpenedFromSourcesPanel);
                 targetConversationType = "drjones-file" /* AiAssistanceModel.AiHistoryStorage.ConversationType.FILE */;
+                break;
+            }
+            case 'ai-assistance.storage-floating-button': {
+                Host.userMetrics.actionTaken(Host.UserMetrics.Action.AiAssistanceOpenedFromStoragePanelFloatingButton);
+                targetConversationType = "storage" /* AiAssistanceModel.AiHistoryStorage.ConversationType.STORAGE */;
                 break;
             }
         }

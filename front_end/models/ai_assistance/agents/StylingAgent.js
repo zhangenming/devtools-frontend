@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 import * as Host from '../../../core/host/host.js';
-import * as i18n from '../../../core/i18n/i18n.js';
 import * as Root from '../../../core/root/root.js';
 import * as SDK from '../../../core/sdk/sdk.js';
 import * as Greendev from '../../../models/greendev/greendev.js';
@@ -14,16 +13,6 @@ import { AI_ASSISTANCE_CSS_CLASS_NAME } from '../injected.js';
 import { ToolRegistry } from '../tools/ToolRegistry.js';
 import { AiAgent } from './AiAgent.js';
 import { executeJavaScriptFunction, executeJsCode, JavascriptExecutor } from './ExecuteJavascript.js';
-/*
-* Strings that don't need to be translated at this time.
-*/
-const UIStringsNotTranslate = {
-    /**
-     * @description Heading text for context details of Freestyler agent.
-     */
-    dataUsed: 'Data used',
-};
-const lockedString = i18n.i18n.lockedString;
 const preamble = `You are the most advanced CSS/DOM/HTML debugging assistant integrated into Chrome DevTools.
 You always suggest considering the best web development practices and the newest platform features such as view transitions.
 The user selected a DOM element in the browser's DevTools and sends a query about the page or the selected DOM element.
@@ -233,86 +222,6 @@ export class StylingAgent extends AiAgent {
             },
         });
     }
-    static async describeElement(element) {
-        let output = `* Element's uid is ${element.backendNodeId()}.
-* Its selector is \`${element.simpleSelector()}\``;
-        const childNodes = await element.getChildNodesPromise();
-        if (childNodes) {
-            const textChildNodes = childNodes.filter(childNode => childNode.nodeType() === Node.TEXT_NODE);
-            const elementChildNodes = childNodes.filter(childNode => childNode.nodeType() === Node.ELEMENT_NODE);
-            switch (elementChildNodes.length) {
-                case 0:
-                    output += '\n* It doesn\'t have any child element nodes';
-                    break;
-                case 1:
-                    output += `\n* It only has 1 child element node: \`${elementChildNodes[0].simpleSelector()}\``;
-                    break;
-                default:
-                    output += `\n* It has ${elementChildNodes.length} child element nodes: ${elementChildNodes.map(node => `\`${node.simpleSelector()}\` (uid=${node.backendNodeId()})`).join(', ')}`;
-            }
-            switch (textChildNodes.length) {
-                case 0:
-                    output += '\n* It doesn\'t have any child text nodes';
-                    break;
-                case 1:
-                    output += '\n* It only has 1 child text node';
-                    break;
-                default:
-                    output += `\n* It has ${textChildNodes.length} child text nodes`;
-            }
-        }
-        if (element.nextSibling) {
-            const elementOrNodeElementNodeText = element.nextSibling.nodeType() === Node.ELEMENT_NODE ?
-                `an element (uid=${element.nextSibling.backendNodeId()})` :
-                'a non element';
-            output += `\n* It has a next sibling and it is ${elementOrNodeElementNodeText} node`;
-        }
-        if (element.previousSibling) {
-            const elementOrNodeElementNodeText = element.previousSibling.nodeType() === Node.ELEMENT_NODE ?
-                `an element (uid=${element.previousSibling.backendNodeId()})` :
-                'a non element';
-            output += `\n* It has a previous sibling and it is ${elementOrNodeElementNodeText} node`;
-        }
-        if (element.isInShadowTree()) {
-            output += '\n* It is in a shadow DOM tree.';
-        }
-        const parentNode = element.parentNode;
-        if (parentNode) {
-            const parentChildrenNodes = await parentNode.getChildNodesPromise();
-            output += `\n* Its parent's selector is \`${parentNode.simpleSelector()}\` (uid=${parentNode.backendNodeId()})`;
-            const elementOrNodeElementNodeText = parentNode.nodeType() === Node.ELEMENT_NODE ? 'an element' : 'a non element';
-            output += `\n* Its parent is ${elementOrNodeElementNodeText} node`;
-            if (parentNode.isShadowRoot()) {
-                output += '\n* Its parent is a shadow root.';
-            }
-            if (parentChildrenNodes) {
-                const childElementNodes = parentChildrenNodes.filter(siblingNode => siblingNode.nodeType() === Node.ELEMENT_NODE);
-                switch (childElementNodes.length) {
-                    case 0:
-                        break;
-                    case 1:
-                        output += '\n* Its parent has only 1 child element node';
-                        break;
-                    default:
-                        output += `\n* Its parent has ${childElementNodes.length} child element nodes: ${childElementNodes.map(node => `\`${node.simpleSelector()}\` (uid=${node.backendNodeId()})`)
-                            .join(', ')}`;
-                        break;
-                }
-                const siblingTextNodes = parentChildrenNodes.filter(siblingNode => siblingNode.nodeType() === Node.TEXT_NODE);
-                switch (siblingTextNodes.length) {
-                    case 0:
-                        break;
-                    case 1:
-                        output += '\n* Its parent has only 1 child text node';
-                        break;
-                    default:
-                        output += `\n* Its parent has ${siblingTextNodes.length} child text nodes: ${siblingTextNodes.map(node => `\`${node.simpleSelector()}\``).join(', ')}`;
-                        break;
-                }
-            }
-        }
-        return output.trim();
-    }
     #getSelectedNode() {
         return this.context?.getItem() ?? null;
     }
@@ -515,16 +424,15 @@ export class StylingAgent extends AiAgent {
         return undefined;
     }
     async *handleContextDetails(selectedElement) {
-        if (!selectedElement) {
-            return;
+        if (selectedElement) {
+            const details = await selectedElement.getUserFacingDetails();
+            if (details) {
+                yield {
+                    type: "context" /* ResponseType.CONTEXT */,
+                    details,
+                };
+            }
         }
-        yield {
-            type: "context" /* ResponseType.CONTEXT */,
-            details: [{
-                    title: lockedString(UIStringsNotTranslate.dataUsed),
-                    text: await StylingAgent.describeElement(selectedElement.getItem()),
-                }],
-        };
     }
     async preRun() {
         this.#currentTurnId++;
@@ -539,9 +447,8 @@ export class StylingAgent extends AiAgent {
             multimodalInputEnhancementQuery = emulationInstructions + '\n' + multimodalInputEnhancementQuery;
             this.#hasAddedEmulationInstructions = true;
         }
-        const elementEnchancementQuery = selectedElement ?
-            `# Inspected element\n\n${await StylingAgent.describeElement(selectedElement.getItem())}\n\n# User request\n\n` :
-            '';
+        const promptDetails = selectedElement ? await selectedElement.getPromptDetails() : null;
+        const elementEnchancementQuery = promptDetails ? `${promptDetails}\n\n# User request\n\n` : '';
         return `${multimodalInputEnhancementQuery}${elementEnchancementQuery}QUERY: ${query}`;
     }
 }
