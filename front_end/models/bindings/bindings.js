@@ -3772,7 +3772,6 @@ var ResourceScriptFile = class extends Common12.ObjectWrapper.ObjectWrapper {
 var SymbolizedError_exports = {};
 __export(SymbolizedError_exports, {
   SymbolizedErrorObject: () => SymbolizedErrorObject,
-  SymbolizedSyntaxError: () => SymbolizedSyntaxError,
   UnparsableError: () => UnparsableError,
   isErrorLike: () => isErrorLike
 });
@@ -3808,6 +3807,7 @@ var SymbolizedErrorObject = class _SymbolizedErrorObject extends Common13.Object
   message;
   stackTrace;
   cause;
+  #syntaxErrorLocation = null;
   constructor(message, stackTrace, cause) {
     super();
     this.message = message;
@@ -3823,42 +3823,50 @@ var SymbolizedErrorObject = class _SymbolizedErrorObject extends Common13.Object
       this.cause.dispose();
     }
   }
-  #fireUpdated() {
+  get syntaxErrorLocation() {
+    return this.#syntaxErrorLocation;
+  }
+  /**
+   * Evaluates if we should populate the `syntaxErrorLocation` based on the provided exception details.
+   *
+   * There are three primary cases for SyntaxError:
+   * 1. Programmatic `SyntaxError`: Thrown via `throw new SyntaxError('...', {cause: ...})`. Has a full stack trace,
+   *    and an optional cause. The exception details point to the `throw` statement, which is identical to the top frame.
+   *    We do NOT want to populate `syntaxErrorLocation` here to avoid redundant location rendering in the UI.
+   * 2. Script parse failure: Failed to parse a script. Has no stack trace but possesses a compile-time location.
+   *    We DO want to populate `syntaxErrorLocation` to highlight where the parse failed.
+   * 3. `eval` parse failure: Failed to parse an eval string. Has a stack trace pointing to the `eval` call site
+   *    and a compile-time location of the parse failure within the string. The exception details location differs
+   *    from the top frame. We DO want to populate `syntaxErrorLocation` here.
+   */
+  static async createForSyntaxError(target, debuggerWorkspaceBinding, message, exceptionDetails, stackTrace, cause) {
+    const { exception, scriptId, lineNumber, columnNumber } = exceptionDetails;
+    if (!exception || exception.subtype !== "error" || exception.className !== "SyntaxError") {
+      throw new Error("SymbolizedErrorObject.createForSyntaxError expects a SyntaxError");
+    }
+    const symbolizedError = new _SymbolizedErrorObject(message, stackTrace, cause);
+    if (!scriptId) {
+      return symbolizedError;
+    }
+    const topFrame = exceptionDetails.stackTrace?.callFrames[0];
+    const isProgrammaticThrow = topFrame && topFrame.scriptId === scriptId && topFrame.lineNumber === lineNumber && topFrame.columnNumber === columnNumber;
+    if (!isProgrammaticThrow) {
+      const debuggerModel = target.model(SDK11.DebuggerModel.DebuggerModel);
+      if (debuggerModel) {
+        const rawLocation = debuggerModel.createRawLocationByScriptId(scriptId, lineNumber, columnNumber);
+        await debuggerWorkspaceBinding.createLiveLocation(rawLocation, symbolizedError.#updateSyntaxErrorLocation.bind(symbolizedError), new LiveLocationPool());
+      }
+    }
+    return symbolizedError;
+  }
+  async #updateSyntaxErrorLocation(liveLocation) {
+    this.#syntaxErrorLocation = await liveLocation.uiLocation();
     this.dispatchEventToListeners(
       "UPDATED"
       /* Events.UPDATED */
     );
   }
-};
-var SymbolizedSyntaxError = class _SymbolizedSyntaxError extends Common13.ObjectWrapper.ObjectWrapper {
-  message;
-  #uiLocation = null;
-  constructor(message) {
-    super();
-    this.message = message;
-  }
-  get uiLocation() {
-    return this.#uiLocation;
-  }
-  static async fromExceptionDetails(target, debuggerWorkspaceBinding, exceptionDetails) {
-    const { exception, scriptId, lineNumber, columnNumber } = exceptionDetails;
-    if (!exception || exception.subtype !== "error" || exception.className !== "SyntaxError") {
-      throw new Error("SymbolizedSyntaxError.fromExceptionDetails expects a SyntaxError");
-    }
-    if (!scriptId) {
-      return null;
-    }
-    const debuggerModel = target.model(SDK11.DebuggerModel.DebuggerModel);
-    if (!debuggerModel) {
-      return null;
-    }
-    const rawLocation = debuggerModel.createRawLocationByScriptId(scriptId, lineNumber, columnNumber);
-    const symbolizedSyntaxError = new _SymbolizedSyntaxError(exception.description || "");
-    await debuggerWorkspaceBinding.createLiveLocation(rawLocation, symbolizedSyntaxError.#update.bind(symbolizedSyntaxError), new LiveLocationPool());
-    return symbolizedSyntaxError;
-  }
-  async #update(liveLocation) {
-    this.#uiLocation = await liveLocation.uiLocation();
+  #fireUpdated() {
     this.dispatchEventToListeners(
       "UPDATED"
       /* Events.UPDATED */
@@ -4017,12 +4025,6 @@ var DebuggerWorkspaceBinding = class _DebuggerWorkspaceBinding {
       ]);
       fetchedExceptionDetails = details;
       causeRemoteObject = causeRemote;
-      if (remoteObject.className === "SyntaxError" && fetchedExceptionDetails) {
-        const syntaxError = await SymbolizedSyntaxError.fromExceptionDetails(remoteObject.runtimeModel().target(), this, fetchedExceptionDetails);
-        if (syntaxError) {
-          return syntaxError;
-        }
-      }
     } else if (remoteObject.type === "string") {
       errorStack = remoteObject.description || "";
       if (!isErrorLike(errorStack)) {
@@ -4043,6 +4045,9 @@ var DebuggerWorkspaceBinding = class _DebuggerWorkspaceBinding {
       return new UnparsableError(errorStack, cause);
     }
     const message = DetailedErrorStackParser_exports.parseMessage(errorStack);
+    if (remoteObject.subtype === "error" && remoteObject.className === "SyntaxError" && fetchedExceptionDetails) {
+      return await SymbolizedErrorObject.createForSyntaxError(remoteObject.runtimeModel().target(), this, message, fetchedExceptionDetails, stackTrace, cause);
+    }
     return new SymbolizedErrorObject(message, stackTrace, cause);
   }
   async createLiveLocation(rawLocation, updateDelegate, locationPool) {

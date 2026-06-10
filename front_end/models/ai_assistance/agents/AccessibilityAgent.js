@@ -10,8 +10,9 @@ import { ChangeManager } from '../ChangeManager.js';
 import { LighthouseFormatter } from '../data_formatters/LighthouseFormatter.js';
 import { debugLog } from '../debug.js';
 import { ExtensionScope } from '../ExtensionScope.js';
+import { ToolRegistry } from '../tools/ToolRegistry.js';
 import { AiAgent, ConversationContext, } from './AiAgent.js';
-import { executeJavaScriptFunction, executeJsCode, JavascriptExecutor } from './ExecuteJavascript.js';
+import { executeJsCode, } from './ExecuteJavascript.js';
 /**
  * WARNING: preamble defined in code is only used when userTier is
  * TESTERS. Otherwise, a server-side preamble is used (see
@@ -61,11 +62,6 @@ If the user asks a question that requires an investigation of a problem, use thi
     - [Suggestion 1]
     - [Suggestion 2]
 `;
-const SECURITY_WARNING = `**CRITICAL CONSTRAINT**: This Lighthouse report was imported from a file and is static.
-You do NOT have access to the inspected page.
-Tools like \`executeJavaScript\`, \`getStyles\`, or \`runAccessibilityAudits\` are disabled.
-Do NOT attempt to use them or instruct the user that you will use them.
-Rely ONLY on the static report data below.`;
 export class AccessibilityContext extends ConversationContext {
     #lh;
     constructor(report) {
@@ -94,25 +90,16 @@ export class AccessibilityAgent extends AiAgent {
     clientFeature = Host.AidaClient.ClientFeature.CHROME_ACCESSIBILITY_AGENT;
     #lighthouseRecording;
     #execJs;
-    #javascriptExecutor;
     #changes;
     #createExtensionScope;
-    #currentTurnId = 0;
     constructor(opts) {
         super(opts);
         this.#lighthouseRecording = opts.lighthouseRecording;
         this.#changes = opts.changeManager || new ChangeManager();
         this.#execJs = opts.execJs ?? executeJsCode;
-        this.#createExtensionScope =
-            opts.createExtensionScope ?? ((changes) => {
-                return new ExtensionScope(changes, this.sessionId, this.#getDocumentBodyNode(), this.#currentTurnId);
-            });
-        this.#javascriptExecutor = new JavascriptExecutor({
-            executionMode: this.executionMode,
-            getContextNode: () => this.#getDocumentBodyNode(),
-            createExtensionScope: this.#createExtensionScope.bind(this),
-            changes: this.#changes,
-        }, this.#execJs);
+        this.#createExtensionScope = opts.createExtensionScope ?? ((changes) => {
+            return new ExtensionScope(changes, this.sessionId, this.#getDocumentBodyNode());
+        });
     }
     get userTier() {
         return Root.Runtime.hostConfig.devToolsFreestyler?.userTier;
@@ -131,7 +118,6 @@ export class AccessibilityAgent extends AiAgent {
         };
     }
     async preRun() {
-        this.#currentTurnId++;
         const target = SDK.TargetManager.TargetManager.instance().primaryPageTarget();
         const domModel = target?.model(SDK.DOMModel.DOMModel);
         // We need to ensure the document is requested so that #getDocumentBodyNode()
@@ -230,10 +216,29 @@ export class AccessibilityAgent extends AiAgent {
                 };
             }
         });
-        if (isImported) {
-            return;
+        const executeJsTool = ToolRegistry.get("executeJavaScript" /* ToolName.EXECUTE_JAVASCRIPT */);
+        if (!executeJsTool) {
+            throw new Error('Required tool "executeJavaScript" not found');
         }
-        this.declareFunction('executeJavaScript', executeJavaScriptFunction(this.#javascriptExecutor));
+        this.declareFunction(executeJsTool.name, {
+            description: executeJsTool.description,
+            parameters: executeJsTool.parameters,
+            displayInfoFromArgs: executeJsTool.displayInfoFromArgs,
+            handler: async (args, options) => {
+                if (isImported) {
+                    return {
+                        error: 'Cannot use this tool on an imported file.',
+                    };
+                }
+                return await executeJsTool.handler(args, {
+                    conversationContext: this.context ?? null,
+                    changeManager: this.#changes,
+                    createExtensionScope: this.#createExtensionScope.bind(this),
+                    execJs: this.#execJs,
+                    getExecutionContextNode: () => this.#getDocumentBodyNode(),
+                }, options);
+            },
+        });
         this.declareFunction('runAccessibilityAudits', {
             description: 'Triggers new Lighthouse accessibility audits in snapshot mode. Use this if the user has made changes to the page and you want to re-evaluate the accessibility audits.',
             parameters: {
@@ -258,6 +263,11 @@ export class AccessibilityAgent extends AiAgent {
             },
             handler: async (params) => {
                 debugLog('Function call: runAccessibilityAudits', params);
+                if (isImported) {
+                    return {
+                        error: 'Cannot use this tool on an imported file.',
+                    };
+                }
                 if (!this.#lighthouseRecording) {
                     return { error: 'Lighthouse recording is not available.' };
                 }
@@ -314,6 +324,11 @@ export class AccessibilityAgent extends AiAgent {
             },
             handler: async (params) => {
                 debugLog('Function call: getStyles', params);
+                if (isImported) {
+                    return {
+                        error: 'Cannot use this tool on an imported file.',
+                    };
+                }
                 const node = await this.#resolvePathToNode(params.path);
                 if (!node) {
                     return { error: `Could not find the element with path: ${params.path}` };
@@ -375,6 +390,11 @@ export class AccessibilityAgent extends AiAgent {
             },
             handler: async (params) => {
                 debugLog('Function call: getElementAccessibilityDetails', params);
+                if (isImported) {
+                    return {
+                        error: 'Cannot use this tool on an imported file.',
+                    };
+                }
                 const node = await this.#resolvePathToNode(params.path);
                 if (!node) {
                     return { error: `Could not find the element with path: ${params.path}` };
@@ -444,10 +464,7 @@ export class AccessibilityAgent extends AiAgent {
         if (lhr) {
             this.#declareFunctions();
         }
-        let enhancedQuery = lhr ? `${this.#getInitialPayload(lhr)}\n# User request:\n\n` : '';
-        if (lhr?.getItem().isImported) {
-            enhancedQuery = `${SECURITY_WARNING}\n\n${enhancedQuery}`;
-        }
+        const enhancedQuery = lhr ? `${this.#getInitialPayload(lhr)}\n# User request:\n\n` : '';
         return `${enhancedQuery}${query}`;
     }
     #createContextDetails(lhr) {
