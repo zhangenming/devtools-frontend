@@ -14,8 +14,8 @@ function renderHeader(content, isCause) {
     return html `<span class="error-message-text">${content}</span>`;
 }
 function formatName(frame) {
-    let name = frame.name || '';
-    const isInline = Boolean(frame.rawName) && frame.name !== frame.rawName;
+    const isInline = frame.isInline;
+    let name = isInline ? (frame.name || '') : (frame.rawName || frame.name || '');
     const shouldAppendMethodAlias = !isInline && frame.methodName && name && name !== frame.methodName &&
         !name.endsWith('.' + frame.methodName) && !name.endsWith(' ' + frame.methodName);
     if (shouldAppendMethodAlias) {

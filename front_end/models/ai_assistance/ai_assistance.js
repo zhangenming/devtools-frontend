@@ -1885,6 +1885,17 @@ var AiAgent = class {
   popPendingMultimodalInput() {
     return void 0;
   }
+  /**
+   * Preamble features appended to the `client_version` in metadata.
+   * This is required ONLY for the Styling Agent for legacy reasons to serve
+   * different server-side preambles based on the Chrome version.
+   * Other agents should NOT set or override this.
+   * If you are curious about this, look for `do_conversation_handler.cc` in
+   * Google3 or chat to @jacktfranklin.
+   */
+  preambleFeatures() {
+    return [];
+  }
   buildRequest(part, role) {
     const parts = Array.isArray(part) ? part : [part];
     const currentMessage = {
@@ -1924,7 +1935,7 @@ var AiAgent = class {
         disable_user_content_logging: !(this.#serverSideLoggingEnabled ?? false),
         string_session_id: this.#sessionId,
         user_tier: userTier,
-        client_version: Root4.Runtime.getChromeVersion()
+        client_version: Root4.Runtime.getChromeVersion() + this.preambleFeatures().map((feature) => `+${feature}`).join("")
       },
       functionality_type: enableAidaFunctionCalling ? Host4.AidaClient.FunctionalityType.AGENTIC_CHAT : Host4.AidaClient.FunctionalityType.CHAT,
       client_feature: this.clientFeature
@@ -3088,7 +3099,7 @@ var ContextSelectionAgent_exports = {};
 __export(ContextSelectionAgent_exports, {
   ContextSelectionAgent: () => ContextSelectionAgent
 });
-import * as Common9 from "./../../core/common/common.js";
+import * as Common10 from "./../../core/common/common.js";
 import * as Host11 from "./../../core/host/host.js";
 import * as i18n15 from "./../../core/i18n/i18n.js";
 import * as Root10 from "./../../core/root/root.js";
@@ -3682,8 +3693,10 @@ function createContextDetailsForFileAgent(selectedFile) {
 var NetworkAgent_exports = {};
 __export(NetworkAgent_exports, {
   NetworkAgent: () => NetworkAgent,
-  RequestContext: () => RequestContext
+  RequestContext: () => RequestContext,
+  getRequestContextOrigin: () => getRequestContextOrigin
 });
+import * as Common6 from "./../../core/common/common.js";
 import * as Host8 from "./../../core/host/host.js";
 import * as i18n9 from "./../../core/i18n/i18n.js";
 import * as Root7 from "./../../core/root/root.js";
@@ -3754,6 +3767,14 @@ var UIStringsNotTranslate2 = {
   requestInitiatorChain: "Request initiator chain"
 };
 var lockedString3 = i18n9.i18n.lockedString;
+function getRequestContextOrigin(request) {
+  const origin = extractContextOrigin(request.documentURL);
+  if (request.isImportedHar()) {
+    const parsed = Common6.ParsedURL.ParsedURL.fromString(origin);
+    return `imported-har://${parsed ? parsed.domain() : origin}`;
+  }
+  return origin;
+}
 var RequestContext = class extends ConversationContext {
   #request;
   #calculator;
@@ -3770,6 +3791,9 @@ var RequestContext = class extends ConversationContext {
    */
   getURL() {
     return this.#request.documentURL;
+  }
+  getOrigin() {
+    return getRequestContextOrigin(this.#request);
   }
   getItem() {
     return this.#request;
@@ -3860,7 +3884,7 @@ __export(PerformanceAgent_exports, {
   PerformanceTraceContext: () => PerformanceTraceContext,
   getLabelName: () => getLabelName
 });
-import * as Common7 from "./../../core/common/common.js";
+import * as Common8 from "./../../core/common/common.js";
 import * as Host9 from "./../../core/host/host.js";
 import * as i18n11 from "./../../core/i18n/i18n.js";
 import * as Platform4 from "./../../core/platform/platform.js";
@@ -3878,7 +3902,7 @@ var PerformanceInsightFormatter_exports = {};
 __export(PerformanceInsightFormatter_exports, {
   PerformanceInsightFormatter: () => PerformanceInsightFormatter
 });
-import * as Common6 from "./../../core/common/common.js";
+import * as Common7 from "./../../core/common/common.js";
 import * as Trace4 from "./../trace/trace.js";
 
 // gen/front_end/models/ai_assistance/data_formatters/PerformanceTraceFormatter.js
@@ -5479,7 +5503,7 @@ Duplication grouped by Node modules: ${filesFormatted}`;
     for (const font of insight.fonts) {
       let fontName = font.name;
       if (!fontName) {
-        const url = new Common6.ParsedURL.ParsedURL(font.request.args.data.url);
+        const url = new Common7.ParsedURL.ParsedURL(font.request.args.data.url);
         fontName = url.isValid ? url.lastPathComponent : "(not available)";
       }
       output += `
@@ -6425,6 +6449,26 @@ var PerformanceTraceContext = class _PerformanceTraceContext extends Conversatio
       const { min, max } = this.#focus.parsedTrace.data.Meta.traceBounds;
       return `trace-${min}-${max}`;
     }
+  }
+  /**
+   * Returns the origin for a performance trace in the AI context.
+   *
+   * To prevent cross-origin prompt injection attacks, imported traces
+   * are isolated from live pages. We assign them a virtual origin
+   * (`imported-trace://${domain}`) so they do not share the origin of live pages
+   * (e.g., `https://${domain}`). This forces a conversation reset when transitioning
+   * between imported trace data and live pages.
+   */
+  getOrigin() {
+    const parsedTrace = this.#focus.parsedTrace;
+    const url = this.getURL();
+    const origin = extractContextOrigin(url);
+    const isFresh = Tracing.FreshRecording.Tracker.instance().recordingIsFresh(parsedTrace);
+    if (!isFresh) {
+      const parsed = Common8.ParsedURL.ParsedURL.fromString(origin);
+      return `imported-trace://${parsed ? parsed.domain() : origin}`;
+    }
+    return origin;
   }
   getItem() {
     return this.#focus;
@@ -7440,7 +7484,7 @@ ${result}`,
           return { error: "Invalid eventKey" };
         }
         const revealable = new SDK7.TraceObject.RevealableEvent(event);
-        await Common7.Revealer.reveal(revealable);
+        await Common8.Revealer.reveal(revealable);
         return {
           result: { success: true },
           widgets: [{
@@ -7618,7 +7662,7 @@ __export(StorageAgent_exports, {
   getCookiesForDomain: () => getCookiesForDomain,
   resolveDOMStorages: () => resolveDOMStorages
 });
-import * as Common8 from "./../../core/common/common.js";
+import * as Common9 from "./../../core/common/common.js";
 import * as Host10 from "./../../core/host/host.js";
 import * as i18n13 from "./../../core/i18n/i18n.js";
 import * as Root9 from "./../../core/root/root.js";
@@ -7626,7 +7670,7 @@ import * as SDK8 from "./../../core/sdk/sdk.js";
 var lockedString5 = i18n13.i18n.lockedString;
 var preamble5 = `You are a Senior Software Engineer specializing in state audit and storage analysis within Chrome DevTools. Your mission is to help developers debug storage-related issues faster by analyzing the evidence in LocalStorage, SessionStorage, and Cookies.
 
- You have access to the site's storage using tools like \`listPageOrigins\`, \`listStorageKeys\`, \`getStorageValues\`, \`listCookies\`, and \`getCookieValues\`.
+ You have access to the site's storage using tools like \`getStorageBreakdown\`, \`listPageOrigins\`, \`listStorageKeys\`, \`getStorageValues\`, \`listCookies\`, and \`getCookieValues\`.
 
  # Goals
 
@@ -7637,6 +7681,7 @@ var preamble5 = `You are a Senior Software Engineer specializing in state audit 
  # Tools & Workflow
 
  -   **Prioritize Top-Level Context**: Always initiate your investigation from the top-level page's storage. Explicitly state if you are analyzing storage from a different context (e.g., an iframe).
+ -   **Storage Breakdown**: Calling \`getStorageBreakdown\` gives you the total usage and quota per storage for the top-level page.
  -   **Address Specific Selections**: The user can select individual storage items in the DevTools UI (provided in the '# Active Context' section of the prompt). If the query is about a selected item (e.g., "Why is this cookie set?"), focus your response on that specific item.
  -   **Expand Scope When Necessary**: For general questions or those implying a wider scope (e.g., "Check all storages," "Are there related cookies on subdomains?"), proactively use your tools to explore other relevant storage contexts, including iframes and different origins.
  -   **Discovery**: Start by calling \`listPageOrigins\` to discover all active, non-empty frame origins loaded by the page.
@@ -7668,7 +7713,7 @@ function isSamePageOrigin(target, context) {
   if (!target || !context) {
     return false;
   }
-  const pageOrigin = Common8.ParsedURL.ParsedURL.extractOrigin(target.inspectedURL());
+  const pageOrigin = Common9.ParsedURL.ParsedURL.extractOrigin(target.inspectedURL());
   return pageOrigin !== "" && context.isOriginAllowed(pageOrigin);
 }
 var StorageContext = class extends ConversationContext {
@@ -7983,11 +8028,49 @@ var StorageAgent = class _StorageAgent extends AiAgent {
         return { result: { cookies: cookieData } };
       }
     });
+    this.declareFunction("getStorageBreakdown", {
+      description: "Retrieves the total storage usage, total storage quota, and a breakdown of active storage usage per storage type for the top-level page.",
+      parameters: {
+        type: 6,
+        description: "",
+        nullable: false,
+        properties: {},
+        required: []
+      },
+      displayInfoFromArgs: () => {
+        return {
+          title: lockedString5("Retrieving storage breakdown"),
+          action: "getStorageBreakdown()"
+        };
+      },
+      handler: async () => {
+        const target = SDK8.TargetManager.TargetManager.instance().primaryPageTarget();
+        if (!target || !this.context || !isSamePageOrigin(target, this.context)) {
+          return { error: "No origin available or not allowed." };
+        }
+        const origin = this.context.getOrigin();
+        const response = await target.storageAgent().invoke_getUsageAndQuota({ origin });
+        if (response.getError()) {
+          return { error: response.getError() || "Unknown CDP error" };
+        }
+        const usageBreakdown = response.usageBreakdown.filter((entry) => entry.usage > 0).sort((a, b) => b.usage - a.usage).map((entry) => ({
+          storageType: entry.storageType,
+          usage: i18n13.ByteUtilities.bytesToString(entry.usage)
+        }));
+        return {
+          result: {
+            totalUsage: i18n13.ByteUtilities.bytesToString(response.usage),
+            totalQuota: i18n13.ByteUtilities.bytesToString(response.quota),
+            usageBreakdown
+          }
+        };
+      }
+    });
   }
   static #formatContext(item) {
     const primaryTargetOrigin = `Primary target: ${item.primaryTargetOrigin}`;
     if (item instanceof CookieItem) {
-      const parsedURL = Common8.ParsedURL.ParsedURL.fromString(item.origin);
+      const parsedURL = Common9.ParsedURL.ParsedURL.fromString(item.origin);
       const domain = parsedURL ? parsedURL.host : item.origin;
       return `${primaryTargetOrigin}
 User-selected Context: Cookies
@@ -8187,8 +8270,8 @@ var ContextSelectionAgent = class _ContextSelectionAgent extends AiAgent {
         let hasCrossOriginRequest = false;
         const requestsToShow = [];
         for (const request of Logs3.NetworkLog.NetworkLog.instance().requests()) {
-          const documentOrigin = Common9.ParsedURL.ParsedURL.extractOrigin(request.documentURL);
-          if (origin && documentOrigin !== origin) {
+          const requestOrigin = getRequestContextOrigin(request);
+          if (origin && requestOrigin !== origin) {
             hasCrossOriginRequest = true;
             continue;
           }
@@ -8255,8 +8338,8 @@ var ContextSelectionAgent = class _ContextSelectionAgent extends AiAgent {
           if (req.requestId() !== id) {
             return false;
           }
-          const documentOrigin = Common9.ParsedURL.ParsedURL.extractOrigin(req.documentURL);
-          return !origin || documentOrigin === origin;
+          const requestOrigin = getRequestContextOrigin(req);
+          return !origin || requestOrigin === origin;
         });
         if (request) {
           const calculator = this.#networkTimeCalculator ?? new NetworkTimeCalculator3.NetworkTransferTimeCalculator();
@@ -8303,7 +8386,7 @@ var ContextSelectionAgent = class _ContextSelectionAgent extends AiAgent {
         const uiSourceCodes = [];
         for (const file of _ContextSelectionAgent.getUISourceCodes()) {
           const fileUrl = file.url();
-          const fileOrigin = Common9.ParsedURL.ParsedURL.extractOrigin(fileUrl);
+          const fileOrigin = Common10.ParsedURL.ParsedURL.extractOrigin(fileUrl);
           if (origin && fileOrigin !== origin) {
             continue;
           }
@@ -8358,7 +8441,7 @@ var ContextSelectionAgent = class _ContextSelectionAgent extends AiAgent {
             return false;
           }
           const fileUrl = file2.url();
-          const fileOrigin = Common9.ParsedURL.ParsedURL.extractOrigin(fileUrl);
+          const fileOrigin = Common10.ParsedURL.ParsedURL.extractOrigin(fileUrl);
           return !origin || fileOrigin === origin;
         });
         if (!file) {
@@ -8575,7 +8658,7 @@ __export(GreenDevAgent_exports, {
   GreenDevAgent: () => GreenDevAgent,
   GreenDevContext: () => GreenDevContext
 });
-import * as Common10 from "./../../core/common/common.js";
+import * as Common11 from "./../../core/common/common.js";
 import * as Host12 from "./../../core/host/host.js";
 import * as Root11 from "./../../core/root/root.js";
 import * as SDK9 from "./../../core/sdk/sdk.js";
@@ -8672,7 +8755,7 @@ var GreenDevContext = class extends ConversationContext {
   }
 };
 var GreenDevAgent = class _GreenDevAgent extends AiAgent {
-  #eventTarget = new Common10.ObjectWrapper.ObjectWrapper();
+  #eventTarget = new Common11.ObjectWrapper.ObjectWrapper();
   addEventListener(eventType, listener, thisObject) {
     return this.#eventTarget.addEventListener(eventType, listener, thisObject);
   }
@@ -9866,6 +9949,9 @@ var StylingAgent = class extends AiAgent {
       }
     });
   }
+  preambleFeatures() {
+    return ["function_calling"];
+  }
   #getSelectedNode() {
     return this.context?.getItem() ?? null;
   }
@@ -10269,7 +10355,7 @@ __export(AiConversation_exports, {
   NOT_FOUND_IMAGE_DATA: () => NOT_FOUND_IMAGE_DATA,
   generateContextDetailsMarkdown: () => generateContextDetailsMarkdown
 });
-import * as Common12 from "./../../core/common/common.js";
+import * as Common13 from "./../../core/common/common.js";
 import * as Host16 from "./../../core/host/host.js";
 import * as Platform5 from "./../../core/platform/platform.js";
 import * as Root14 from "./../../core/root/root.js";
@@ -10283,22 +10369,22 @@ __export(AiHistoryStorage_exports, {
   MAX_RECENT_PROMPTS_COUNT: () => MAX_RECENT_PROMPTS_COUNT,
   RECENT_PROMPTS_SIZE_LIMIT: () => RECENT_PROMPTS_SIZE_LIMIT
 });
-import * as Common11 from "./../../core/common/common.js";
+import * as Common12 from "./../../core/common/common.js";
 var instance = null;
 var DEFAULT_MAX_STORAGE_SIZE = 50 * 1024 * 1024;
 var MAX_RECENT_PROMPTS_COUNT = 20;
 var RECENT_PROMPTS_SIZE_LIMIT = 100 * 1024;
-var AiHistoryStorage = class _AiHistoryStorage extends Common11.ObjectWrapper.ObjectWrapper {
+var AiHistoryStorage = class _AiHistoryStorage extends Common12.ObjectWrapper.ObjectWrapper {
   #historySetting;
   #imageHistorySettings;
   #recentPromptsSetting;
-  #mutex = new Common11.Mutex.Mutex();
+  #mutex = new Common12.Mutex.Mutex();
   #maxStorageSize;
   constructor(maxStorageSize = DEFAULT_MAX_STORAGE_SIZE) {
     super();
-    this.#historySetting = Common11.Settings.Settings.instance().createSetting("ai-assistance-history-entries", []);
-    this.#imageHistorySettings = Common11.Settings.Settings.instance().createSetting("ai-assistance-history-images", []);
-    this.#recentPromptsSetting = Common11.Settings.Settings.instance().createSetting("ai-assistance-recent-prompts", []);
+    this.#historySetting = Common12.Settings.Settings.instance().createSetting("ai-assistance-history-entries", []);
+    this.#imageHistorySettings = Common12.Settings.Settings.instance().createSetting("ai-assistance-history-images", []);
+    this.#recentPromptsSetting = Common12.Settings.Settings.instance().createSetting("ai-assistance-recent-prompts", []);
     this.#maxStorageSize = maxStorageSize;
   }
   clearForTest() {
@@ -10839,7 +10925,7 @@ function isAiAssistanceContextSelectionAgentEnabled() {
 function getPrimaryPageOrigin() {
   const target = SDK11.TargetManager.TargetManager.instance().primaryPageTarget();
   const inspectedURL = target?.inspectedURL();
-  return inspectedURL ? new Common12.ParsedURL.ParsedURL(inspectedURL).securityOrigin() : void 0;
+  return inspectedURL ? new Common13.ParsedURL.ParsedURL(inspectedURL).securityOrigin() : void 0;
 }
 
 // gen/front_end/models/ai_assistance/BuiltInAi.js
@@ -10847,11 +10933,11 @@ var BuiltInAi_exports = {};
 __export(BuiltInAi_exports, {
   BuiltInAi: () => BuiltInAi
 });
-import * as Common13 from "./../../core/common/common.js";
+import * as Common14 from "./../../core/common/common.js";
 import * as Host17 from "./../../core/host/host.js";
 import * as Root15 from "./../../core/root/root.js";
 var builtInAiInstance;
-var BuiltInAi = class _BuiltInAi extends Common13.ObjectWrapper.ObjectWrapper {
+var BuiltInAi = class _BuiltInAi extends Common14.ObjectWrapper.ObjectWrapper {
   #availability = null;
   #hasGpu;
   #consoleInsightsSession;

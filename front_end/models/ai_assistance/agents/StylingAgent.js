@@ -228,6 +228,9 @@ export class StylingAgent extends AiAgent {
             },
         });
     }
+    preambleFeatures() {
+        return ['function_calling'];
+    }
     #getSelectedNode() {
         return this.context?.getItem() ?? null;
     }

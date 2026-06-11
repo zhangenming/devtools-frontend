@@ -29553,6 +29553,10 @@ var NetworkRequest = class _NetworkRequest extends Common27.ObjectWrapper.Object
   #contentDataProvider;
   #isSameSite = null;
   #wasIntercepted = false;
+  /**
+   * Whether this request was imported from a HAR file.
+   */
+  #isImportedHar = false;
   #associatedData = /* @__PURE__ */ new Map();
   #hasOverriddenContent = false;
   #hasThirdPartyCookiePhaseoutIssue = false;
@@ -30156,6 +30160,12 @@ var NetworkRequest = class _NetworkRequest extends Common27.ObjectWrapper.Object
   }
   setWasIntercepted(wasIntercepted) {
     this.#wasIntercepted = wasIntercepted;
+  }
+  isImportedHar() {
+    return this.#isImportedHar;
+  }
+  setIsImportedHar(isImportedHar) {
+    this.#isImportedHar = isImportedHar;
   }
   setEarlyHintsHeaders(headers) {
     this.earlyHintsHeaders = headers;
