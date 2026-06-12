@@ -13593,7 +13593,7 @@ var ColorMatcher = class _ColorMatcher extends matcherBase(ColorMatch) {
       if (callee && colorFunc.match(/^(rgba?|hsla?|hwba?|lab|lch|oklab|oklch|color)$/)) {
         const args = ASTUtils.children(node.getChild("ArgList"));
         const colorText = args.length >= 2 ? matching.getComputedTextRange(args[0], args[args.length - 1]) : "";
-        const isRelativeColorSyntax = Boolean(colorText.match(/^[^)]*\(\W*from\W+/) && !matching.hasUnresolvedSubstitutions(node) && CSS.supports("color", colorFunc + colorText));
+        const isRelativeColorSyntax = Boolean(colorText.match(/^[^)]*\(\W*from\W+/) && !matching.hasUnresolvedSubstitutions(node));
         if (!isRelativeColorSyntax) {
           return new ColorMatch(text, node);
         }

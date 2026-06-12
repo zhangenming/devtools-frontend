@@ -10618,8 +10618,7 @@ var URLRenderer = class extends rendererBase(SDK9.CSSPropertyParserMatchers.URLM
       // so that we don't have to keep two versions (original vs. trimmed) of URL
       // at the same time, which complicates both StylesSidebarPane and StylePropertyTreeElement.
       bypassURLTrimming: true,
-      showColumnNumber: false,
-      inlineFrameIndex: 0
+      showColumnNumber: false
     }), hrefUrl || url);
     container.appendChild(link2);
     UI11.UIUtils.createTextChild(container, ")");
@@ -11416,8 +11415,7 @@ var AdoptedStyleSheetTreeElement = class _AdoptedStyleSheetTreeElement extends U
       documentElement.appendChild(Components5.Linkifier.Linkifier.linkifyURL(linkText, {
         text: linkText,
         preventClick: true,
-        showColumnNumber: false,
-        inlineFrameIndex: 0
+        showColumnNumber: false
       }));
       UI13.UIUtils.createTextChild(documentElement, ")");
     }
@@ -12469,8 +12467,7 @@ function renderTitle(node, isClosingTag, expanded, isExpandable, isXMLMimeType, 
       return html10`<span>#document (<span>${Components6.Linkifier.Linkifier.renderLinkifiedUrl(text, {
         text,
         preventClick: true,
-        showColumnNumber: false,
-        inlineFrameIndex: 0
+        showColumnNumber: false
       })}</span>)</span>`;
     }
     case Node.DOCUMENT_FRAGMENT_NODE: {
@@ -12547,7 +12544,6 @@ function renderLinkifiedValue(value5, node) {
     text: value5,
     preventClick: true,
     showColumnNumber: false,
-    inlineFrameIndex: 0,
     onRef: (link2) => {
       ImagePreviewPopover.setImageUrl(link2, rewrittenHref);
     }

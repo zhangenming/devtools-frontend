@@ -93,7 +93,6 @@ const DEFAULT_VIEW = (input, _output, target) => {
         }
         const linkOptions = {
             showColumnNumber: true,
-            inlineFrameIndex: 0,
             maxLength: UI.UIUtils.MaxLengthForDisplayedURLsInConsole,
             ignoreListManager: input.ignoreListManager,
         };
@@ -134,6 +133,9 @@ export class SymbolizedErrorWidget extends UI.Widget.Widget {
         const host = element || document.createElement('span');
         super(host, { classes: ['symbolized-error-widget-host'] });
         this.#view = view;
+    }
+    get linkElements() {
+        return [...this.contentElement.querySelectorAll('.devtools-link')];
     }
     set ignoreListManager(ignoreListManager) {
         this.#ignoreListManager = ignoreListManager;

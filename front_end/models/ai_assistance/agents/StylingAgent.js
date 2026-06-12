@@ -155,9 +155,17 @@ export class StylingAgent extends AiAgent {
             description: getStylesTool.description,
             parameters: getStylesTool.parameters,
             displayInfoFromArgs: getStylesTool.displayInfoFromArgs,
-            handler: args => getStylesTool.handler(args, {
-                conversationContext: this.context ?? null,
-            }),
+            handler: async (args) => {
+                const context = this.context;
+                if (!context) {
+                    return { error: 'Error: Could not find the currently selected element.' };
+                }
+                return await getStylesTool.handler(args, {
+                    conversationContext: context,
+                    getTarget: () => SDK.TargetManager.TargetManager.instance().primaryPageTarget() ?? context.getItem().domModel().target(),
+                    getEstablishedOrigin: () => context.getOrigin(),
+                });
+            },
         });
         const executeJsTool = ToolRegistry.get("executeJavaScript" /* ToolName.EXECUTE_JAVASCRIPT */);
         if (!executeJsTool) {
@@ -227,6 +235,19 @@ export class StylingAgent extends AiAgent {
                 return await this.activateDeviceEmulation(params.deviceName, params.visionDeficiency);
             },
         });
+    }
+    /**
+     * Clears styling-agent-specific caches and state.
+     * Resets cached emulation data (screenshots, accessibility tree) and the
+     * instructions flag to ensure they are re-evaluated in subsequent queries.
+     */
+    clearCache() {
+        super.clearCache();
+        // Reset emulation state so that subsequent queries will re-initialize
+        // emulation details and fetch fresh data.
+        this.#greenDevEmulationScreenshot = null;
+        this.#greenDevEmulationAxTree = null;
+        this.#hasAddedEmulationInstructions = false;
     }
     preambleFeatures() {
         return ['function_calling'];
