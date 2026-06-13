@@ -8342,6 +8342,7 @@ var StylesSidebarPane = class _StylesSidebarPane extends Common5.ObjectWrapper.e
   #shouldRenderLazily = false;
   #lazyRenderObserver;
   #lazyRenderCallbacks = /* @__PURE__ */ new WeakMap();
+  #updateId = 0;
   constructor(computedStyleModel) {
     super(computedStyleModel, { delegatesFocus: true, useShadowDom: true, classes: ["flex-none"] });
     this.setMinimumSize(96, 26);
@@ -8650,8 +8651,14 @@ var StylesSidebarPane = class _StylesSidebarPane extends Common5.ObjectWrapper.e
         /* Events.INITIAL_UPDATE_COMPLETED */
       );
     }
-    this.nodeStylesUpdatedForTest(this.node(), true);
-    this.dispatchEventToListeners("StylesUpdateCompleted", { hasMatchedStyles: this.hasMatchedStyles });
+    this.#updateId += 1;
+    const currentUpdateId = this.#updateId;
+    void UI10.Widget.Widget.allUpdatesComplete.then(() => {
+      if (this.#updateId === currentUpdateId) {
+        this.nodeStylesUpdatedForTest(this.node(), true);
+        this.dispatchEventToListeners("StylesUpdateCompleted", { hasMatchedStyles: this.hasMatchedStyles });
+      }
+    });
   }
   #getRegisteredPropertyDetails(matchedStyles, variableName) {
     const registration = matchedStyles.getRegisteredProperty(variableName);
