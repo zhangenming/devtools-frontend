@@ -3161,6 +3161,7 @@ export const knownContextValues = new Set([
     'profile-view.focus-selected-function',
     'profile-view.restore-all-functions',
     'profile-view.selected-view',
+    'profiler',
     'profiler.clear-all',
     'profiler.delete-profile',
     'profiler.heap-snapshot-base',

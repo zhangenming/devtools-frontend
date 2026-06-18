@@ -3,6 +3,23 @@ import * as Platform from '../../core/platform/platform.js';
 import type * as SDK from '../../core/sdk/sdk.js';
 import type * as Protocol from '../../generated/protocol.js';
 import * as UI from '../../ui/legacy/legacy.js';
+interface ViewInput {
+    isProfiling: boolean;
+    log: SDK.PaintProfiler.PaintProfilerLogItem[];
+    profiles: Protocol.LayerTree.PaintProfile[] | null | undefined;
+    logCategories: PaintProfilerCategory[] | undefined;
+    innerBarWidth: number;
+    minBarHeight: number;
+    barPaddingWidth: number;
+    outerBarWidth: number;
+    windowLeftRatio: number;
+    windowRightRatio: number;
+}
+interface ViewOutput {
+    onCanvasContainerCreated: (el: Element | undefined) => void;
+}
+declare const DEFAULT_VIEW: (input: ViewInput, output: ViewOutput, target: HTMLElement) => void;
+type View = typeof DEFAULT_VIEW;
 declare const PaintProfilerView_base: (new (...args: any[]) => {
     __events: Common.ObjectWrapper.ObjectWrapper<EventTypes>;
     addEventListener<T extends Events.WINDOW_CHANGED>(eventType: T, listener: (arg0: Common.EventTarget.EventTargetEvent<EventTypes[T], any>) => void, thisObject?: Object): Common.EventTarget.EventDescriptor<EventTypes, T>;
@@ -11,41 +28,33 @@ declare const PaintProfilerView_base: (new (...args: any[]) => {
     hasEventListeners(eventType: Events.WINDOW_CHANGED): boolean;
     dispatchEventToListeners<T extends Events.WINDOW_CHANGED>(eventType: Platform.TypeScriptUtilities.NoUnion<T>, ...eventData: Common.EventTarget.EventPayloadToRestParameters<EventTypes, T>): void;
     dispatchDOMEvent?(event: Event): void;
-}) & typeof UI.Widget.HBox;
+}) & typeof UI.Widget.Widget;
 export declare class PaintProfilerView extends PaintProfilerView_base {
     #private;
-    private canvasContainer;
-    private readonly progressBanner;
-    private pieChart;
-    private readonly showImageCallback;
-    private canvas;
-    private context;
+    private canvasContainer?;
     private readonly innerBarWidth;
     private minBarHeight;
     private readonly barPaddingWidth;
     private readonly outerBarWidth;
     private pendingScale;
     private scale;
-    private samplesPerBar;
     private log;
     private snapshot?;
     private logCategories?;
     private profiles?;
     private updateImageTimer?;
-    constructor(showImageCallback: (arg0?: string | undefined) => void);
+    private readonly showImageCallback;
+    private isProfiling;
+    constructor(showImageCallback: (arg0?: string | undefined) => void, view?: View);
     static categories(): Record<string, PaintProfilerCategory>;
     private static initLogItemCategories;
     private static categoryForLogItem;
+    wasShown(): void;
     onResize(): void;
     setSnapshotAndLog(snapshot: SDK.PaintProfiler.PaintProfilerSnapshot | null, log: SDK.PaintProfiler.PaintProfilerLogItem[], clipRect: Protocol.DOM.Rect | null): Promise<void>;
     setScale(scale: number): void;
-    update(): void;
-    private renderBar;
+    performUpdate(): void;
     private onWindowChanged;
-    private updatePieChart;
-    private calculatePieChart;
-    private populatePieChart;
-    private formatPieChartTime;
     selectionWindow(): {
         left: number;
         right: number;
