@@ -192,8 +192,9 @@ export class PaintProfilerView extends Common.ObjectWrapper.eventMixin(UI.Widget
     minBarHeight;
     barPaddingWidth;
     outerBarWidth;
-    pendingScale;
-    scale;
+    #pendingScale;
+    #scale;
+    samplesPerBar;
     log;
     snapshot;
     logCategories;
@@ -204,17 +205,17 @@ export class PaintProfilerView extends Common.ObjectWrapper.eventMixin(UI.Widget
     #isResizeEnabled = false;
     #view;
     #viewOutput;
-    constructor(showImageCallback, view = DEFAULT_VIEW) {
-        super();
+    constructor(element, view = DEFAULT_VIEW) {
+        super(element);
         this.contentElement.classList.add('paint-profiler-overview');
-        this.showImageCallback = showImageCallback;
         this.#view = view;
         this.innerBarWidth = 4 * window.devicePixelRatio;
         this.minBarHeight = window.devicePixelRatio;
         this.barPaddingWidth = 2 * window.devicePixelRatio;
         this.outerBarWidth = this.innerBarWidth + this.barPaddingWidth;
-        this.pendingScale = 1;
-        this.scale = this.pendingScale;
+        this.#pendingScale = 1;
+        this.#scale = this.#pendingScale;
+        this.samplesPerBar = 0;
         this.log = [];
         this.#viewOutput = {
             onCanvasContainerCreated: (el) => {
@@ -227,6 +228,18 @@ export class PaintProfilerView extends Common.ObjectWrapper.eventMixin(UI.Widget
             },
         };
         this.reset();
+    }
+    set snapshotAndLog(data) {
+        const newSnapshot = data ? data.snapshot : null;
+        const newLog = data ? data.log : [];
+        const newClipRect = data ? (data.clipRect || null) : null;
+        if (this.snapshot === newSnapshot && this.log === newLog) {
+            return;
+        }
+        void this.setSnapshotAndLog(newSnapshot, newLog, newClipRect);
+    }
+    get snapshoAndLog() {
+        return { snapshot: this.snapshot, log: this.log };
     }
     static categories() {
         if (!categories) {
@@ -324,13 +337,16 @@ export class PaintProfilerView extends Common.ObjectWrapper.eventMixin(UI.Widget
         this.profiles = profiles;
         this.requestUpdate();
     }
-    setScale(scale) {
-        const needsUpdate = scale > this.scale;
+    set scale(scale) {
+        const needsUpdate = scale > this.#scale;
         const predictiveGrowthFactor = 2;
-        this.pendingScale = Math.min(1, scale * predictiveGrowthFactor);
+        this.#pendingScale = Math.min(1, scale * predictiveGrowthFactor);
         if (needsUpdate && this.snapshot) {
             this.updateImage();
         }
+    }
+    get scale() {
+        return this.#scale;
     }
     performUpdate() {
         const input = {
@@ -348,7 +364,7 @@ export class PaintProfilerView extends Common.ObjectWrapper.eventMixin(UI.Widget
         this.#view(input, this.#viewOutput, this.contentElement);
     }
     onWindowChanged() {
-        this.dispatchEventToListeners("WindowChanged" /* Events.WINDOW_CHANGED */);
+        this.dispatchEventToListeners("WindowChanged" /* Events.WINDOW_CHANGED */, this.selectionWindow());
         this.requestUpdate();
         if (this.updateImageTimer) {
             return;
@@ -373,7 +389,7 @@ export class PaintProfilerView extends Common.ObjectWrapper.eventMixin(UI.Widget
             left = this.log[window.left].commandIndex;
             right = this.log[window.right - 1].commandIndex;
         }
-        const scale = this.pendingScale;
+        const scale = this.#pendingScale;
         if (!this.snapshot) {
             return;
         }
@@ -381,8 +397,8 @@ export class PaintProfilerView extends Common.ObjectWrapper.eventMixin(UI.Widget
             if (!image) {
                 return;
             }
-            this.scale = scale;
-            this.showImageCallback(image);
+            this.#scale = scale;
+            this.showImageCallback?.(image);
         });
     }
     reset() {
@@ -469,30 +485,39 @@ export const COMMAND_LOG_DEFAULT_VIEW = (input, _output, target) => {
     </div>`, target);
 };
 export class PaintProfilerCommandLogView extends UI.Widget.VBox {
-    log;
-    selectionWindow;
+    #log = [];
+    #selectionWindow = null;
     #view;
     constructor(element, view = COMMAND_LOG_DEFAULT_VIEW) {
         super(element);
         this.#view = view;
         this.setMinimumSize(100, 25);
-        this.log = [];
     }
     wasShown() {
         super.wasShown();
         this.requestUpdate();
     }
-    setCommandLog(log) {
-        this.log = log;
-        this.updateWindow({ left: 0, right: this.log.length });
-    }
-    updateWindow(selectionWindow) {
-        this.selectionWindow = selectionWindow;
+    set commandLog(log) {
+        if (this.#log === log) {
+            return;
+        }
+        this.#log = log;
+        this.#selectionWindow = { left: 0, right: this.#log.length };
         this.requestUpdate();
     }
+    get commandLog() {
+        return this.#log;
+    }
+    set selectionWindow(window) {
+        this.#selectionWindow = window;
+        this.requestUpdate();
+    }
+    get selectionWindow() {
+        return this.#selectionWindow || null;
+    }
     performUpdate() {
-        const visibleLogItems = this.selectionWindow && this.log.length ?
-            this.log.slice(this.selectionWindow.left, this.selectionWindow.right) :
+        const visibleLogItems = this.#selectionWindow && this.#log.length ?
+            this.#log.slice(this.#selectionWindow.left, this.#selectionWindow.right) :
             [];
         this.#view({ visibleLogItems }, undefined, this.contentElement);
         return Promise.resolve();

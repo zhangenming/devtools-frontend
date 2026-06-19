@@ -2829,6 +2829,7 @@ var knownContextValues = /* @__PURE__ */ new Set([
   "network-show-blocked-cookies-only-setting",
   "network-show-settings-toolbar",
   "network-text-filter",
+  "network-track-widget",
   "network-web-socket-message-filter",
   "network.ad-blocking-enabled",
   "network.ad-blocking-enabled-true",

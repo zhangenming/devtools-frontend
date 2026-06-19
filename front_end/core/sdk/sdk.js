@@ -13411,6 +13411,8 @@ __export(CSSPropertyParserMatchers_exports, {
   URLMatcher: () => URLMatcher,
   VariableMatch: () => VariableMatch,
   VariableMatcher: () => VariableMatcher,
+  VariableNameMatch: () => VariableNameMatch,
+  VariableNameMatcher: () => VariableNameMatcher,
   defaultValueForCSSType: () => defaultValueForCSSType,
   isValidCSSType: () => isValidCSSType,
   localEvalCSS: () => localEvalCSS
@@ -13499,6 +13501,64 @@ var VariableMatcher = class extends matcherBase(VariableMatch) {
   matches(node, matching) {
     const match = new BaseVariableMatcher(() => null).matches(node, matching);
     return match ? new VariableMatch(match.text, match.node, match.name, match.fallback, match.matching, this.matchedStyles, this.style) : null;
+  }
+};
+var VariableNameMatch = class {
+  node;
+  text;
+  matchedStyles;
+  style;
+  constructor(node, text, matchedStyles, style) {
+    this.node = node;
+    this.text = text;
+    this.matchedStyles = matchedStyles;
+    this.style = style;
+  }
+  resolveVariable() {
+    return this.matchedStyles.computeCSSVariable(this.style, this.text);
+  }
+};
+var VariableNameMatcher = class extends matcherBase(VariableNameMatch) {
+  matchedStyles;
+  style;
+  // clang-format on
+  constructor(matchedStyles, style) {
+    super();
+    this.matchedStyles = matchedStyles;
+    this.style = style;
+  }
+  accepts() {
+    return true;
+  }
+  matches(node, matching) {
+    if (node.name !== "VariableName" && node.name !== "FeatureName" && node.name !== "KeywordQuery") {
+      return null;
+    }
+    const rawText = matching.ast.text(node);
+    if (!rawText.startsWith("--")) {
+      return null;
+    }
+    let cur = node.parent;
+    let foundStyleCall = null;
+    while (cur) {
+      if (cur.name === "CallExpression") {
+        return null;
+      }
+      if (cur.name === "CallQuery") {
+        const callee = cur.getChild("QueryCallee");
+        if (callee && matching.ast.text(callee) === "style") {
+          foundStyleCall = cur;
+          break;
+        }
+        return null;
+      }
+      cur = cur.parent;
+    }
+    if (!foundStyleCall) {
+      return null;
+    }
+    const text = node.name === "KeywordQuery" ? rawText.split(/\s|[>!=<:]/)[0] : rawText;
+    return new VariableNameMatch(node, text, this.matchedStyles, this.style);
   }
 };
 var AttributeMatch = class extends BaseVariableMatch {
@@ -17361,6 +17421,7 @@ var CSSMatchedStyles = class _CSSMatchedStyles {
   propertyMatchers(style, computedStyles) {
     return [
       new VariableMatcher(this, style),
+      new VariableNameMatcher(this, style),
       new ColorMatcher(() => computedStyles?.get("color") ?? null),
       new ColorMixMatcher(),
       new ContrastColorMatcher(),
