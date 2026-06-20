@@ -7788,7 +7788,14 @@ var StylesAiCodeCompletionProvider = class _StylesAiCodeCompletionProvider {
     }
     currentPropertyString = currentPropertyString + text;
     prefix = prefix + text;
-    const suffix = content.substring(propertyEndOffset);
+    let suffix = content.substring(propertyEndOffset);
+    const maxLength = TextEditor.AiCodeCompletionProvider.MAX_PREFIX_SUFFIX_LENGTH;
+    if (prefix.length > maxLength) {
+      prefix = prefix.substring(prefix.length - maxLength);
+    }
+    if (suffix.length > maxLength) {
+      suffix = suffix.substring(0, maxLength);
+    }
     const startTime = performance.now();
     const aidaSuggestion = await this.#requestAidaSuggestion(prefix, suffix, cursorPosition);
     if (!aidaSuggestion) {
@@ -9809,9 +9816,20 @@ var CSSPropertyPrompt = class extends UI10.TextPrompt.TextPrompt {
   onInput(event) {
     super.onInput(event);
     if (this.aiCodeCompletionProvider) {
-      this.#updateAiCodeSuggestion();
-      this.#debouncedTriggerAiCodeCompletion();
+      const inputEvent = event;
+      const isDeletion = inputEvent.inputType?.startsWith("delete");
+      if (isDeletion) {
+        this.#debouncedTriggerAiCodeCompletion.cancel();
+        this.setAiAutoCompletion(null);
+      } else {
+        this.#updateAiCodeSuggestion();
+        this.#debouncedTriggerAiCodeCompletion();
+      }
     }
+  }
+  detach() {
+    this.#debouncedTriggerAiCodeCompletion.cancel();
+    super.detach();
   }
   #handleEscape(keyboardEvent) {
     if (!this.aiCodeCompletionProvider || !this.treeElement.section().activeAiSuggestion) {
@@ -9820,11 +9838,11 @@ var CSSPropertyPrompt = class extends UI10.TextPrompt.TextPrompt {
     keyboardEvent.preventDefault();
     if (this.isSuggestBoxVisible()) {
       this.suggestBox?.hide();
-      keyboardEvent.consume(true);
-      return true;
+    } else {
+      this.setAiAutoCompletion(null);
     }
-    this.setAiAutoCompletion(null);
-    return false;
+    keyboardEvent.consume(true);
+    return true;
   }
   handleNameOrValueUpDown(event) {
     function finishHandler(_originalValue, _replacementString) {
@@ -10062,6 +10080,7 @@ var CSSPropertyPrompt = class extends UI10.TextPrompt.TextPrompt {
     if (!args) {
       this.treeElement.section().activeAiSuggestion = void 0;
       this.activeAiSuggestionInfo = void 0;
+      this.applySuggestion(null);
       return;
     }
     if (!this.queryRange) {
@@ -10139,7 +10158,7 @@ var CSSPropertyPrompt = class extends UI10.TextPrompt.TextPrompt {
     return completionHint;
   }
   acceptCodeComplete() {
-    if (this.isSuggestBoxVisible()) {
+    if (this.isSuggestBoxVisible() || this.currentSuggestion()) {
       this.acceptAutoComplete();
       const textAfterAccept = this.text();
       if (!this.treeElement.section().activeAiSuggestion?.properties.length) {
