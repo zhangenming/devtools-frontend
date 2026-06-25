@@ -98,6 +98,9 @@ export class CSSMetadata {
                 if (preset && preset !== value) {
                     return false;
                 }
+                if (partialValueKeywordsNoPresets.get(name)?.has(value)) {
+                    return false;
+                }
                 return CSS.supports(name, value);
             })
                 .sort(CSSMetadata.sortPrefixesAndCSSWideKeywordsToEnd);
@@ -459,6 +462,24 @@ const valuePresets = new Map([
             ['ex', 'ex alphabetic'],
         ])
     ]
+]);
+const partialValueKeywordsNoPresets = new Map([
+    ['scroll-snap-type', new Set(['mandatory', 'proximity'])],
+    ['scrollbar-gutter', new Set(['both-edges'])],
+    ['animation-timing-function', new Set(['jump-both', 'jump-end', 'jump-none', 'jump-start'])],
+    ['transition-timing-function', new Set(['jump-both', 'jump-end', 'jump-none', 'jump-start'])],
+    [
+        'animation-trigger', new Set([
+            'play',
+            'pause',
+            'play-once',
+            'play-alternate',
+            'play-forwards',
+            'play-backwards',
+            'play-pause',
+            'replay',
+        ])
+    ],
 ]);
 const distanceProperties = new Set([
     'background-position',

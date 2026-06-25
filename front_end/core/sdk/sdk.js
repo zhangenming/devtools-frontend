@@ -9378,6 +9378,9 @@ var CSSMetadata = class _CSSMetadata {
         if (preset && preset !== value) {
           return false;
         }
+        if (partialValueKeywordsNoPresets.get(name)?.has(value)) {
+          return false;
+        }
         return CSS.supports(name, value);
       }).sort(_CSSMetadata.sortPrefixesAndCSSWideKeywordsToEnd);
       const presets = values.map((value) => `${name}: ${value}`);
@@ -9714,6 +9717,25 @@ var valuePresets = /* @__PURE__ */ new Map([
     /* @__PURE__ */ new Map([
       ["cap", "cap alphabetic"],
       ["ex", "ex alphabetic"]
+    ])
+  ]
+]);
+var partialValueKeywordsNoPresets = /* @__PURE__ */ new Map([
+  ["scroll-snap-type", /* @__PURE__ */ new Set(["mandatory", "proximity"])],
+  ["scrollbar-gutter", /* @__PURE__ */ new Set(["both-edges"])],
+  ["animation-timing-function", /* @__PURE__ */ new Set(["jump-both", "jump-end", "jump-none", "jump-start"])],
+  ["transition-timing-function", /* @__PURE__ */ new Set(["jump-both", "jump-end", "jump-none", "jump-start"])],
+  [
+    "animation-trigger",
+    /* @__PURE__ */ new Set([
+      "play",
+      "pause",
+      "play-once",
+      "play-alternate",
+      "play-forwards",
+      "play-backwards",
+      "play-pause",
+      "replay"
     ])
   ]
 ]);
