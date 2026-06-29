@@ -27360,6 +27360,12 @@ var DOMNode = class _DOMNode extends Common21.ObjectWrapper.ObjectWrapper {
       /* Protocol.DOM.PseudoType.PickerIcon */
     )?.at(-1);
   }
+  interestButtonPseudoElement() {
+    return this.#pseudoElements.get(
+      "interest-button"
+      /* Protocol.DOM.PseudoType.InterestButton */
+    )?.at(-1);
+  }
   markerPseudoElement() {
     return this.#pseudoElements.get(
       "marker"
@@ -29254,8 +29260,8 @@ var ResourceTreeModel = class _ResourceTreeModel extends SDKModel {
     }
     return null;
   }
-  static reloadAllPages(bypassCache, scriptToEvaluateOnLoad) {
-    for (const resourceTreeModel of TargetManager.instance().models(_ResourceTreeModel)) {
+  static reloadAllPages(bypassCache, scriptToEvaluateOnLoad, targetManager = TargetManager.instance()) {
+    for (const resourceTreeModel of targetManager.models(_ResourceTreeModel)) {
       if (resourceTreeModel.target().parentTarget()?.type() !== Type.FRAME) {
         resourceTreeModel.reloadPage(bypassCache, scriptToEvaluateOnLoad);
       }
