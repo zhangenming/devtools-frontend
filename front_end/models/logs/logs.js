@@ -10,6 +10,7 @@ __export(LogManager_exports, {
   LogManager: () => LogManager
 });
 import * as Common2 from "./../../core/common/common.js";
+import * as Root2 from "./../../core/root/root.js";
 import * as SDK2 from "./../../core/sdk/sdk.js";
 
 // gen/front_end/models/logs/NetworkLog.js
@@ -482,16 +483,22 @@ var Events;
 
 // gen/front_end/models/logs/LogManager.js
 var modelToEventListeners = /* @__PURE__ */ new WeakMap();
-var instance = null;
 var LogManager = class _LogManager {
-  constructor() {
-    SDK2.TargetManager.TargetManager.instance().observeModels(SDK2.LogModel.LogModel, this);
+  #targetManager;
+  #networkLog;
+  constructor(targetManager, networkLog) {
+    this.#targetManager = targetManager;
+    this.#networkLog = networkLog;
+    this.#targetManager.observeModels(SDK2.LogModel.LogModel, this);
   }
   static instance({ forceNew } = { forceNew: false }) {
-    if (!instance || forceNew) {
-      instance = new _LogManager();
+    if (!Root2.DevToolsContext.globalInstance().has(_LogManager) || forceNew) {
+      Root2.DevToolsContext.globalInstance().set(_LogManager, new _LogManager(SDK2.TargetManager.TargetManager.instance(), NetworkLog.instance()));
     }
-    return instance;
+    return Root2.DevToolsContext.globalInstance().get(_LogManager);
+  }
+  static removeInstance() {
+    Root2.DevToolsContext.globalInstance().delete(_LogManager);
   }
   modelAdded(logModel) {
     const eventListeners = [];
@@ -519,16 +526,16 @@ var LogManager = class _LogManager {
     };
     const consoleMessage = new SDK2.ConsoleModel.ConsoleMessage(target.model(SDK2.RuntimeModel.RuntimeModel), entry.source, entry.level, entry.text, details);
     if (entry.networkRequestId) {
-      NetworkLog.instance().associateConsoleMessageWithRequest(consoleMessage, entry.networkRequestId);
+      this.#networkLog.associateConsoleMessageWithRequest(consoleMessage, entry.networkRequestId);
     }
     const consoleModel = target.model(SDK2.ConsoleModel.ConsoleModel);
     if (consoleMessage.source === "worker") {
       const workerId = consoleMessage.workerId || "";
-      if (SDK2.TargetManager.TargetManager.instance().targetById(workerId)) {
+      if (this.#targetManager.targetById(workerId)) {
         return;
       }
       window.setTimeout(() => {
-        if (!SDK2.TargetManager.TargetManager.instance().targetById(workerId)) {
+        if (!this.#targetManager.targetById(workerId)) {
           consoleModel?.addMessage(consoleMessage);
         }
       }, 1e3);
