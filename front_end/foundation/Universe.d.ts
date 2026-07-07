@@ -24,6 +24,7 @@ export declare class Universe {
     get cruxManager(): CrUXManager.CrUXManager;
     get domDebuggerManager(): SDK.DOMDebuggerModel.DOMDebuggerManager;
     get domModelUndoStack(): SDK.DOMModel.DOMModelUndoStack;
+    get eventBreakpointsManager(): SDK.EventBreakpointsModel.EventBreakpointsManager;
     get isolatedFileSystemManager(): Persistence.IsolatedFileSystemManager.IsolatedFileSystemManager;
     get isolateManager(): SDK.IsolateManager.IsolateManager;
     get networkPersistenceManager(): Persistence.NetworkPersistenceManager.NetworkPersistenceManager;

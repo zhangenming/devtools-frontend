@@ -252,15 +252,15 @@ var ThrottlingManager = class _ThrottlingManager extends Common.ObjectWrapper.Ob
   get hardwareConcurrencyOverrideEnabled() {
     return this.#hardwareConcurrencyOverrideEnabled;
   }
-  constructor() {
+  constructor(settings) {
     super();
     this.cpuThrottlingManager = SDK2.CPUThrottlingManager.CPUThrottlingManager.instance();
     this.cpuThrottlingManager.addEventListener("RateChanged", (event) => this.onCPUThrottlingRateChangedOnSDK(event.data));
     this.cpuThrottlingControls = /* @__PURE__ */ new Set();
     this.cpuThrottlingOptions = ThrottlingPresets.cpuThrottlingPresets;
-    this.customNetworkConditionsSetting = SDK2.NetworkManager.customUserNetworkConditionsSetting();
-    this.currentNetworkThrottlingConditionKeySetting = SDK2.NetworkManager.activeNetworkThrottlingKeySetting();
-    this.calibratedCpuThrottlingSetting = Common.Settings.Settings.instance().createSetting(
+    this.customNetworkConditionsSetting = SDK2.NetworkManager.customUserNetworkConditionsSetting(settings);
+    this.currentNetworkThrottlingConditionKeySetting = SDK2.NetworkManager.activeNetworkThrottlingKeySetting(settings);
+    this.calibratedCpuThrottlingSetting = settings.createSetting(
       "calibrated-cpu-throttling",
       {},
       "Global"
@@ -286,9 +286,9 @@ var ThrottlingManager = class _ThrottlingManager extends Common.ObjectWrapper.Ob
     return custom ?? SDK2.NetworkManager.NoThrottlingConditions;
   }
   static instance(opts = { forceNew: null }) {
-    const { forceNew } = opts;
+    const { forceNew, settings } = opts;
     if (!throttlingManagerInstance || forceNew) {
-      throttlingManagerInstance = new _ThrottlingManager();
+      throttlingManagerInstance = new _ThrottlingManager(settings ?? Common.Settings.Settings.instance());
     }
     return throttlingManagerInstance;
   }

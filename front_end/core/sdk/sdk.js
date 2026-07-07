@@ -11141,6 +11141,17 @@ var extraPropertyValues = /* @__PURE__ */ new Map([
     ])
   ],
   [
+    "text-wrap",
+    /* @__PURE__ */ new Set([
+      "auto",
+      "wrap",
+      "nowrap",
+      "balance",
+      "pretty",
+      "stable"
+    ])
+  ],
+  [
     "corner-shape",
     /* @__PURE__ */ new Set([
       "round",
@@ -20286,6 +20297,7 @@ var CSSModel = class _CSSModel extends SDKModel {
       return null;
     }
     const display = styles.get("display");
+    const isContents = display === "contents";
     const isFlex = display === "flex" || display === "inline-flex";
     const isGrid = display === "grid" || display === "inline-grid";
     const isSubgrid = (isGrid && (styles.get("grid-template-columns")?.startsWith("subgrid") || styles.get("grid-template-rows")?.startsWith("subgrid"))) ?? false;
@@ -20298,6 +20310,7 @@ var CSSModel = class _CSSModel extends SDKModel {
       isGrid,
       isSubgrid,
       isGridLanes,
+      isContents,
       containerType: isContainer ? containerType : void 0,
       hasScroll
     };
@@ -25209,6 +25222,26 @@ var DOMNode = class _DOMNode extends Common18.ObjectWrapper.ObjectWrapper {
   isXMLNode() {
     return Boolean(this.#xmlVersion);
   }
+  isCustomElement() {
+    if (this.nodeType() !== Node.ELEMENT_NODE || this.isXMLNode()) {
+      return false;
+    }
+    const localName = this.localName() || this.nodeName().toLowerCase();
+    if (localName.includes("-")) {
+      const builtInExclusionList = [
+        "annotation-xml",
+        "color-profile",
+        "font-face",
+        "font-face-src",
+        "font-face-uri",
+        "font-face-format",
+        "font-face-name",
+        "missing-glyph"
+      ];
+      return !builtInExclusionList.includes(localName);
+    }
+    return this.getAttribute("is") !== void 0;
+  }
   setMarker(name, value) {
     if (value === null) {
       if (!this.#markers.has(name)) {
@@ -28220,10 +28253,10 @@ var CONNECTION_TYPES = /* @__PURE__ */ new Map([
     /* Protocol.Network.ConnectionType.Wimax */
   ]
 ]);
-function customUserNetworkConditionsSetting(settings = Common24.Settings.Settings.instance()) {
+function customUserNetworkConditionsSetting(settings) {
   return settings.moduleSetting("custom-network-conditions");
 }
-function activeNetworkThrottlingKeySetting(settings = Common24.Settings.Settings.instance()) {
+function activeNetworkThrottlingKeySetting(settings) {
   return settings.createSetting(
     "active-network-condition-key",
     "NO_THROTTLING"

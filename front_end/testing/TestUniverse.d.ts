@@ -52,6 +52,7 @@ export declare class TestUniverse implements Foundation.Universe.Universe {
     get debuggerWorkspaceBinding(): Bindings.DebuggerWorkspaceBinding.DebuggerWorkspaceBinding;
     get domDebuggerManager(): SDK.DOMDebuggerModel.DOMDebuggerManager;
     get domModelUndoStack(): SDK.DOMModel.DOMModelUndoStack;
+    get eventBreakpointsManager(): SDK.EventBreakpointsModel.EventBreakpointsManager;
     get frameManager(): SDK.FrameManager.FrameManager;
     get ignoreListManager(): Workspace.IgnoreListManager.IgnoreListManager;
     get isolateManager(): SDK.IsolateManager.IsolateManager;

@@ -835,6 +835,26 @@ export class DOMNode extends Common.ObjectWrapper.ObjectWrapper {
     isXMLNode() {
         return Boolean(this.#xmlVersion);
     }
+    isCustomElement() {
+        if (this.nodeType() !== Node.ELEMENT_NODE || this.isXMLNode()) {
+            return false;
+        }
+        const localName = this.localName() || this.nodeName().toLowerCase();
+        if (localName.includes('-')) {
+            const builtInExclusionList = [
+                'annotation-xml',
+                'color-profile',
+                'font-face',
+                'font-face-src',
+                'font-face-uri',
+                'font-face-format',
+                'font-face-name',
+                'missing-glyph',
+            ];
+            return !builtInExclusionList.includes(localName);
+        }
+        return this.getAttribute('is') !== undefined;
+    }
     setMarker(name, value) {
         if (value === null) {
             if (!this.#markers.has(name)) {

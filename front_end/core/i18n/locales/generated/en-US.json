@@ -8219,6 +8219,9 @@
   "panels/elements/ElementsTreeElement.ts | showCommandForTarget": {
     "message": "Show element associated with the commandfor attribute"
   },
+  "panels/elements/ElementsTreeElement.ts | showCustomElementDefinition": {
+    "message": "Show custom element definition"
+  },
   "panels/elements/ElementsTreeElement.ts | showFrameDetails": {
     "message": "Show iframe details"
   },

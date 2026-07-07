@@ -109,6 +109,12 @@ export class TestUniverse {
         }
         return this.#context.get(SDK.DOMModel.DOMModelUndoStack);
     }
+    get eventBreakpointsManager() {
+        if (!this.#context.has(SDK.EventBreakpointsModel.EventBreakpointsManager)) {
+            this.#context.set(SDK.EventBreakpointsModel.EventBreakpointsManager, new SDK.EventBreakpointsModel.EventBreakpointsManager(this.targetManager));
+        }
+        return this.#context.get(SDK.EventBreakpointsModel.EventBreakpointsManager);
+    }
     get frameManager() {
         if (!this.#context.has(SDK.FrameManager.FrameManager)) {
             this.#context.set(SDK.FrameManager.FrameManager, new SDK.FrameManager.FrameManager(this.targetManager));

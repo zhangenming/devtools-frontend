@@ -114,10 +114,10 @@ const CONNECTION_TYPES = new Map([
  * to in multiple places, and this ensures we don't have accidental typos which
  * mean extra settings get mistakenly created.
  */
-export function customUserNetworkConditionsSetting(settings = Common.Settings.Settings.instance()) {
+export function customUserNetworkConditionsSetting(settings) {
     return settings.moduleSetting('custom-network-conditions');
 }
-export function activeNetworkThrottlingKeySetting(settings = Common.Settings.Settings.instance()) {
+export function activeNetworkThrottlingKeySetting(settings) {
     return settings.createSetting('active-network-condition-key', "NO_THROTTLING" /* PredefinedThrottlingConditionKey.NO_THROTTLING */);
 }
 export class NetworkManager extends SDKModel {

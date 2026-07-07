@@ -60,6 +60,8 @@ var Universe = class {
     context.set(CrUXManager.CrUXManager, cruxManager);
     const isolateManager = new SDK.IsolateManager.IsolateManager(targetManager);
     context.set(SDK.IsolateManager.IsolateManager, isolateManager);
+    const eventBreakpointsManager = new SDK.EventBreakpointsModel.EventBreakpointsManager(targetManager);
+    context.set(SDK.EventBreakpointsModel.EventBreakpointsManager, eventBreakpointsManager);
     const domModelUndoStack = new SDK.DOMModel.DOMModelUndoStack();
     context.set(SDK.DOMModel.DOMModelUndoStack, domModelUndoStack);
     const workspace = new Workspace.Workspace.WorkspaceImpl();
@@ -107,6 +109,9 @@ var Universe = class {
   }
   get domModelUndoStack() {
     return this.context.get(SDK.DOMModel.DOMModelUndoStack);
+  }
+  get eventBreakpointsManager() {
+    return this.context.get(SDK.EventBreakpointsModel.EventBreakpointsManager);
   }
   get isolatedFileSystemManager() {
     return this.context.get(Persistence.IsolatedFileSystemManager.IsolatedFileSystemManager);
