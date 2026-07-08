@@ -10073,11 +10073,16 @@ function cssMetadata() {
   return cssMetadataInstance;
 }
 var imageValuePresetMap = /* @__PURE__ */ new Map([
-  ["linear-gradient", "linear-gradient(|45deg, black, transparent|)"],
-  ["radial-gradient", "radial-gradient(|black, transparent|)"],
-  ["repeating-linear-gradient", "repeating-linear-gradient(|45deg, black, transparent 100px|)"],
-  ["repeating-radial-gradient", "repeating-radial-gradient(|black, transparent 100px|)"],
-  ["url", "url(||)"]
+  ["linear-gradient()", "linear-gradient(|45deg, black, transparent|)"],
+  ["radial-gradient()", "radial-gradient(|black, transparent|)"],
+  ["conic-gradient()", "conic-gradient(|from 45deg, red, orange, yellow, green, teal, blue, purple|)"],
+  ["repeating-linear-gradient()", "repeating-linear-gradient(|45deg, black, transparent 100px|)"],
+  ["repeating-radial-gradient()", "repeating-radial-gradient(|black, transparent 100px|)"],
+  ["repeating-conic-gradient()", "repeating-conic-gradient(|black 0deg 25%, white 0deg 50%|)"],
+  // Checkerboard
+  ["url()", "url(||)"],
+  ["image-set()", 'image-set(|url("") 1x, url("") 2x|)'],
+  ["cross-fade()", 'cross-fade(|url("") 50%, url("") 50%|)']
 ]);
 var filterValuePresetMap = /* @__PURE__ */ new Map([
   ["blur", "blur(|1px|)"],
@@ -10101,7 +10106,12 @@ var valuePresets = /* @__PURE__ */ new Map([
   ["backdrop-filter", filterValuePresetMap],
   ["background", imageValuePresetMap],
   ["background-image", imageValuePresetMap],
+  ["mask-image", imageValuePresetMap],
   ["-webkit-mask-image", imageValuePresetMap],
+  ["list-style", imageValuePresetMap],
+  ["list-style-image", imageValuePresetMap],
+  ["border-image", imageValuePresetMap],
+  ["border-image-source", imageValuePresetMap],
   [
     "transform",
     /* @__PURE__ */ new Map([
@@ -10467,7 +10477,47 @@ var extraPropertyValues = /* @__PURE__ */ new Map([
   ["-webkit-text-emphasis-position", textEmphasisPosition],
   ["alignment-baseline", /* @__PURE__ */ new Set(["before-edge", "after-edge", "text-before-edge", "text-after-edge", "hanging"])],
   ["page-break-before", /* @__PURE__ */ new Set(["left", "right", "always", "avoid"])],
-  ["border-image", /* @__PURE__ */ new Set(["repeat", "stretch", "space", "round"])],
+  [
+    "border-image",
+    /* @__PURE__ */ new Set([
+      "none",
+      // border-image-source
+      "repeat",
+      "stretch",
+      "space",
+      "round",
+      "auto",
+      // border-image-width
+      "fill",
+      // border-image-slice
+      "linear-gradient()",
+      "radial-gradient()",
+      "conic-gradient()",
+      "repeating-linear-gradient()",
+      "repeating-radial-gradient()",
+      "repeating-conic-gradient()",
+      "image-set()",
+      "cross-fade()",
+      "url()"
+    ])
+  ],
+  ["border-image-width", /* @__PURE__ */ new Set(["auto"])],
+  ["border-image-slice", /* @__PURE__ */ new Set(["fill"])],
+  [
+    "border-image-source",
+    /* @__PURE__ */ new Set([
+      "none",
+      "linear-gradient()",
+      "radial-gradient()",
+      "conic-gradient()",
+      "repeating-linear-gradient()",
+      "repeating-radial-gradient()",
+      "repeating-conic-gradient()",
+      "image-set()",
+      "cross-fade()",
+      "url()"
+    ])
+  ],
   [
     "text-decoration",
     /* @__PURE__ */ new Set(["blink", "line-through", "overline", "underline", "wavy", "double", "solid", "dashed", "dotted"])
@@ -10797,16 +10847,32 @@ var extraPropertyValues = /* @__PURE__ */ new Map([
       "border-box",
       "content-box",
       "padding-box",
-      "linear-gradient",
-      "radial-gradient",
-      "repeating-linear-gradient",
-      "repeating-radial-gradient",
-      "url"
+      "text",
+      // background-clip
+      "linear-gradient()",
+      "radial-gradient()",
+      "conic-gradient()",
+      "repeating-linear-gradient()",
+      "repeating-radial-gradient()",
+      "repeating-conic-gradient()",
+      "image-set()",
+      "cross-fade()",
+      "url()"
     ])
   ],
   [
     "background-image",
-    /* @__PURE__ */ new Set(["linear-gradient", "radial-gradient", "repeating-linear-gradient", "repeating-radial-gradient", "url"])
+    /* @__PURE__ */ new Set([
+      "linear-gradient()",
+      "radial-gradient()",
+      "conic-gradient()",
+      "repeating-linear-gradient()",
+      "repeating-radial-gradient()",
+      "repeating-conic-gradient()",
+      "image-set()",
+      "cross-fade()",
+      "url()"
+    ])
   ],
   ["background-position", /* @__PURE__ */ new Set(["top", "bottom", "left", "right", "center"])],
   ["background-position-x", /* @__PURE__ */ new Set(["left", "right", "center"])],
@@ -11059,8 +11125,32 @@ var extraPropertyValues = /* @__PURE__ */ new Map([
     ])
   ],
   [
+    "mask-image",
+    /* @__PURE__ */ new Set([
+      "linear-gradient()",
+      "radial-gradient()",
+      "conic-gradient()",
+      "repeating-linear-gradient()",
+      "repeating-radial-gradient()",
+      "repeating-conic-gradient()",
+      "image-set()",
+      "cross-fade()",
+      "url()"
+    ])
+  ],
+  [
     "-webkit-mask-image",
-    /* @__PURE__ */ new Set(["linear-gradient", "radial-gradient", "repeating-linear-gradient", "repeating-radial-gradient", "url"])
+    /* @__PURE__ */ new Set([
+      "linear-gradient()",
+      "radial-gradient()",
+      "conic-gradient()",
+      "repeating-linear-gradient()",
+      "repeating-radial-gradient()",
+      "repeating-conic-gradient()",
+      "image-set()",
+      "cross-fade()",
+      "url()"
+    ])
   ],
   ["-webkit-mask-origin", /* @__PURE__ */ new Set(["border", "border-box", "content", "content-box", "padding", "padding-box"])],
   ["-webkit-mask-position", /* @__PURE__ */ new Set(["top", "bottom", "left", "right", "center"])],
@@ -21325,7 +21415,7 @@ var RuntimeModel = class extends SDKModel {
     const result = await this.queryObjects(object);
     object.release();
     if ("error" in result) {
-      Common12.Console.Console.instance().error(result.error);
+      this.target().targetManager().getConsole().error(result.error);
       return;
     }
     this.dispatchEventToListeners(Events4.QueryObjectRequested, { objects: result.objects, executionContextId });
@@ -28598,22 +28688,25 @@ var MAX_RESPONSE_BODY_TOTAL_BUFFER_LENGTH = 250 * 1024 * 1024;
 var FetchDispatcher = class {
   #fetchAgent;
   #manager;
+  #multitargetNetworkManager;
   constructor(agent, manager) {
     this.#fetchAgent = agent;
     this.#manager = manager;
+    this.#multitargetNetworkManager = this.#manager.target().targetManager().getNetworkManager();
   }
   requestPaused({ requestId, request, resourceType, responseStatusCode, responseHeaders, networkId }) {
     const networkRequest = networkId ? this.#manager.requestForId(networkId) : null;
     if (networkRequest?.originalResponseHeaders.length === 0 && responseHeaders) {
       networkRequest.originalResponseHeaders = responseHeaders;
     }
-    void MultitargetNetworkManager.instance().requestIntercepted(new InterceptedRequest(this.#fetchAgent, request, resourceType, requestId, networkRequest, responseStatusCode, responseHeaders));
+    void this.#multitargetNetworkManager.requestIntercepted(new InterceptedRequest(this.#multitargetNetworkManager, this.#fetchAgent, request, resourceType, requestId, networkRequest, responseStatusCode, responseHeaders));
   }
   authRequired({}) {
   }
 };
 var NetworkDispatcher = class {
   #manager;
+  #multitargetNetworkManager;
   #requestsById = /* @__PURE__ */ new Map();
   #requestsByURL = /* @__PURE__ */ new Map();
   #requestsByLoaderId = /* @__PURE__ */ new Map();
@@ -28629,7 +28722,8 @@ var NetworkDispatcher = class {
   #requestIdToTrustTokenEvent = /* @__PURE__ */ new Map();
   constructor(manager) {
     this.#manager = manager;
-    MultitargetNetworkManager.instance().addEventListener("RequestIntercepted", this.#markAsIntercepted.bind(this));
+    this.#multitargetNetworkManager = this.#manager.target().targetManager().getNetworkManager();
+    this.#multitargetNetworkManager.addEventListener("RequestIntercepted", this.#markAsIntercepted.bind(this));
   }
   #markAsIntercepted(event) {
     const request = this.requestForId(event.data);
@@ -29031,7 +29125,7 @@ var NetworkDispatcher = class {
     return newNetworkRequest;
   }
   maybeAdoptMainResourceRequest(requestId) {
-    const request = MultitargetNetworkManager.instance().inflightMainResourceRequests.get(requestId);
+    const request = this.#multitargetNetworkManager.inflightMainResourceRequests.get(requestId);
     if (!request) {
       return null;
     }
@@ -29063,7 +29157,7 @@ var NetworkDispatcher = class {
       this.#requestsByLoaderId.set(loaderId, networkRequest);
     }
     if (networkRequest.loaderId === networkRequest.requestId() || networkRequest.loaderId === "") {
-      MultitargetNetworkManager.instance().inflightMainResourceRequests.set(networkRequest.requestId(), networkRequest);
+      this.#multitargetNetworkManager.inflightMainResourceRequests.set(networkRequest.requestId(), networkRequest);
     }
     this.#manager.dispatchEventToListeners(Events8.RequestStarted, { request: networkRequest, originalRequest });
   }
@@ -29084,7 +29178,7 @@ var NetworkDispatcher = class {
       }
     }
     this.#manager.dispatchEventToListeners(Events8.RequestFinished, networkRequest);
-    MultitargetNetworkManager.instance().inflightMainResourceRequests.delete(networkRequest.requestId());
+    this.#multitargetNetworkManager.inflightMainResourceRequests.delete(networkRequest.requestId());
     const settings = this.#manager.target().targetManager().settings;
     if (settings.moduleSetting("monitoring-xhr-enabled").get() && networkRequest.resourceType().category() === Common24.ResourceType.resourceCategories.XHR) {
       let message;
@@ -29461,7 +29555,7 @@ var RequestCondition = class extends Common24.ObjectWrapper.ObjectWrapper {
   #enabled;
   #conditions;
   #ruleIds = /* @__PURE__ */ new Set();
-  static createFromSetting(setting, settings = Common24.Settings.Settings.instance()) {
+  static createFromSetting(setting, settings) {
     if ("urlPattern" in setting) {
       const pattern2 = RequestURLPattern.create(setting.urlPattern) ?? {
         wildcardURL: setting.urlPattern,
@@ -30011,6 +30105,7 @@ var MultitargetNetworkManager = class _MultitargetNetworkManager extends Common2
   }
 };
 var InterceptedRequest = class _InterceptedRequest {
+  #multitargetNetworkManager;
   #fetchAgent;
   #hasResponded = false;
   request;
@@ -30019,7 +30114,8 @@ var InterceptedRequest = class _InterceptedRequest {
   responseHeaders;
   requestId;
   networkRequest;
-  constructor(fetchAgent, request, resourceType, requestId, networkRequest, responseStatusCode, responseHeaders) {
+  constructor(multitargetNetworkManager, fetchAgent, request, resourceType, requestId, networkRequest, responseStatusCode, responseHeaders) {
+    this.#multitargetNetworkManager = multitargetNetworkManager;
     this.#fetchAgent = fetchAgent;
     this.request = request;
     this.resourceType = resourceType;
@@ -30088,7 +30184,7 @@ var InterceptedRequest = class _InterceptedRequest {
       this.networkRequest.hasOverriddenContent = isBodyOverridden;
     }
     void this.#fetchAgent.invoke_fulfillRequest({ requestId: this.requestId, responseCode, body, responseHeaders });
-    MultitargetNetworkManager.instance().dispatchEventToListeners("RequestFulfilled", this.request.url);
+    this.#multitargetNetworkManager.dispatchEventToListeners("RequestFulfilled", this.request.url);
   }
   continueRequestWithoutChange() {
     console.assert(!this.#hasResponded);

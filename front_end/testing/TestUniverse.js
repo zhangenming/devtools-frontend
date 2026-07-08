@@ -10,7 +10,9 @@ import * as AutofillManager from '../models/autofill_manager/autofill_manager.js
 import * as Bindings from '../models/bindings/bindings.js';
 import * as Breakpoints from '../models/breakpoints/breakpoints.js';
 import * as CrUXManager from '../models/crux-manager/crux-manager.js';
+import * as Emulation from '../models/emulation/emulation.js';
 import * as JavaScriptMetadata from '../models/javascript_metadata/javascript_metadata.js';
+import * as LiveMetrics from '../models/live-metrics/live-metrics.js';
 import * as Logs from '../models/logs/logs.js';
 import * as Persistence from '../models/persistence/persistence.js';
 import * as ProjectSettings from '../models/project_settings/project_settings.js';
@@ -30,6 +32,7 @@ import { createTarget } from './TargetHelpers.js';
 export class TestUniverse {
     #context = new Root.DevToolsContext.WritableDevToolsContext();
     #creationOptions;
+    supportsEmulation = true;
     constructor(options) {
         this.#creationOptions = options;
     }
@@ -97,6 +100,12 @@ export class TestUniverse {
         }
         return this.#context.get(Bindings.DebuggerWorkspaceBinding.DebuggerWorkspaceBinding);
     }
+    get deviceModeModel() {
+        if (!this.#context.has(Emulation.DeviceModeModel.DeviceModeModel)) {
+            this.#context.set(Emulation.DeviceModeModel.DeviceModeModel, new Emulation.DeviceModeModel.DeviceModeModel(this.targetManager, this.settings, this.multitargetNetworkManager));
+        }
+        return this.#context.get(Emulation.DeviceModeModel.DeviceModeModel);
+    }
     get domDebuggerManager() {
         if (!this.#context.has(SDK.DOMDebuggerModel.DOMDebuggerManager)) {
             this.#context.set(SDK.DOMDebuggerModel.DOMDebuggerManager, new SDK.DOMDebuggerModel.DOMDebuggerManager(this.targetManager));
@@ -150,6 +159,12 @@ export class TestUniverse {
             this.#context.set(JavaScriptMetadata.JavaScriptMetadata.JavaScriptMetadataImpl, new JavaScriptMetadata.JavaScriptMetadata.JavaScriptMetadataImpl());
         }
         return this.#context.get(JavaScriptMetadata.JavaScriptMetadata.JavaScriptMetadataImpl);
+    }
+    get liveMetrics() {
+        if (!this.#context.has(LiveMetrics.LiveMetrics)) {
+            this.#context.set(LiveMetrics.LiveMetrics, new LiveMetrics.LiveMetrics(this.targetManager, this.deviceModeModel));
+        }
+        return this.#context.get(LiveMetrics.LiveMetrics);
     }
     get multitargetNetworkManager() {
         if (!this.#context.has(SDK.NetworkManager.MultitargetNetworkManager)) {
