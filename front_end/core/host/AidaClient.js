@@ -377,18 +377,24 @@ export function getClientFeatureName(feature) {
     }
     return name;
 }
-let hostConfigTrackerInstance;
 export class HostConfigTracker extends Common.ObjectWrapper.ObjectWrapper {
     #pollTimer;
     #aidaAvailability;
-    constructor() {
-        super();
-    }
-    static instance() {
-        if (!hostConfigTrackerInstance) {
-            hostConfigTrackerInstance = new HostConfigTracker();
+    static instance({ forceNew } = { forceNew: false }) {
+        if (!Root.DevToolsContext.globalInstance().has(HostConfigTracker) || forceNew) {
+            Root.DevToolsContext.globalInstance().set(HostConfigTracker, new HostConfigTracker());
         }
-        return hostConfigTrackerInstance;
+        return Root.DevToolsContext.globalInstance().get(HostConfigTracker);
+    }
+    dispose() {
+        clearTimeout(this.#pollTimer);
+        this.listeners = undefined;
+    }
+    static removeInstance() {
+        if (Root.DevToolsContext.globalInstance().has(HostConfigTracker)) {
+            Root.DevToolsContext.globalInstance().get(HostConfigTracker).dispose();
+            Root.DevToolsContext.globalInstance().delete(HostConfigTracker);
+        }
     }
     addEventListener(eventType, listener) {
         const isFirst = !this.hasEventListeners(eventType);

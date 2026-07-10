@@ -401,7 +401,7 @@ export class ElementsPanel extends UI.Panel.Panel {
         this.evaluateTrackingComputedStyleUpdatesForNode();
     }
     willHide() {
-        SDK.OverlayModel.OverlayModel.hideDOMNodeHighlight();
+        SDK.OverlayModel.OverlayModel.hideDOMNodeHighlight(SDK.TargetManager.TargetManager.instance());
         this.evaluateTrackingComputedStyleUpdatesForNode();
         this.#domTreeWidget.detach();
         super.willHide();

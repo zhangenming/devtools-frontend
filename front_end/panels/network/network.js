@@ -12400,7 +12400,7 @@ var NetworkLogView = class _NetworkLogView extends Common19.ObjectWrapper.eventM
       await Common19.Revealer.reveal(requestLocation);
     } else {
       UI25.InspectorView.InspectorView.instance().displaySelectOverrideFolderInfobar(async () => {
-        await Sources2.SourcesNavigator.OverridesNavigatorView.instance().setupNewWorkspace();
+        await Sources2.SourcesNavigator.OverridesNavigatorView.setupNewWorkspace();
         await networkPersistenceManager.getOrCreateHeadersUISourceCodeFromUrl(request.url());
         await Common19.Revealer.reveal(requestLocation);
       });

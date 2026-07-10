@@ -4767,7 +4767,7 @@ var DOMNodeLink = class extends UI13.Widget.Widget {
         this.#node?.highlight?.();
       },
       onMouseLeave: () => {
-        SDK3.OverlayModel.OverlayModel.hideDOMNodeHighlight();
+        SDK3.OverlayModel.OverlayModel.hideDOMNodeHighlight(SDK3.TargetManager.TargetManager.instance());
       },
       ariaDescription: options.ariaDescription
     };

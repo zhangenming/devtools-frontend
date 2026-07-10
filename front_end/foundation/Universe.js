@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 import * as Common from '../core/common/common.js';
+import * as Host from '../core/host/host.js';
 import * as Root from '../core/root/root.js';
 import * as SDK from '../core/sdk/sdk.js';
 import * as AutofillManager from '../models/autofill_manager/autofill_manager.js';
@@ -29,6 +30,10 @@ export class Universe {
         this.context = context;
         const console = new Common.Console.Console();
         context.set(Common.Console.Console, console);
+        const hostConfigTracker = new Host.AidaClient.HostConfigTracker();
+        context.set(Host.AidaClient.HostConfigTracker, hostConfigTracker);
+        const gdpClient = new Host.GdpClient.GdpClient();
+        context.set(Host.GdpClient.GdpClient, gdpClient);
         // TODO(crbug.com/458180550): Store instance only on this.context instead.
         //                            For now the global is required as not everything in foundation cleanly
         //                            reads from the scoped `Settings` instance.
@@ -141,6 +146,12 @@ export class Universe {
     }
     get fileManager() {
         return this.context.get(Workspace.FileManager.FileManager);
+    }
+    get gdpClient() {
+        return this.context.get(Host.GdpClient.GdpClient);
+    }
+    get hostConfigTracker() {
+        return this.context.get(Host.AidaClient.HostConfigTracker);
     }
     get isolatedFileSystemManager() {
         return this.context.get(Persistence.IsolatedFileSystemManager.IsolatedFileSystemManager);

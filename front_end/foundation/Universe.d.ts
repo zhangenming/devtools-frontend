@@ -1,5 +1,5 @@
 import * as Common from '../core/common/common.js';
-import type * as Host from '../core/host/host.js';
+import * as Host from '../core/host/host.js';
 import * as Root from '../core/root/root.js';
 import * as SDK from '../core/sdk/sdk.js';
 import * as AutofillManager from '../models/autofill_manager/autofill_manager.js';
@@ -36,6 +36,8 @@ export declare class Universe {
     get emulatedDevicesList(): Emulation.EmulatedDevices.EmulatedDevicesList;
     get eventBreakpointsManager(): SDK.EventBreakpointsModel.EventBreakpointsManager;
     get fileManager(): Workspace.FileManager.FileManager;
+    get gdpClient(): Host.GdpClient.GdpClient;
+    get hostConfigTracker(): Host.AidaClient.HostConfigTracker;
     get isolatedFileSystemManager(): Persistence.IsolatedFileSystemManager.IsolatedFileSystemManager;
     get isolateManager(): SDK.IsolateManager.IsolateManager;
     get networkPersistenceManager(): Persistence.NetworkPersistenceManager.NetworkPersistenceManager;

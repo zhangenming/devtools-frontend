@@ -1865,13 +1865,13 @@ var ElementsBreadcrumbs = class extends HTMLElement {
     return () => node.highlight();
   }
   #onCrumbMouseLeave() {
-    SDK3.OverlayModel.OverlayModel.hideDOMNodeHighlight();
+    SDK3.OverlayModel.OverlayModel.hideDOMNodeHighlight(SDK3.TargetManager.TargetManager.instance());
   }
   #onCrumbFocus(node) {
     return () => node.highlight();
   }
   #onCrumbBlur() {
-    SDK3.OverlayModel.OverlayModel.hideDOMNodeHighlight();
+    SDK3.OverlayModel.OverlayModel.hideDOMNodeHighlight(SDK3.TargetManager.TargetManager.instance());
   }
   #engageResizeObserver() {
     if (!this.#resizeObserver || this.#isObservingResize === true) {
@@ -2218,7 +2218,7 @@ var QueryContainer = class extends HTMLElement {
     this.dispatchEvent(new QueriedSizeRequestedEvent());
   }
   #onContainerLinkMouseLeave() {
-    SDK4.OverlayModel.OverlayModel.hideDOMNodeHighlight();
+    SDK4.OverlayModel.OverlayModel.hideDOMNodeHighlight(SDK4.TargetManager.TargetManager.instance());
     this.#isContainerLinkHovered = false;
     this.#render();
   }

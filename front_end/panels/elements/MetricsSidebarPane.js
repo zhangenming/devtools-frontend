@@ -244,7 +244,7 @@ export class MetricsSidebarPane extends ElementsSidebarPane {
         }
         else {
             this.highlightMode = '';
-            SDK.OverlayModel.OverlayModel.hideDOMNodeHighlight();
+            SDK.OverlayModel.OverlayModel.hideDOMNodeHighlight(SDK.TargetManager.TargetManager.instance());
         }
         if (this.computedStyle) {
             this.updateMetrics(this.computedStyle, mode, this.boxModelInternal);

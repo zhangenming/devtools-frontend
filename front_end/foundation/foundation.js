@@ -10,6 +10,7 @@ __export(Universe_exports, {
   Universe: () => Universe
 });
 import * as Common from "./../core/common/common.js";
+import * as Host from "./../core/host/host.js";
 import * as Root from "./../core/root/root.js";
 import * as SDK from "./../core/sdk/sdk.js";
 import * as AutofillManager from "./../models/autofill_manager/autofill_manager.js";
@@ -37,6 +38,10 @@ var Universe = class {
     this.context = context;
     const console = new Common.Console.Console();
     context.set(Common.Console.Console, console);
+    const hostConfigTracker = new Host.AidaClient.HostConfigTracker();
+    context.set(Host.AidaClient.HostConfigTracker, hostConfigTracker);
+    const gdpClient = new Host.GdpClient.GdpClient();
+    context.set(Host.GdpClient.GdpClient, gdpClient);
     const settings = Common.Settings.Settings.instance({
       forceNew: true,
       console,
@@ -144,6 +149,12 @@ var Universe = class {
   }
   get fileManager() {
     return this.context.get(Workspace.FileManager.FileManager);
+  }
+  get gdpClient() {
+    return this.context.get(Host.GdpClient.GdpClient);
+  }
+  get hostConfigTracker() {
+    return this.context.get(Host.AidaClient.HostConfigTracker);
   }
   get isolatedFileSystemManager() {
     return this.context.get(Persistence.IsolatedFileSystemManager.IsolatedFileSystemManager);

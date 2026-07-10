@@ -2024,18 +2024,24 @@ function getClientFeatureName(feature) {
   }
   return name;
 }
-var hostConfigTrackerInstance;
 var HostConfigTracker = class _HostConfigTracker extends Common4.ObjectWrapper.ObjectWrapper {
   #pollTimer;
   #aidaAvailability;
-  constructor() {
-    super();
-  }
-  static instance() {
-    if (!hostConfigTrackerInstance) {
-      hostConfigTrackerInstance = new _HostConfigTracker();
+  static instance({ forceNew } = { forceNew: false }) {
+    if (!Root3.DevToolsContext.globalInstance().has(_HostConfigTracker) || forceNew) {
+      Root3.DevToolsContext.globalInstance().set(_HostConfigTracker, new _HostConfigTracker());
     }
-    return hostConfigTrackerInstance;
+    return Root3.DevToolsContext.globalInstance().get(_HostConfigTracker);
+  }
+  dispose() {
+    clearTimeout(this.#pollTimer);
+    this.listeners = void 0;
+  }
+  static removeInstance() {
+    if (Root3.DevToolsContext.globalInstance().has(_HostConfigTracker)) {
+      Root3.DevToolsContext.globalInstance().get(_HostConfigTracker).dispose();
+      Root3.DevToolsContext.globalInstance().delete(_HostConfigTracker);
+    }
   }
   addEventListener(eventType, listener) {
     const isFirst = !this.hasEventListeners(eventType);
