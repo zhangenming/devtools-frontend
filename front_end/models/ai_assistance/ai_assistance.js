@@ -10008,7 +10008,6 @@ __export(BuiltInAi_exports, {
 import * as Common14 from "./../../core/common/common.js";
 import * as Host20 from "./../../core/host/host.js";
 import * as Root14 from "./../../core/root/root.js";
-var builtInAiInstance;
 var BuiltInAi = class _BuiltInAi extends Common14.ObjectWrapper.ObjectWrapper {
   #availability = null;
   #hasGpu;
@@ -10017,10 +10016,10 @@ var BuiltInAi = class _BuiltInAi extends Common14.ObjectWrapper.ObjectWrapper {
   #downloadProgress = null;
   #currentlyCreatingSession = false;
   static instance() {
-    if (builtInAiInstance === void 0) {
-      builtInAiInstance = new _BuiltInAi();
+    if (!Root14.DevToolsContext.globalInstance().has(_BuiltInAi)) {
+      Root14.DevToolsContext.globalInstance().set(_BuiltInAi, new _BuiltInAi());
     }
-    return builtInAiInstance;
+    return Root14.DevToolsContext.globalInstance().get(_BuiltInAi);
   }
   constructor() {
     super();
@@ -10162,7 +10161,7 @@ Your instructions are as follows:
     this.#currentlyCreatingSession = false;
   }
   static removeInstance() {
-    builtInAiInstance = void 0;
+    Root14.DevToolsContext.globalInstance().delete(_BuiltInAi);
   }
   async *getConsoleInsight(prompt, abortController) {
     if (!this.#consoleInsightsSession) {

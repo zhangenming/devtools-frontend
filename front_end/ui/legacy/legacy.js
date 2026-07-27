@@ -8257,10 +8257,6 @@ var InspectorView = class _InspectorView extends VBox {
   applyDrawerOrientationForDockSideForTest() {
   }
   #applyDrawerOrientationForDockSide() {
-    if (!this.drawerVisible()) {
-      this.applyDrawerOrientationForDockSideForTest();
-      return;
-    }
     const newOrientation = this.#getOrientationForDockMode();
     this.#applyDrawerOrientation(newOrientation);
     this.applyDrawerOrientationForDockSideForTest();
@@ -8402,6 +8398,7 @@ var InspectorView = class _InspectorView extends VBox {
       }
       return;
     }
+    this.#applyDrawerOrientationForDockSide();
     this.#drawerView.show(hasTargetDrawer);
     if (focus) {
       this.focusRestorer = new WidgetFocusRestorer(this.drawerTabbedPane);
@@ -8410,7 +8407,6 @@ var InspectorView = class _InspectorView extends VBox {
       this.focusRestorer = null;
       this.#mainPanelAtDrawerFocus = null;
     }
-    this.#applyDrawerOrientationForDockSide();
     LiveAnnouncer.alert(i18nString9(UIStrings9.drawerShown));
   }
   drawerVisible() {
@@ -19688,7 +19684,7 @@ var PopoverHelper = class _PopoverHelper {
   boundMouseDown;
   boundMouseMove;
   boundMouseOut;
-  boundScrollEnd;
+  boundScroll;
   boundKeyUp;
   jslogContext;
   constructor(container, getRequest, jslogContext) {
@@ -19705,7 +19701,7 @@ var PopoverHelper = class _PopoverHelper {
     this.boundMouseDown = this.mouseDown.bind(this);
     this.boundMouseMove = this.mouseMove.bind(this);
     this.boundMouseOut = this.mouseOut.bind(this);
-    this.boundScrollEnd = this.scrollEnd.bind(this);
+    this.boundScroll = this.scroll.bind(this);
     this.boundKeyUp = this.keyUp.bind(this);
     this.container.addEventListener("mousedown", this.boundMouseDown, false);
     this.container.addEventListener("mousemove", this.boundMouseMove, false);
@@ -19723,7 +19719,7 @@ var PopoverHelper = class _PopoverHelper {
   eventInScheduledContent(event) {
     return this.scheduledRequest ? this.scheduledRequest.box.contains(event.clientX, event.clientY) : false;
   }
-  scrollEnd(_event) {
+  scroll(_event) {
     this.hidePopover();
   }
   mouseDown(event) {
@@ -19855,14 +19851,14 @@ var PopoverHelper = class _PopoverHelper {
       popover2.contentElement.addEventListener("mouseout", this.popoverMouseOut.bind(this, popover2), true);
       popover2.setContentAnchorBox(request.box);
       popover2.show(document2);
-      this.container.addEventListener("scrollend", this.boundScrollEnd, true);
+      this.container.addEventListener("scroll", this.boundScroll, true);
       this.hidePopoverCallback = () => {
         if (request.hide) {
           request.hide.call(null);
         }
         popover2.hide();
         popoverHelperInstance = null;
-        this.container.removeEventListener("scrollend", this.boundScrollEnd, true);
+        this.container.removeEventListener("scroll", this.boundScroll, true);
       };
     });
   }
