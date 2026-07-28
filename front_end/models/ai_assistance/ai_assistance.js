@@ -154,11 +154,21 @@ function formatStyles(styles, indent = 2) {
   return lines.join("\n");
 }
 var ChangeManager = class {
+  #targetManager;
   #stylesheetMutex = new Common2.Mutex.Mutex();
   #cssModelToStylesheetId = /* @__PURE__ */ new Map();
   #stylesheetChanges = /* @__PURE__ */ new Map();
   constructor(targetManager = SDK.TargetManager.TargetManager.instance()) {
-    targetManager.addModelListener(SDK.ResourceTreeModel.ResourceTreeModel, SDK.ResourceTreeModel.Events.PrimaryPageChanged, this.clear, this);
+    this.#targetManager = targetManager;
+    this.#targetManager.addModelListener(SDK.ResourceTreeModel.ResourceTreeModel, SDK.ResourceTreeModel.Events.PrimaryPageChanged, this.clear, this);
+  }
+  dispose() {
+    this.#targetManager.removeModelListener(SDK.ResourceTreeModel.ResourceTreeModel, SDK.ResourceTreeModel.Events.PrimaryPageChanged, this.clear, this);
+    for (const cssModel of this.#cssModelToStylesheetId.keys()) {
+      cssModel.removeEventListener(SDK.CSSModel.Events.ModelDisposed, this.#onCssModelDisposed, this);
+    }
+    this.#cssModelToStylesheetId.clear();
+    this.#stylesheetChanges.clear();
   }
   async clear() {
     const models = Array.from(this.#cssModelToStylesheetId.keys());
@@ -9237,7 +9247,7 @@ var AiAgent2 = class extends AiAgent {
   #declaredTools = /* @__PURE__ */ new Set();
   constructor(opts) {
     super(opts);
-    this.#changes = new ChangeManager(opts.targetManager);
+    this.#changes = opts.changeManager ?? new ChangeManager(opts.targetManager);
     this.#lighthouseRecording = opts.lighthouseRecording;
     this.#execJs = opts.execJs ?? executeJsCode;
     this.#allowedOrigin = opts.allowedOrigin;
@@ -10076,6 +10086,9 @@ var BuiltInAi = class _BuiltInAi extends Common14.ObjectWrapper.ObjectWrapper {
     }, 1e3);
   }
   #isGpuAvailable() {
+    if (typeof document === "undefined") {
+      return false;
+    }
     const canvas = document.createElement("canvas");
     try {
       const webgl = canvas.getContext("webgl");

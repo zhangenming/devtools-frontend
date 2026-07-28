@@ -562,10 +562,12 @@ import * as Platform16 from "./../../core/platform/platform.js";
 // gen/front_end/ui/legacy/Dialog.js
 var Dialog_exports = {};
 __export(Dialog_exports, {
-  Dialog: () => Dialog
+  Dialog: () => Dialog,
+  DialogWidget: () => DialogWidget
 });
 import * as Common16 from "./../../core/common/common.js";
 import * as i18n27 from "./../../core/i18n/i18n.js";
+import { nothing as nothing4, render as render7 } from "./../lit/lit.js";
 import * as Buttons7 from "./../components/buttons/buttons.js";
 import * as VisualLogging17 from "./../visual_logging/visual_logging.js";
 
@@ -17303,7 +17305,7 @@ var Dialog = class _Dialog extends Common16.ObjectWrapper.eventMixin(GlassPane) 
     this.contentElement.tabIndex = 0;
     this.contentElement.addEventListener("focus", () => this.widget().focus(), false);
     if (jslogContext) {
-      this.contentElement.setAttribute("jslog", `${VisualLogging17.dialog(jslogContext).track({ resize: true, keydown: "Escape" })}`);
+      this.jslogContext = jslogContext;
     }
     this.setPointerEventsBehavior(
       "BlockedByGlassPane"
@@ -17318,6 +17320,13 @@ var Dialog = class _Dialog extends Common16.ObjectWrapper.eventMixin(GlassPane) 
     });
     markAsModalDialog(this.contentElement);
     this.targetDocumentKeyDownHandler = this.onKeyDown.bind(this);
+  }
+  set jslogContext(jslogContext) {
+    if (jslogContext) {
+      this.contentElement.setAttribute("jslog", `${VisualLogging17.dialog(jslogContext).track({ resize: true, keydown: "Escape" })}`);
+    } else {
+      this.contentElement.removeAttribute("jslog");
+    }
   }
   static hasInstance() {
     return _Dialog.dialogs.length > 0;
@@ -17467,6 +17476,78 @@ var Dialog = class _Dialog extends Common16.ObjectWrapper.eventMixin(GlassPane) 
     }
   }
   static dialogs = [];
+};
+var DialogWidget = class extends Common16.ObjectWrapper.eventMixin(Widget) {
+  #open = false;
+  #content = nothing4;
+  #dialog = new Dialog();
+  constructor(element) {
+    super(element);
+    this.#dialog.setSizeBehavior(
+      "MeasureContent"
+      /* SizeBehavior.MEASURE_CONTENT */
+    );
+    this.#dialog.contentElement.tabIndex = -1;
+    this.#dialog.addEventListener("hidden", () => {
+      this.#open = false;
+      this.dispatchEventToListeners(
+        "hidden"
+        /* Events.HIDDEN */
+      );
+    });
+  }
+  get open() {
+    return this.#open;
+  }
+  set open(open) {
+    if (this.#open !== open) {
+      this.#open = open;
+      this.requestUpdate();
+    }
+  }
+  #jslogContext = "";
+  get content() {
+    return this.#content;
+  }
+  set content(content) {
+    this.#content = content;
+    this.requestUpdate();
+  }
+  get jslogContext() {
+    return this.#jslogContext;
+  }
+  set jslogContext(jslogContext) {
+    if (this.#jslogContext !== jslogContext) {
+      this.#jslogContext = jslogContext;
+      this.#dialog.jslogContext = jslogContext;
+      this.requestUpdate();
+    }
+  }
+  wasShown() {
+    super.wasShown();
+    this.requestUpdate();
+  }
+  willHide() {
+    super.willHide();
+    this.#dialog.hide();
+  }
+  onDetach() {
+    super.onDetach();
+    this.#dialog.hide();
+  }
+  performUpdate() {
+    if (this.open) {
+      render7(this.#content ?? nothing4, this.#dialog.contentElement);
+      if (!this.#dialog.isShowing()) {
+        this.#dialog.show(this.contentElement.ownerDocument);
+        this.#dialog.contentElement.focus();
+      } else {
+        this.#dialog.positionContent();
+      }
+    } else if (this.#dialog.isShowing()) {
+      this.#dialog.hide();
+    }
+  }
 };
 
 // gen/front_end/ui/legacy/ARIAUtils.js
@@ -17942,7 +18023,7 @@ __export(EmptyWidget_exports, {
 });
 import "./../kit/kit.js";
 import * as i18n29 from "./../../core/i18n/i18n.js";
-import { Directives as Directives4, html as html4, render as render7 } from "./../lit/lit.js";
+import { Directives as Directives4, html as html4, render as render8 } from "./../lit/lit.js";
 import * as VisualLogging18 from "./../visual_logging/visual_logging.js";
 
 // gen/front_end/ui/legacy/emptyWidget.css.js
@@ -17969,7 +18050,7 @@ var str_15 = i18n29.i18n.registerUIStrings("ui/legacy/EmptyWidget.ts", UIStrings
 var i18nString15 = i18n29.i18n.getLocalizedString.bind(void 0, str_15);
 var { ref } = Directives4;
 var DEFAULT_VIEW = (input, output, target) => {
-  render7(html4`
+  render8(html4`
     <style>${inspectorCommon_css_default}</style>
     <style>${emptyWidget_css_default}</style>
     <div class="empty-state" jslog=${VisualLogging18.section("empty-view")}
@@ -18949,7 +19030,7 @@ __export(ListWidget_exports, {
 import * as i18n33 from "./../../core/i18n/i18n.js";
 import * as Platform21 from "./../../core/platform/platform.js";
 import * as Buttons8 from "./../components/buttons/buttons.js";
-import { html as html5, nothing as nothing4, render as render8 } from "./../lit/lit.js";
+import { html as html5, nothing as nothing5, render as render9 } from "./../lit/lit.js";
 import * as VisualLogging20 from "./../visual_logging/visual_logging.js";
 
 // gen/front_end/ui/legacy/listWidget.css.js
@@ -19296,11 +19377,11 @@ var ListWidget = class extends VBox {
     const controls = document.createElement("div");
     controls.classList.add("controls-container");
     controls.classList.add("fill");
-    render8(html5`
+    render9(html5`
       <div class="controls-gradient"></div>
       <div class="controls-buttons">
         <devtools-toolbar>
-          ${controlLabels?.hideEdit ? nothing4 : html5`<devtools-button class=toolbar-button
+          ${controlLabels?.hideEdit ? nothing5 : html5`<devtools-button class=toolbar-button
                            .iconName=${"edit"}
                            .jslogContext=${"edit-item"}
                            .title=${controlLabels?.edit ?? i18nString17(UIStrings17.editString)}
@@ -19997,7 +20078,7 @@ __export(RemoteDebuggingTerminatedScreen_exports, {
 });
 import * as i18n35 from "./../../core/i18n/i18n.js";
 import * as Buttons9 from "./../components/buttons/buttons.js";
-import { html as html6, render as render9 } from "./../lit/lit.js";
+import { html as html6, render as render10 } from "./../lit/lit.js";
 
 // gen/front_end/ui/legacy/remoteDebuggingTerminatedScreen.css.js
 var remoteDebuggingTerminatedScreen_css_default = `/*
@@ -20062,7 +20143,7 @@ var UIStrings18 = {
 var str_18 = i18n35.i18n.registerUIStrings("ui/legacy/RemoteDebuggingTerminatedScreen.ts", UIStrings18);
 var i18nString18 = i18n35.i18n.getLocalizedString.bind(void 0, str_18);
 var DEFAULT_VIEW2 = (input, _output, target) => {
-  render9(html6`
+  render10(html6`
     <style>${remoteDebuggingTerminatedScreen_css_default}</style>
     <div class="header">${i18nString18(UIStrings18.debuggingConnectionWasClosed)}</div>
     <div class="content">
@@ -21653,7 +21734,7 @@ __export(TargetCrashedScreen_exports, {
   TargetCrashedScreen: () => TargetCrashedScreen
 });
 import * as i18n41 from "./../../core/i18n/i18n.js";
-import { html as html7, render as render10 } from "./../lit/lit.js";
+import { html as html7, render as render11 } from "./../lit/lit.js";
 
 // gen/front_end/ui/legacy/targetCrashedScreen.css.js
 var targetCrashedScreen_css_default = `/*
@@ -21689,7 +21770,7 @@ var UIStrings21 = {
 var str_21 = i18n41.i18n.registerUIStrings("ui/legacy/TargetCrashedScreen.ts", UIStrings21);
 var i18nString21 = i18n41.i18n.getLocalizedString.bind(void 0, str_21);
 var DEFAULT_VIEW3 = (input, _output, target) => {
-  render10(html7`
+  render11(html7`
     <style>${targetCrashedScreen_css_default}</style>
     <div class="message">${i18nString21(UIStrings21.devtoolsWasDisconnectedFromThe)}</div>
     <div class="message">${i18nString21(UIStrings21.oncePageIsReloadedDevtoolsWill)}</div>`, target);
@@ -22052,7 +22133,7 @@ ol.tree-outline.tree-variant-navigation:not(.hide-selection-when-blurred) li.sel
 
 // gen/front_end/ui/legacy/Treeoutline.js
 var nodeToParentTreeElementMap = /* @__PURE__ */ new WeakMap();
-var { render: render11 } = Lit3;
+var { render: render12 } = Lit3;
 var Events2;
 (function(Events3) {
   Events3["ElementAttached"] = "ElementAttached";
@@ -22688,7 +22769,7 @@ var TreeElement = class {
       this.listItemNode.insertBefore(this.leadingIconsElement, this.titleElement);
       this.ensureSelection();
     }
-    render11(icons, this.leadingIconsElement);
+    render12(icons, this.leadingIconsElement);
   }
   setTrailingIcons(icons) {
     if (!this.trailingIconsElement && !icons.length) {
@@ -22701,7 +22782,7 @@ var TreeElement = class {
       this.listItemNode.appendChild(this.trailingIconsElement);
       this.ensureSelection();
     }
-    render11(icons, this.trailingIconsElement);
+    render12(icons, this.trailingIconsElement);
   }
   get tooltip() {
     return this.tooltipInternal;
