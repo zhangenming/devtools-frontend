@@ -8699,7 +8699,8 @@ var HIGHLIGHTABLE_PROPERTIES = [
 var DISCLAIMER_TOOLTIP_ID = "styles-ai-code-completion-disclaimer-tooltip";
 var SPINNER_TOOLTIP_ID = "styles-ai-code-completion-spinner-tooltip";
 var CITATIONS_TOOLTIP_ID = "styles-ai-code-completion-citations-tooltip";
-var StylesSidebarPane = class _StylesSidebarPane extends Common5.ObjectWrapper.eventMixin(ElementsSidebarPane) {
+var StylesSidebarPaneBase = Common5.ObjectWrapper.eventMixin(ElementsSidebarPane);
+var StylesSidebarPane = class _StylesSidebarPane extends StylesSidebarPaneBase {
   matchedStyles = null;
   currentToolbarPane = null;
   animatedToolbarPane = null;
@@ -14095,6 +14096,16 @@ var ElementsTreeWidget = class _ElementsTreeWidget extends UI15.Widget.Widget {
   static #adTooltipIdCounter = 0;
   #adTooltipId = `ad-tooltip-${++_ElementsTreeWidget.#adTooltipIdCounter}`;
   #updateRecord = null;
+  get updateRecord() {
+    return this.#updateRecord;
+  }
+  set updateRecord(updateRecord) {
+    if (this.#updateRecord === updateRecord) {
+      return;
+    }
+    this.#updateRecord = updateRecord;
+    this.requestUpdate();
+  }
   get node() {
     return this.#node;
   }
@@ -17080,73 +17091,6 @@ var DEFAULT_VIEW7 = (input, output, target) => {
     elementsTreeOutline.elementInternal.addEventListener("clipboard-paste", (event) => {
       input.onPaste?.(event);
     }, false);
-    output.imagePreviewPopover = new ImagePreviewPopover(elementsTreeOutline.contentElement, (event) => {
-      let link2 = event.target;
-      while (link2 && !ImagePreviewPopover.getImageURL(link2)) {
-        link2 = link2.parentElementOrShadowHost();
-      }
-      return link2;
-    }, async (link2) => {
-      const listItem = UI19.UIUtils.enclosingNodeOrSelfWithNodeName(link2, "li");
-      if (!listItem) {
-        return void 0;
-      }
-      const treeElement = UI19.TreeOutline.TreeElement.getTreeElementBylistItemNode(listItem);
-      return await UIComponentUtils.ImagePreview.loadPrecomputedFeatures(treeElement?.node());
-    });
-    const popupHelper = new UI19.PopoverHelper.PopoverHelper(elementsTreeOutline.elementInternal, (event) => {
-      const hoveredNode = event.composedPath()[0];
-      if (!(hoveredNode instanceof Element) || !hoveredNode.matches(".violating-element")) {
-        return null;
-      }
-      const listItem = UI19.UIUtils.enclosingNodeOrSelfWithNodeName(hoveredNode, "li");
-      if (!listItem) {
-        return null;
-      }
-      const treeElement = UI19.TreeOutline.TreeElement.getTreeElementBylistItemNode(listItem);
-      const node = treeElement?.node();
-      if (!node) {
-        return null;
-      }
-      let issues = treeElement?.widget?.issues ?? [];
-      if (hoveredNode.classList.contains("webkit-html-attribute-name")) {
-        const attrName = hoveredNode.textContent;
-        issues = issues.filter((issue) => getElementIssueDetails(issue)?.attribute === attrName);
-      } else if (hoveredNode.classList.contains("webkit-html-tag-name")) {
-        issues = issues.filter((issue) => {
-          const details = getElementIssueDetails(issue);
-          return Boolean(details && !details.attribute);
-        });
-      }
-      if (issues.length === 0) {
-        return null;
-      }
-      return {
-        box: hoveredNode.boxInWindow(),
-        show: async (popover) => {
-          popover.setIgnoreLeftMargin(true);
-          render13(html15`
-            <div class="squiggles-content">
-              ${issues.map((issue) => {
-            const elementIssueDetails = getElementIssueDetails(issue);
-            if (!elementIssueDetails) {
-              return nothing6;
-            }
-            const issueKindIconName = IssueCounter.IssueCounter.getIssueKindIconName(issue.getKind());
-            const openIssueEvent = () => Common12.Revealer.reveal(issue);
-            return html15`
-                  <div class="squiggles-content-item">
-                  <devtools-icon .name=${issueKindIconName} @click=${openIssueEvent}></devtools-icon>
-                  <devtools-link class="link" @click=${openIssueEvent}>${i18nString16(UIStrings17.viewIssue)}</devtools-link>
-                  <span>${elementIssueDetails.tooltip}</span>
-                  </div>`;
-          })}
-            </div>`, popover.contentElement);
-          return true;
-        }
-      };
-    }, "elements.issue");
-    popupHelper.setTimeout(300);
     target.appendChild(elementsTreeOutline.element);
   }
   output.elementsTreeOutline.maxTreeDepth = input.maxTreeDepth;
@@ -17170,9 +17114,6 @@ var DEFAULT_VIEW7 = (input, output, target) => {
   }
   if (input.visible !== void 0) {
     output.elementsTreeOutline.setVisible(input.visible);
-    if (!input.visible) {
-      output.imagePreviewPopover?.hide();
-    }
   }
   output.elementsTreeOutline.maxRowsShown = input.maxRowsShown;
   output.elementsTreeOutline.setWordWrap(input.wrap);
@@ -17681,7 +17622,8 @@ var DECLARATIVE_VIEW = (input, _output, target) => {
         if (event instanceof MouseEvent) {
           input.onContextMenu?.(node, event, widget4);
         }
-      }
+      },
+      updateRecord: input.updateRecordForNode?.(node) ?? null
     })}
         ${hasChildren ? html15`
           <ul role="group">
@@ -17728,7 +17670,8 @@ var DECLARATIVE_VIEW = (input, _output, target) => {
         if (event instanceof MouseEvent) {
           input.onContextMenu?.(node, event, widget4);
         }
-      }
+      },
+      updateRecord: input.updateRecordForNode?.(node) ?? null
     })}
                 </li>
               ` : nothing6}
@@ -17789,6 +17732,23 @@ var DECLARATIVE_VIEW = (input, _output, target) => {
     </div>
   `, target);
 };
+function getElementsTreeWidgetAndNode(element) {
+  let current = element;
+  while (current) {
+    if (current.tagName === "LI") {
+      const treeElement = UI19.TreeOutline.TreeElement.getTreeElementBylistItemNode(current);
+      if (treeElement instanceof ElementsTreeElement) {
+        return { node: treeElement.node(), widget: treeElement.widget };
+      }
+    }
+    const widget4 = UI19.Widget.Widget.get(current);
+    if (widget4 instanceof ElementsTreeWidget) {
+      return { node: widget4.node, widget: widget4 };
+    }
+    current = current.parentElementOrShadowHost();
+  }
+  return {};
+}
 var DOMTreeWidget = class extends UI19.Widget.Widget {
   omitRootDOMNode = false;
   selectEnabled = false;
@@ -17918,6 +17878,9 @@ var DOMTreeWidget = class extends UI19.Widget.Widget {
   #adoptedStyleSheetsExpandedByNode = /* @__PURE__ */ new WeakMap();
   #adoptedStyleSheetExpanded = /* @__PURE__ */ new WeakMap();
   #selectedAdoptedStyleSheet = null;
+  // TODO: Move #imagePreviewPopover and #issuePopoverHelper to the view once declarative versions exist.
+  #imagePreviewPopover;
+  #issuePopoverHelper;
   #view;
   #viewOutput = {
     highlightedTreeElement: null,
@@ -17936,6 +17899,80 @@ var DOMTreeWidget = class extends UI19.Widget.Widget {
       SDK16.TargetManager.TargetManager.instance().addModelListener(SDK16.OverlayModel.OverlayModel, "HighlightNodeRequested", this.#highlightNode, this, { scoped: true });
       SDK16.TargetManager.TargetManager.instance().addModelListener(SDK16.OverlayModel.OverlayModel, "InspectModeWillBeToggled", this.#clearHighlightedNode, this, { scoped: true });
     }
+    this.#setupPopovers();
+  }
+  // TODO: Move imagePreviewPopover and issuePopoverHelper to the view once declarative versions exist.
+  #setupPopovers() {
+    this.#imagePreviewPopover = new ImagePreviewPopover(this.contentElement, (event) => {
+      let link2 = event.composedPath()[0];
+      while (link2 && link2 !== this.contentElement && !ImagePreviewPopover.getImageURL(link2)) {
+        link2 = link2.parentElementOrShadowHost();
+      }
+      return link2 && link2 !== this.contentElement ? link2 : null;
+    }, async (link2) => {
+      const { node } = getElementsTreeWidgetAndNode(link2);
+      return await UIComponentUtils.ImagePreview.loadPrecomputedFeatures(node);
+    });
+    this.#issuePopoverHelper = new UI19.PopoverHelper.PopoverHelper(this.contentElement, (event) => {
+      const hoveredNode = event.composedPath()[0];
+      if (!(hoveredNode instanceof Element) || !hoveredNode.matches(".violating-element")) {
+        return null;
+      }
+      const { node, widget: widget4 } = getElementsTreeWidgetAndNode(hoveredNode);
+      if (!node) {
+        return null;
+      }
+      let issues = widget4?.issues ?? [];
+      if (hoveredNode.classList.contains("webkit-html-attribute-name")) {
+        const attrName = hoveredNode.textContent;
+        issues = issues.filter((issue) => getElementIssueDetails(issue)?.attribute === attrName);
+      } else if (hoveredNode.classList.contains("webkit-html-tag-name")) {
+        issues = issues.filter((issue) => {
+          const details = getElementIssueDetails(issue);
+          return Boolean(details && !details.attribute);
+        });
+      }
+      if (issues.length === 0) {
+        return null;
+      }
+      return {
+        box: hoveredNode.boxInWindow(),
+        show: async (popover) => {
+          popover.setIgnoreLeftMargin(true);
+          render13(html15`
+            <div class="squiggles-content">
+              ${issues.map((issue) => {
+            const elementIssueDetails = getElementIssueDetails(issue);
+            if (!elementIssueDetails) {
+              return nothing6;
+            }
+            const issueKindIconName = IssueCounter.IssueCounter.getIssueKindIconName(issue.getKind());
+            const openIssueEvent = () => Common12.Revealer.reveal(issue);
+            return html15`
+                  <div class="squiggles-content-item">
+                  <devtools-icon .name=${issueKindIconName} @click=${openIssueEvent}></devtools-icon>
+                  <devtools-link class="link" @click=${openIssueEvent}>${i18nString16(UIStrings17.viewIssue)}</devtools-link>
+                  <span>${elementIssueDetails.tooltip}</span>
+                  </div>`;
+          })}
+            </div>`, popover.contentElement);
+          return true;
+        }
+      };
+    }, "elements.issue");
+    this.#issuePopoverHelper.setTimeout(300);
+  }
+  #updateRecords = /* @__PURE__ */ new Map();
+  updateRecordsForTest() {
+    return this.#updateRecords;
+  }
+  #addUpdateRecord(node) {
+    let record = this.#updateRecords.get(node);
+    if (!record) {
+      record = new Elements.ElementUpdateRecord.ElementUpdateRecord();
+      this.#updateRecords.set(node, record);
+    }
+    return record;
   }
   #onDocumentUpdated(event) {
     const domModel = event.data;
@@ -17943,14 +17980,114 @@ var DOMTreeWidget = class extends UI19.Widget.Widget {
       this.#selectedDOMNode = null;
       this.#expandedNodes.clear();
       this.#currentHighlightedNode = null;
+      this.#updateRecords.clear();
     }
     if (domModel.existingDocument()) {
       this.rootDOMNode = domModel.existingDocument();
     }
     this.onDocumentUpdated(domModel);
   }
-  #onDOMNodeChanged() {
-    this.requestUpdate();
+  #updateModifiedNodesTimeout;
+  #updateModifiedNodesSoon() {
+    if (!this.#updateRecords.size) {
+      return;
+    }
+    if (this.#updateModifiedNodesTimeout) {
+      return;
+    }
+    this.#updateModifiedNodesTimeout = window.setTimeout(this.updateModifiedNodes.bind(this), 50);
+  }
+  #onNodeInserted(event) {
+    const node = event.data;
+    if (node.parentNode) {
+      this.#addUpdateRecord(node.parentNode).nodeInserted(node);
+    }
+    this.#updateModifiedNodesSoon();
+  }
+  #onNodeRemoved(event) {
+    const { node, parent } = event.data;
+    this.resetClipboardIfNeeded(node);
+    if (parent) {
+      this.#addUpdateRecord(parent).nodeRemoved(node);
+    }
+    this.#updateModifiedNodesSoon();
+  }
+  #onAttrModified(event) {
+    const { node, name } = event.data;
+    this.#addUpdateRecord(node).attributeModified(name);
+    this.#updateModifiedNodesSoon();
+  }
+  #onAttrRemoved(event) {
+    const { node, name } = event.data;
+    this.#addUpdateRecord(node).attributeRemoved(name);
+    this.#updateModifiedNodesSoon();
+  }
+  #onCharacterDataModified(event) {
+    const node = event.data;
+    this.#addUpdateRecord(node).charDataModified();
+    if (node.parentNode && node.parentNode.firstChild === node.parentNode.lastChild) {
+      this.#addUpdateRecord(node.parentNode).childrenModified();
+    }
+    this.#updateModifiedNodesSoon();
+  }
+  #onChildNodeCountUpdated(event) {
+    const node = event.data;
+    this.#addUpdateRecord(node).childrenModified();
+    this.#updateModifiedNodesSoon();
+  }
+  #onAdoptedStyleSheetsModified(event) {
+    const node = event.data;
+    this.#addUpdateRecord(node).childrenModified();
+    this.#updateModifiedNodesSoon();
+  }
+  #onDistributedNodesChanged(event) {
+    const node = event.data;
+    this.#addUpdateRecord(node).childrenModified();
+    this.#updateModifiedNodesSoon();
+  }
+  #onDocumentURLChanged(event) {
+    this.#addUpdateRecord(event.data).charDataModified();
+    this.#updateModifiedNodesSoon();
+  }
+  #onMarkersChanged() {
+    this.#updateModifiedNodesSoon();
+  }
+  updateModifiedNodes() {
+    if (this.#view === DECLARATIVE_VIEW) {
+      this.performUpdate();
+      return;
+    }
+    this.#viewOutput.elementsTreeOutline?.updateModifiedNodes();
+  }
+  #wireDOMModel(domModel) {
+    domModel.addEventListener(SDK16.DOMModel.Events.DocumentUpdated, this.#onDocumentUpdated, this);
+    domModel.addEventListener(SDK16.DOMModel.Events.NodeInserted, this.#onNodeInserted, this);
+    domModel.addEventListener(SDK16.DOMModel.Events.NodeRemoved, this.#onNodeRemoved, this);
+    domModel.addEventListener(SDK16.DOMModel.Events.AttrModified, this.#onAttrModified, this);
+    domModel.addEventListener(SDK16.DOMModel.Events.AttrRemoved, this.#onAttrRemoved, this);
+    domModel.addEventListener(SDK16.DOMModel.Events.CharacterDataModified, this.#onCharacterDataModified, this);
+    domModel.addEventListener(SDK16.DOMModel.Events.ChildNodeCountUpdated, this.#onChildNodeCountUpdated, this);
+    domModel.addEventListener(SDK16.DOMModel.Events.MarkersChanged, this.#onMarkersChanged, this);
+    domModel.addEventListener(SDK16.DOMModel.Events.AdoptedStyleSheetsModified, this.#onAdoptedStyleSheetsModified, this);
+    domModel.addEventListener(SDK16.DOMModel.Events.TopLayerElementsChanged, this.#onTopLayerElementsChanged, this);
+    domModel.addEventListener(SDK16.DOMModel.Events.DistributedNodesChanged, this.#onDistributedNodesChanged, this);
+    domModel.addEventListener(SDK16.DOMModel.Events.DocumentURLChanged, this.#onDocumentURLChanged, this);
+    domModel.addEventListener(SDK16.DOMModel.Events.AffectedByStartingStylesFlagUpdated, this.requestUpdate, this);
+  }
+  #unwireDOMModel(domModel) {
+    domModel.removeEventListener(SDK16.DOMModel.Events.DocumentUpdated, this.#onDocumentUpdated, this);
+    domModel.removeEventListener(SDK16.DOMModel.Events.NodeInserted, this.#onNodeInserted, this);
+    domModel.removeEventListener(SDK16.DOMModel.Events.NodeRemoved, this.#onNodeRemoved, this);
+    domModel.removeEventListener(SDK16.DOMModel.Events.AttrModified, this.#onAttrModified, this);
+    domModel.removeEventListener(SDK16.DOMModel.Events.AttrRemoved, this.#onAttrRemoved, this);
+    domModel.removeEventListener(SDK16.DOMModel.Events.CharacterDataModified, this.#onCharacterDataModified, this);
+    domModel.removeEventListener(SDK16.DOMModel.Events.ChildNodeCountUpdated, this.#onChildNodeCountUpdated, this);
+    domModel.removeEventListener(SDK16.DOMModel.Events.MarkersChanged, this.#onMarkersChanged, this);
+    domModel.removeEventListener(SDK16.DOMModel.Events.AdoptedStyleSheetsModified, this.#onAdoptedStyleSheetsModified, this);
+    domModel.removeEventListener(SDK16.DOMModel.Events.TopLayerElementsChanged, this.#onTopLayerElementsChanged, this);
+    domModel.removeEventListener(SDK16.DOMModel.Events.DistributedNodesChanged, this.#onDistributedNodesChanged, this);
+    domModel.removeEventListener(SDK16.DOMModel.Events.DocumentURLChanged, this.#onDocumentURLChanged, this);
+    domModel.removeEventListener(SDK16.DOMModel.Events.AffectedByStartingStylesFlagUpdated, this.requestUpdate, this);
   }
   #onShowHTMLCommentsChange() {
     this.#showComments = this.#showHTMLCommentsSetting.get();
@@ -17974,6 +18111,8 @@ var DOMTreeWidget = class extends UI19.Widget.Widget {
     this.performUpdate();
   }
   selectDOMNode(node, focus) {
+    this.#imagePreviewPopover?.hide();
+    this.#issuePopoverHelper?.hidePopover();
     if (node instanceof SDK16.DOMModel.AdoptedStyleSheet) {
       this.highlightAdoptedStyleSheet(node);
       return;
@@ -18202,7 +18341,12 @@ var DOMTreeWidget = class extends UI19.Widget.Widget {
     }
   }
   performUpdate() {
+    if (this.#updateModifiedNodesTimeout) {
+      clearTimeout(this.#updateModifiedNodesTimeout);
+      this.#updateModifiedNodesTimeout = void 0;
+    }
     const firstRender = !this.#viewOutput.elementsTreeOutline;
+    const updatedNodes = this.#view === DECLARATIVE_VIEW ? [...this.#updateRecords.keys()] : [];
     this.#view({
       domTreeWidget: this,
       rootDOMNode: this.#rootDOMNode,
@@ -18337,8 +18481,15 @@ var DOMTreeWidget = class extends UI19.Widget.Widget {
         this.performUpdate();
       },
       expandedChildrenLimit: (node) => this.expandedChildrenLimit(node),
-      onExpandAllChildren: (node) => this.expandAllChildren(node)
+      onExpandAllChildren: (node) => this.expandAllChildren(node),
+      updateRecordForNode: (node) => this.#updateRecords.get(node) ?? null
     }, this.#viewOutput, this.contentElement);
+    if (this.#view === DECLARATIVE_VIEW) {
+      this.#updateRecords.clear();
+      if (updatedNodes.length > 0) {
+        this.onElementsTreeUpdated({ data: updatedNodes });
+      }
+    }
     if (this.#viewOutput.elementsTreeOutline) {
       this.#viewOutput.elementsTreeOutline.domTreeWidget = this;
     }
@@ -18352,16 +18503,7 @@ var DOMTreeWidget = class extends UI19.Widget.Widget {
     if (this.#view === DECLARATIVE_VIEW) {
       if (!this.#wiredDOMModels.has(domModel)) {
         this.#wiredDOMModels.add(domModel);
-        domModel.addEventListener(SDK16.DOMModel.Events.DocumentUpdated, this.#onDocumentUpdated, this);
-        domModel.addEventListener(SDK16.DOMModel.Events.NodeInserted, this.#onDOMNodeChanged, this);
-        domModel.addEventListener(SDK16.DOMModel.Events.NodeRemoved, this.#onDOMNodeChanged, this);
-        domModel.addEventListener(SDK16.DOMModel.Events.AttrModified, this.#onDOMNodeChanged, this);
-        domModel.addEventListener(SDK16.DOMModel.Events.AttrRemoved, this.#onDOMNodeChanged, this);
-        domModel.addEventListener(SDK16.DOMModel.Events.CharacterDataModified, this.#onDOMNodeChanged, this);
-        domModel.addEventListener(SDK16.DOMModel.Events.ChildNodeCountUpdated, this.#onDOMNodeChanged, this);
-        domModel.addEventListener(SDK16.DOMModel.Events.MarkersChanged, this.#onDOMNodeChanged, this);
-        domModel.addEventListener(SDK16.DOMModel.Events.AdoptedStyleSheetsModified, this.#onDOMNodeChanged, this);
-        domModel.addEventListener(SDK16.DOMModel.Events.TopLayerElementsChanged, this.#onTopLayerElementsChanged, this);
+        this.#wireDOMModel(domModel);
       }
       if (this.isShowing() && !domModel.parentModel() && (!this.rootDOMNode || this.rootDOMNode.domModel() !== domModel)) {
         if (domModel.existingDocument()) {
@@ -18390,16 +18532,7 @@ var DOMTreeWidget = class extends UI19.Widget.Widget {
     if (this.#view === DECLARATIVE_VIEW) {
       if (this.#wiredDOMModels.has(domModel)) {
         this.#wiredDOMModels.delete(domModel);
-        domModel.removeEventListener(SDK16.DOMModel.Events.DocumentUpdated, this.#onDocumentUpdated, this);
-        domModel.removeEventListener(SDK16.DOMModel.Events.NodeInserted, this.#onDOMNodeChanged, this);
-        domModel.removeEventListener(SDK16.DOMModel.Events.NodeRemoved, this.#onDOMNodeChanged, this);
-        domModel.removeEventListener(SDK16.DOMModel.Events.AttrModified, this.#onDOMNodeChanged, this);
-        domModel.removeEventListener(SDK16.DOMModel.Events.AttrRemoved, this.#onDOMNodeChanged, this);
-        domModel.removeEventListener(SDK16.DOMModel.Events.CharacterDataModified, this.#onDOMNodeChanged, this);
-        domModel.removeEventListener(SDK16.DOMModel.Events.ChildNodeCountUpdated, this.#onDOMNodeChanged, this);
-        domModel.removeEventListener(SDK16.DOMModel.Events.MarkersChanged, this.#onDOMNodeChanged, this);
-        domModel.removeEventListener(SDK16.DOMModel.Events.AdoptedStyleSheetsModified, this.#onDOMNodeChanged, this);
-        domModel.removeEventListener(SDK16.DOMModel.Events.TopLayerElementsChanged, this.#onTopLayerElementsChanged, this);
+        this.#unwireDOMModel(domModel);
       }
       this.performUpdate();
       return;
@@ -18474,8 +18607,10 @@ var DOMTreeWidget = class extends UI19.Widget.Widget {
     return this.#multilineEditing;
   }
   runPendingUpdates() {
-    this.#viewOutput.elementsTreeOutline?.runPendingUpdates();
-    this.performUpdate();
+    this.updateModifiedNodes();
+    if (this.#view !== DECLARATIVE_VIEW) {
+      this.performUpdate();
+    }
   }
   onResize() {
     super.onResize();
@@ -18485,6 +18620,15 @@ var DOMTreeWidget = class extends UI19.Widget.Widget {
   }
   willHide() {
     super.willHide();
+    this.#imagePreviewPopover?.hide();
+    this.#issuePopoverHelper?.hidePopover();
+    if (this.#updateModifiedNodesTimeout) {
+      clearTimeout(this.#updateModifiedNodesTimeout);
+      this.#updateModifiedNodesTimeout = void 0;
+    }
+    if (this.#view === DECLARATIVE_VIEW) {
+      this.#updateRecords.clear();
+    }
     if (this.#multilineEditing) {
       this.#multilineEditing.cancel();
     }
@@ -19006,15 +19150,36 @@ var DOMTreeWidget = class extends UI19.Widget.Widget {
   wasHidden() {
     super.wasHidden();
     this.#visible = false;
-    this.#viewOutput.imagePreviewPopover?.hide();
+    if (this.#updateModifiedNodesTimeout) {
+      clearTimeout(this.#updateModifiedNodesTimeout);
+      this.#updateModifiedNodesTimeout = void 0;
+    }
+    if (this.#view === DECLARATIVE_VIEW) {
+      this.#updateRecords.clear();
+    }
     this.performUpdate();
   }
   detach(overrideHideOnDetach) {
     super.detach(overrideHideOnDetach);
     this.#visible = false;
     this.#showHTMLCommentsSetting.removeChangeListener(this.#onShowHTMLCommentsChange, this);
-    this.#viewOutput.imagePreviewPopover?.hide();
+    if (this.#updateModifiedNodesTimeout) {
+      clearTimeout(this.#updateModifiedNodesTimeout);
+      this.#updateModifiedNodesTimeout = void 0;
+    }
+    if (this.#view === DECLARATIVE_VIEW) {
+      this.#updateRecords.clear();
+    }
     this.performUpdate();
+  }
+  hideImagePreview() {
+    this.#imagePreviewPopover?.hide();
+  }
+  imagePreviewPopoverForTest() {
+    return this.#imagePreviewPopover;
+  }
+  issuePopoverHelperForTest() {
+    return this.#issuePopoverHelper;
   }
   show(parentElement, insertBefore, suppressOrphanWidgetError = false) {
     this.performUpdate();
@@ -19042,7 +19207,8 @@ var DOMTreeWidget = class extends UI19.Widget.Widget {
     super.show(parentElement, insertBefore, suppressOrphanWidgetError);
   }
 };
-var ElementsTreeOutline = class _ElementsTreeOutline extends Common12.ObjectWrapper.eventMixin(UI19.TreeOutline.TreeOutline) {
+var ElementsTreeOutlineBase = Common12.ObjectWrapper.eventMixin(UI19.TreeOutline.TreeOutline);
+var ElementsTreeOutline = class _ElementsTreeOutline extends ElementsTreeOutlineBase {
   treeElementByNode;
   shadowRoot;
   elementInternal;
@@ -23546,7 +23712,8 @@ var Events2;
 (function(Events3) {
   Events3["STYLES_UPDATE_COMPLETED"] = "StylesUpdateCompleted";
 })(Events2 || (Events2 = {}));
-var StandaloneStylesContainer = class extends Common20.ObjectWrapper.eventMixin(UI28.Widget.VBox) {
+var StandaloneStylesContainerBase = Common20.ObjectWrapper.eventMixin(UI28.Widget.VBox);
+var StandaloneStylesContainer = class extends StandaloneStylesContainerBase {
   activeCSSAngle = null;
   isEditingStyle = false;
   sectionByElement = /* @__PURE__ */ new WeakMap();
