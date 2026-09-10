@@ -7,6 +7,7 @@ import * as TextUtils from '../../../core/text_utils/text_utils.js';
 import { FileContext } from '../contexts/FileContext.js';
 import { FileFormatter } from '../data_formatters/FileFormatter.js';
 import { ListSourcesTool } from './ListSources.js';
+import { isOriginAllowedByLock, } from './Tool.js';
 const UIStringsNotTranslate = {
     readingSource: 'Reading source content',
 };
@@ -37,22 +38,13 @@ export class GetSourceContentTool {
         };
     }
     async handler(args, context) {
-        const origin = context.getEstablishedOrigin();
-        if (origin?.isOpaque()) {
-            return {
-                error: 'Opaque origin not allowed',
-            };
-        }
-        const file = ListSourcesTool.getUISourceCodes().find(f => ListSourcesTool.uiSourceCodeId.get(f) === args.id);
+        const establishedOrigin = context.getEstablishedOrigin();
+        const file = ListSourcesTool.getUISourceCodes()
+            .filter(f => isOriginAllowedByLock(establishedOrigin, FileContext.originForUISourceCode(f)))
+            .find(f => ListSourcesTool.uiSourceCodeId.get(f) === args.id);
         if (!file) {
             return {
                 error: 'Unable to find file.',
-            };
-        }
-        const fileContext = new FileContext(file);
-        if (!fileContext.isOriginAllowed(origin)) {
-            return {
-                error: 'Cross-origin access blocked.',
             };
         }
         const contentData = await file.requestContentData();

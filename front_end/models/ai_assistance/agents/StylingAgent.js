@@ -140,6 +140,7 @@ export class StylingAgent extends AiAgent {
                 createExtensionScope: this.#createExtensionScope.bind(this),
                 execJs: this.#execJs,
                 getExecutionContextNode: () => this.context?.getItem() ?? null,
+                getEstablishedOrigin: () => this.context?.getOrigin(),
             }, options),
         });
     }

@@ -5,6 +5,7 @@ import * as Host from '../../../core/host/host.js';
 import * as i18n from '../../../core/i18n/i18n.js';
 import * as Workspace from '../../workspace/workspace.js';
 import { FileContext } from '../contexts/FileContext.js';
+import { isOriginAllowedByLock, } from './Tool.js';
 const UIStringsNotTranslate = {
     listingSources: 'Listing workspace sources',
 };
@@ -56,15 +57,14 @@ export class ListSourcesTool {
         };
     }
     async handler(_params, context) {
-        const origin = context.getEstablishedOrigin();
-        if (origin?.isOpaque()) {
+        const establishedOrigin = context.getEstablishedOrigin();
+        if (!establishedOrigin || establishedOrigin.isOpaque()) {
             return {
                 error: 'Opaque origin not allowed',
             };
         }
         const files = ListSourcesTool.getUISourceCodes().filter(file => {
-            const fileContext = new FileContext(file);
-            return fileContext.isOriginAllowed(origin);
+            return isOriginAllowedByLock(establishedOrigin, FileContext.originForUISourceCode(file));
         });
         return {
             result: {

@@ -924,6 +924,7 @@ var Audits;
     FederatedAuthRequestIssueReason2["UiDismissedNoEmbargo"] = "UiDismissedNoEmbargo";
     FederatedAuthRequestIssueReason2["CorsError"] = "CorsError";
     FederatedAuthRequestIssueReason2["SuppressedBySegmentationPlatform"] = "SuppressedBySegmentationPlatform";
+    FederatedAuthRequestIssueReason2["PopupBlockedByConnectionAllowlist"] = "PopupBlockedByConnectionAllowlist";
   })(FederatedAuthRequestIssueReason = Audits2.FederatedAuthRequestIssueReason || (Audits2.FederatedAuthRequestIssueReason = {}));
   let FederatedAuthUserInfoRequestIssueReason;
   ((FederatedAuthUserInfoRequestIssueReason2) => {
@@ -996,6 +997,7 @@ var Audits;
     EmailVerificationRequestIssueReason2["TokenVerificationKbInvalidSdHash"] = "TokenVerificationKbInvalidSdHash";
     EmailVerificationRequestIssueReason2["TokenVerificationKbMissingCnf"] = "TokenVerificationKbMissingCnf";
     EmailVerificationRequestIssueReason2["TokenVerificationKbSignatureFailed"] = "TokenVerificationKbSignatureFailed";
+    EmailVerificationRequestIssueReason2["CrossOriginIframeNotSupported"] = "CrossOriginIframeNotSupported";
   })(EmailVerificationRequestIssueReason = Audits2.EmailVerificationRequestIssueReason || (Audits2.EmailVerificationRequestIssueReason = {}));
   let PartitioningBlobURLInfo;
   ((PartitioningBlobURLInfo2) => {
@@ -1452,6 +1454,11 @@ var Emulation;
     SetDeviceMetricsOverrideRequestScrollbarType2["Overlay"] = "overlay";
     SetDeviceMetricsOverrideRequestScrollbarType2["Default"] = "default";
   })(SetDeviceMetricsOverrideRequestScrollbarType = Emulation2.SetDeviceMetricsOverrideRequestScrollbarType || (Emulation2.SetDeviceMetricsOverrideRequestScrollbarType = {}));
+  let SetDeviceMetricsOverrideRequestViewportMeta;
+  ((SetDeviceMetricsOverrideRequestViewportMeta2) => {
+    SetDeviceMetricsOverrideRequestViewportMeta2["Enable"] = "enable";
+    SetDeviceMetricsOverrideRequestViewportMeta2["Default"] = "default";
+  })(SetDeviceMetricsOverrideRequestViewportMeta = Emulation2.SetDeviceMetricsOverrideRequestViewportMeta || (Emulation2.SetDeviceMetricsOverrideRequestViewportMeta = {}));
   let SetEmitTouchEventsForMouseRequestConfiguration;
   ((SetEmitTouchEventsForMouseRequestConfiguration2) => {
     SetEmitTouchEventsForMouseRequestConfiguration2["Mobile"] = "mobile";
@@ -3242,6 +3249,7 @@ var Runtime;
     RemoteObjectSubtype2["Dataview"] = "dataview";
     RemoteObjectSubtype2["Webassemblymemory"] = "webassemblymemory";
     RemoteObjectSubtype2["Wasmvalue"] = "wasmvalue";
+    RemoteObjectSubtype2["Deferredmodule"] = "deferredmodule";
     RemoteObjectSubtype2["Trustedtype"] = "trustedtype";
   })(RemoteObjectSubtype = Runtime20.RemoteObjectSubtype || (Runtime20.RemoteObjectSubtype = {}));
   let ObjectPreviewType;
@@ -3276,6 +3284,7 @@ var Runtime;
     ObjectPreviewSubtype2["Dataview"] = "dataview";
     ObjectPreviewSubtype2["Webassemblymemory"] = "webassemblymemory";
     ObjectPreviewSubtype2["Wasmvalue"] = "wasmvalue";
+    ObjectPreviewSubtype2["Deferredmodule"] = "deferredmodule";
     ObjectPreviewSubtype2["Trustedtype"] = "trustedtype";
   })(ObjectPreviewSubtype = Runtime20.ObjectPreviewSubtype || (Runtime20.ObjectPreviewSubtype = {}));
   let PropertyPreviewType;
@@ -3311,6 +3320,7 @@ var Runtime;
     PropertyPreviewSubtype2["Dataview"] = "dataview";
     PropertyPreviewSubtype2["Webassemblymemory"] = "webassemblymemory";
     PropertyPreviewSubtype2["Wasmvalue"] = "wasmvalue";
+    PropertyPreviewSubtype2["Deferredmodule"] = "deferredmodule";
     PropertyPreviewSubtype2["Trustedtype"] = "trustedtype";
   })(PropertyPreviewSubtype = Runtime20.PropertyPreviewSubtype || (Runtime20.PropertyPreviewSubtype = {}));
   let ConsoleAPICalledEventType;
@@ -4071,8 +4081,18 @@ var Tool_exports = {};
 __export(Tool_exports, {
   MAX_FUNCTION_RESULT_BYTE_LENGTH: () => MAX_FUNCTION_RESULT_BYTE_LENGTH,
   ToolAnnotation: () => ToolAnnotation,
-  ToolName: () => ToolName
+  ToolName: () => ToolName,
+  isOriginAllowedByLock: () => isOriginAllowedByLock
 });
+function isOriginAllowedByLock(establishedOrigin, targetOrigin) {
+  if (!establishedOrigin || establishedOrigin.isOpaque()) {
+    return false;
+  }
+  if (!targetOrigin || targetOrigin.isOpaque()) {
+    return false;
+  }
+  return targetOrigin.isSameOriginWith(establishedOrigin);
+}
 var MAX_FUNCTION_RESULT_BYTE_LENGTH = 16384 * 4;
 var ToolName = /* @__PURE__ */ ((ToolName2) => {
   ToolName2["EXECUTE_JAVASCRIPT"] = "executeJavaScript";
@@ -4203,6 +4223,9 @@ const data = {
     if (!executionNode) {
       return { error: "Error: Could not find the context node for execution." };
     }
+    if (!isOriginAllowedByLock(context.getEstablishedOrigin(), executionNode.securityOrigin())) {
+      return { error: "Error: Cannot execute JavaScript on cross-origin target." };
+    }
     if (Root2.Runtime.hostConfig.devToolsAiV2Architecture?.enabled) {
       const validationResult = await _ExecuteJavaScriptTool.validateAndFormatCode(params.code);
       if (validationResult.error) {
@@ -4312,8 +4335,8 @@ function resolveAllowedTargetOrigins(requestedOrigins, context, targetManager) {
   if (!primaryPageTarget) {
     return { error: "Primary page target not found." };
   }
-  const pageOrigin = SDK6.SecurityOrigin.SecurityOrigin.create(primaryPageTarget.inspectedURL());
-  if (!pageOrigin || !pageOrigin.isSameOriginWith(establishedOrigin)) {
+  const pageOrigin = primaryPageTarget.inspectedSecurityOrigin();
+  if (!pageOrigin.isSameOriginWith(establishedOrigin)) {
     return { error: "Page origin does not match allowed origin." };
   }
   const candidateOrigins = Array.isArray(requestedOrigins) && requestedOrigins.length > 0 ? requestedOrigins.map((origin) => SDK6.SecurityOrigin.SecurityOrigin.create(origin)) : [establishedOrigin];
@@ -9019,15 +9042,14 @@ var ListSourcesTool = class _ListSourcesTool {
     };
   }
   async handler(_params, context) {
-    const origin = context.getEstablishedOrigin();
-    if (origin?.isOpaque()) {
+    const establishedOrigin = context.getEstablishedOrigin();
+    if (!establishedOrigin || establishedOrigin.isOpaque()) {
       return {
         error: "Opaque origin not allowed"
       };
     }
     const files = _ListSourcesTool.getUISourceCodes().filter((file) => {
-      const fileContext = new FileContext(file);
-      return fileContext.isOriginAllowed(origin);
+      return isOriginAllowedByLock(establishedOrigin, FileContext.originForUISourceCode(file));
     });
     return {
       result: {
@@ -9067,24 +9089,11 @@ var GetSourceContentTool = class {
     };
   }
   async handler(args, context) {
-    const origin = context.getEstablishedOrigin();
-    if (origin?.isOpaque()) {
-      return {
-        error: "Opaque origin not allowed"
-      };
-    }
-    const file = ListSourcesTool.getUISourceCodes().find(
-      (f) => ListSourcesTool.uiSourceCodeId.get(f) === args.id
-    );
+    const establishedOrigin = context.getEstablishedOrigin();
+    const file = ListSourcesTool.getUISourceCodes().filter((f) => isOriginAllowedByLock(establishedOrigin, FileContext.originForUISourceCode(f))).find((f) => ListSourcesTool.uiSourceCodeId.get(f) === args.id);
     if (!file) {
       return {
         error: "Unable to find file."
-      };
-    }
-    const fileContext = new FileContext(file);
-    if (!fileContext.isOriginAllowed(origin)) {
-      return {
-        error: "Cross-origin access blocked."
       };
     }
     const contentData = await file.requestContentData();
@@ -9262,8 +9271,8 @@ var GetStorageValuesTool = class {
     if (!primaryPageTarget) {
       return { error: "No origin available or not allowed." };
     }
-    const pageOrigin = SDK16.SecurityOrigin.SecurityOrigin.create(primaryPageTarget.inspectedURL());
-    if (!pageOrigin || !pageOrigin.isSameOriginWith(establishedOrigin)) {
+    const pageOrigin = primaryPageTarget.inspectedSecurityOrigin();
+    if (!pageOrigin.isSameOriginWith(establishedOrigin)) {
       return { error: "No origin available or not allowed." };
     }
     const candidateOrigins = args.origins && args.origins.length > 0 ? args.origins.map((origin) => SDK16.SecurityOrigin.SecurityOrigin.create(origin)) : [establishedOrigin];
@@ -9916,8 +9925,8 @@ var ListStorageKeysTool = class {
     if (!primaryPageTarget) {
       return { error: "No origin available or not allowed." };
     }
-    const pageOrigin = SDK20.SecurityOrigin.SecurityOrigin.create(primaryPageTarget.inspectedURL());
-    if (!pageOrigin || !pageOrigin.isSameOriginWith(establishedOrigin)) {
+    const pageOrigin = primaryPageTarget.inspectedSecurityOrigin();
+    if (!pageOrigin.isSameOriginWith(establishedOrigin)) {
       return { error: "No origin available or not allowed." };
     }
     const candidateOrigins = args.origins && args.origins.length > 0 ? args.origins.map((origin) => SDK20.SecurityOrigin.SecurityOrigin.create(origin)) : [establishedOrigin];
@@ -10992,7 +11001,8 @@ var AccessibilityAgent = class extends AiAgent {
             changeManager: this.#changes,
             createExtensionScope: this.#createExtensionScope.bind(this),
             execJs: this.#execJs,
-            getExecutionContextNode: () => this.#getDocumentBodyNode()
+            getExecutionContextNode: () => this.#getDocumentBodyNode(),
+            getEstablishedOrigin: () => this.context?.getOrigin()
           },
           options
         );
@@ -13933,7 +13943,8 @@ var StylingAgent = class extends AiAgent {
           changeManager: this.#changes,
           createExtensionScope: this.#createExtensionScope.bind(this),
           execJs: this.#execJs,
-          getExecutionContextNode: () => this.context?.getItem() ?? null
+          getExecutionContextNode: () => this.context?.getItem() ?? null,
+          getEstablishedOrigin: () => this.context?.getOrigin()
         },
         options
       )
@@ -14130,7 +14141,7 @@ var AiAgent2 = class extends AiAgent {
     if (this.context && !this.context.isLoggingEnabled()) {
       this.disableServerSideLogging();
     }
-    const target = this.targetManager.primaryPageTarget();
+    const target = this.#getPrimaryPageTarget();
     const domModel = target?.model(SDK29.DOMModel.DOMModel);
     if (domModel) {
       if (!domModel.existingDocument()) {
@@ -14269,9 +14280,14 @@ ${skillObj.instructions}
     }
     return response.trim();
   }
+  #getExecutionContextNode() {
+    if (this.context instanceof DOMNodeContext) {
+      return this.context.getItem();
+    }
+    return this.#getDocumentBodyNode();
+  }
   #createExtensionScope(changes) {
-    const selectedNode = this.context && this.context instanceof DOMNodeContext ? this.context.getItem() : this.#getDocumentBodyNode();
-    return new ExtensionScope(changes, this.sessionId, selectedNode);
+    return new ExtensionScope(changes, this.sessionId, this.#getExecutionContextNode());
   }
   /**
    * Declares a tool to be available to the agent model, verifying first that
@@ -14291,8 +14307,8 @@ ${skillObj.instructions}
           changeManager: this.#changes,
           createExtensionScope: this.#createExtensionScope.bind(this),
           execJs: this.#execJs,
-          getExecutionContextNode: () => this.context instanceof DOMNodeContext ? this.context.getItem() : this.#getDocumentBodyNode(),
-          getTarget: () => this.targetManager.primaryPageTarget(),
+          getExecutionContextNode: () => this.#getExecutionContextNode(),
+          getTarget: () => this.#getPrimaryPageTarget(),
           getEstablishedOrigin: () => this.#getConversationOrigin(),
           getLighthouseReport: () => this.context instanceof AccessibilityContext ? this.context.getItem() : null,
           runLighthouse: async (overrides) => await (this.#lighthouseRecording?.(overrides) ?? null),
@@ -14307,12 +14323,40 @@ ${skillObj.instructions}
     });
   }
   /**
+   * Returns the primary page target only if no conversation origin is locked,
+   * or if the primary target matches the locked conversation origin.
+   * If origin access is explicitly blocked (e.g. cross-origin navigation occurred),
+   * or if the conversation is locked to an origin different from the primary page target
+   * (e.g. an iframe origin), returns null to prevent cross-origin target access.
+   */
+  #getPrimaryPageTarget() {
+    const allowed = this.#allowedOrigin?.();
+    if (allowed && "blocked" in allowed) {
+      return null;
+    }
+    const target = this.targetManager.primaryPageTarget();
+    if (!target) {
+      return null;
+    }
+    const establishedOrigin = this.#getConversationOrigin();
+    if (!establishedOrigin) {
+      return target;
+    }
+    const targetOrigin = target.inspectedSecurityOrigin();
+    if (targetOrigin.isSameOriginWith(establishedOrigin)) {
+      return target;
+    }
+    return null;
+  }
+  /**
    * For non-DOM contexts (e.g., Lighthouse accessibility reports or storage items),
    * there is no user-selected DOM node. We fall back to the document body as the
    * default execution context node so scripts have a valid `$0` target.
+   * If the conversation is locked to an origin different from the primary page target,
+   * returns null to prevent exposing the top-level document body across origins.
    */
   #getDocumentBodyNode() {
-    const document2 = this.targetManager.primaryPageTarget()?.model(SDK29.DOMModel.DOMModel)?.existingDocument();
+    const document2 = this.#getPrimaryPageTarget()?.model(SDK29.DOMModel.DOMModel)?.existingDocument();
     return document2?.body ?? null;
   }
   #getConversationOrigin() {

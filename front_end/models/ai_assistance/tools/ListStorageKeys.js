@@ -64,8 +64,8 @@ export class ListStorageKeysTool {
         if (!primaryPageTarget) {
             return { error: 'No origin available or not allowed.' };
         }
-        const pageOrigin = SDK.SecurityOrigin.SecurityOrigin.create(primaryPageTarget.inspectedURL());
-        if (!pageOrigin || !pageOrigin.isSameOriginWith(establishedOrigin)) {
+        const pageOrigin = primaryPageTarget.inspectedSecurityOrigin();
+        if (!pageOrigin.isSameOriginWith(establishedOrigin)) {
             return { error: 'No origin available or not allowed.' };
         }
         const candidateOrigins = (args.origins && args.origins.length > 0) ?
