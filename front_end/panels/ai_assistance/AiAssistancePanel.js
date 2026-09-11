@@ -246,6 +246,9 @@ async function getEmptyStateSuggestions(conversation) {
 }
 function createV2MarkdownRenderer(conversation) {
     const options = {};
+    if (conversation) {
+        options.getEstablishedOrigin = () => conversation.origin;
+    }
     const primaryTarget = SDK.TargetManager.TargetManager.instance().primaryPageTarget();
     const domModel = primaryTarget?.model(SDK.DOMModel.DOMModel);
     const resourceTreeModel = primaryTarget?.model(SDK.ResourceTreeModel.ResourceTreeModel);

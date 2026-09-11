@@ -93,8 +93,12 @@ models/ai_assistance/data_formatters/PerformanceInsightFormatter.test.js
 models/ai_assistance/data_formatters/PerformanceTraceFormatter.test.js
 models/ai_code_completion/AiCodeCompletion.test.js
 models/ai_code_generation/AiCodeGeneration.test.js
+models/badges/AiExplorerBadge.test.js
+models/badges/Badge.test.js
+models/badges/UserBadges.test.js
 models/comment_manager/CD4ABridge.test.js
 models/comment_manager/CommentManager.test.js
+models/cpu_profile/CPUProfileDataModel.test.js
 models/crux-manager/CrUXManager.test.js
 models/formatter/FormatterWorkerPool.test.js
 models/formatter/ScriptFormatter.test.js
@@ -120,6 +124,7 @@ models/issues_manager/SRIMessageSignatureIssue.test.js
 models/issues_manager/SharedDictionaryIssue.test.js
 models/issues_manager/StylesheetLoadingIssue.test.js
 models/issues_manager/UnencodedDigestIssue.test.js
+models/javascript_metadata/JavaScriptMetadata.test.js
 models/stack_trace/DetailedErrorStackParser.test.js
 models/stack_trace/StackTrace.test.js
 models/stack_trace/StackTraceImpl.test.js
@@ -235,9 +240,6 @@ models/ai_assistance/tools/SelectTraceEventByKey.test.js
 models/ai_assistance/tools/Tool.test.js
 models/ai_assistance/tools/ToolRegistry.test.js
 models/autofill_manager/AutofillManager.test.js
-models/badges/AiExplorerBadge.test.js
-models/badges/Badge.test.js
-models/badges/UserBadges.test.js
 models/bindings/CSSWorkspaceBinding.test.js
 models/bindings/CompilerScriptMapping.test.js
 models/bindings/ContentProviderBasedProject.test.js
@@ -254,7 +256,6 @@ models/bindings/StylesSourceMapping.test.js
 models/bindings/SymbolizedError.test.js
 models/breakpoints/BreakpointManager.test.js
 models/computed_style/ComputedStyleModel.test.js
-models/cpu_profile/CPUProfileDataModel.test.js
 models/emulation/DeviceModeModel.test.js
 models/emulation/EmulatedDevices.test.js
 models/extensions/HostUrlPattern.test.js
@@ -264,7 +265,6 @@ models/geometry/Geometry.test.js
 models/issues_manager/DOMIssuesManager.test.js
 models/issues_manager/IssuesManager.test.js
 models/issues_manager/SelectivePermissionsInterventionIssue.test.js
-models/javascript_metadata/JavaScriptMetadata.test.js
 models/live-metrics/LiveMetrics.test.js
 models/logs/NetworkLog.test.js
 models/logs/RequestResolver.test.js
