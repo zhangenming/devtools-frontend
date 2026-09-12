@@ -1,5 +1,7 @@
-// ../../front_end/models/geometry/GeometryImpl.ts
+// ../../front_end/ui/geometry/GeometryImpl.ts
+import * as Platform from "../../core/platform/platform.js";
 import * as SDK from "../../core/sdk/sdk.js";
+var Size2 = Platform.Size;
 var EPS = 1e-5;
 var Vector = class {
   x;
@@ -235,43 +237,11 @@ var boundsForTransformedPoints = function(matrix, points, aggregateBounds) {
   }
   return aggregateBounds;
 };
-var Size = class _Size {
-  width;
-  height;
-  constructor(width, height) {
-    this.width = width;
-    this.height = height;
-  }
-  clipTo(size) {
-    if (!size) {
-      return this;
-    }
-    return new _Size(Math.min(this.width, size.width), Math.min(this.height, size.height));
-  }
-  scale(scale) {
-    return new _Size(this.width * scale, this.height * scale);
-  }
-  isEqual(size) {
-    return size !== null && this.width === size.width && this.height === size.height;
-  }
-  widthToMax(size) {
-    return new _Size(Math.max(this.width, typeof size === "number" ? size : size.width), this.height);
-  }
-  addWidth(size) {
-    return new _Size(this.width + (typeof size === "number" ? size : size.width), this.height);
-  }
-  heightToMax(size) {
-    return new _Size(this.width, Math.max(this.height, typeof size === "number" ? size : size.height));
-  }
-  addHeight(size) {
-    return new _Size(this.width, this.height + (typeof size === "number" ? size : size.height));
-  }
-};
 var Constraints = class _Constraints {
   minimum;
   preferred;
   constructor(minimum, preferred) {
-    this.minimum = minimum || new Size(0, 0);
+    this.minimum = minimum || new Size2(0, 0);
     this.preferred = preferred || this.minimum;
     if (this.minimum.width > this.preferred.width || this.minimum.height > this.preferred.height) {
       throw new Error("Minimum size is greater than preferred.");
@@ -311,7 +281,7 @@ export {
   EulerAngles,
   LINEAR_BEZIER,
   Point,
-  Size,
+  Size2 as Size,
   Vector,
   boundsForTransformedPoints,
   calculateAngle,

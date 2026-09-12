@@ -10,7 +10,7 @@ __export(AnimationTimingModel_exports, {
   AnimationTimingModel: () => AnimationTimingModel,
   LINEAR_BEZIER: () => LINEAR_BEZIER2
 });
-import * as Geometry from "../../../../models/geometry/geometry.js";
+import * as Geometry from "../../../geometry/geometry.js";
 
 // ../../front_end/ui/legacy/components/inline_editor/CSSLinearEasingModel.ts
 var CSSLinearEasingModel_exports = {};
@@ -188,7 +188,7 @@ __export(AnimationTimingUI_exports, {
 });
 import * as i18n from "../../../../core/i18n/i18n.js";
 import * as Platform from "../../../../core/platform/platform.js";
-import * as Geometry3 from "../../../../models/geometry/geometry.js";
+import * as Geometry3 from "../../../geometry/geometry.js";
 import * as VisualLogging2 from "../../../visual_logging/visual_logging.js";
 import * as UI2 from "../../legacy.js";
 
@@ -198,7 +198,7 @@ __export(BezierUI_exports, {
   BezierUI: () => BezierUI,
   Height: () => Height
 });
-import * as Geometry2 from "../../../../models/geometry/geometry.js";
+import * as Geometry2 from "../../../geometry/geometry.js";
 import * as VisualLogging from "../../../visual_logging/visual_logging.js";
 import * as UI from "../../legacy.js";
 var BezierUI = class {
@@ -1549,7 +1549,7 @@ __export(CSSAngleUtils_exports, {
   roundAngleByUnit: () => roundAngleByUnit
 });
 import * as Platform4 from "../../../../core/platform/platform.js";
-import * as Geometry4 from "../../../../models/geometry/geometry.js";
+import * as Geometry4 from "../../../geometry/geometry.js";
 import * as UI4 from "../../legacy.js";
 var CSSAngleRegex = /(?<value>[+-]?\d*\.?\d+)(?<unit>deg|grad|rad|turn)/;
 var AngleUnit = /* @__PURE__ */ ((AngleUnit2) => {
@@ -2108,7 +2108,7 @@ __export(CSSShadowEditor_exports, {
 import * as Common4 from "../../../../core/common/common.js";
 import * as i18n5 from "../../../../core/i18n/i18n.js";
 import * as Platform6 from "../../../../core/platform/platform.js";
-import * as Geometry5 from "../../../../models/geometry/geometry.js";
+import * as Geometry5 from "../../../geometry/geometry.js";
 import * as VisualLogging7 from "../../../visual_logging/visual_logging.js";
 import * as UI5 from "../../legacy.js";
 

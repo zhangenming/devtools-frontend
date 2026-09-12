@@ -27,7 +27,7 @@
     "noImplicitReturns": true,
     "outDir": ".",
     "preserveConstEnums": true,
-    "rootDir": "../../../../../../front_end/models/geometry",
+    "rootDir": "../../../../../../front_end/models/logs",
     "rootDirs": [
       "../../../../../../",
       "../../../"
@@ -35,7 +35,7 @@
     "skipLibCheck": true,
     "sourceMap": true,
     "strict": true,
-    "target": "ES2023",
+    "target": "es2023",
     "typeRoots": [
       "../../../../../../node_modules/@types",
       "../../../../../../node_modules"
@@ -46,7 +46,8 @@
     "useUnknownInCatchVariables": false
   },
   "files": [
-    "../../../../../../front_end/models/geometry/Geometry.test.ts",
+    "../../../../../../front_end/models/logs/NetworkLog.test.ts",
+    "../../../../../../front_end/models/logs/RequestResolver.test.ts",
     "../../../../../../front_end/legacy/legacy-defs.d.ts",
     "../../../../../../front_end/global_typings/global_defs.d.ts",
     "../../../../../../node_modules/@types/filesystem/index.d.ts",
@@ -55,6 +56,18 @@
   "references": [
     {
       "path": "bundle-tsconfig.ref.json"
+    },
+    {
+      "path": "../../core/platform/bundle-tsconfig.ref.json"
+    },
+    {
+      "path": "../../core/sdk/bundle-tsconfig.ref.json"
+    },
+    {
+      "path": "../../generated/generated-tsconfig.ref.json"
+    },
+    {
+      "path": "../../testing/testing-tsconfig.ref.json"
     }
   ]
 }

@@ -21,13 +21,14 @@
     ],
     "module": "esnext",
     "moduleResolution": "bundler",
+    "noEmit": true,
     "noEmitOnError": true,
     "noFallthroughCasesInSwitch": true,
     "noImplicitOverride": true,
     "noImplicitReturns": true,
     "outDir": ".",
     "preserveConstEnums": true,
-    "rootDir": "../../../../../../front_end/models/autofill_manager",
+    "rootDir": "../../../../../../front_end/ui/geometry",
     "rootDirs": [
       "../../../../../../",
       "../../../"
@@ -37,16 +38,15 @@
     "strict": true,
     "target": "ES2023",
     "typeRoots": [
-      "../../../../../../node_modules/@types",
-      "../../../../../../node_modules"
+
     ],
     "types": [
-      "mocha"
+
     ],
     "useUnknownInCatchVariables": false
   },
   "files": [
-    "../../../../../../front_end/models/autofill_manager/AutofillManager.test.ts",
+    "../../../../../../front_end/ui/geometry/geometry.ts",
     "../../../../../../front_end/legacy/legacy-defs.d.ts",
     "../../../../../../front_end/global_typings/global_defs.d.ts",
     "../../../../../../node_modules/@types/filesystem/index.d.ts",
@@ -54,16 +54,7 @@
   ],
   "references": [
     {
-      "path": "bundle-tsconfig.ref.json"
-    },
-    {
-      "path": "../../core/sdk/bundle-tsconfig.ref.json"
-    },
-    {
-      "path": "../../generated/generated-tsconfig.ref.json"
-    },
-    {
-      "path": "../../testing/testing-tsconfig.ref.json"
+      "path": "geometry-tsconfig.ref.json"
     }
   ]
 }

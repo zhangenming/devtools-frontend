@@ -27,7 +27,7 @@
     "noImplicitReturns": true,
     "outDir": ".",
     "preserveConstEnums": true,
-    "rootDir": "../../../../../../front_end/models/issues_manager",
+    "rootDir": "../../../../../../front_end/models/computed_style",
     "rootDirs": [
       "../../../../../../",
       "../../../"
@@ -35,7 +35,7 @@
     "skipLibCheck": true,
     "sourceMap": true,
     "strict": true,
-    "target": "ES2023",
+    "target": "es2023",
     "typeRoots": [
       "../../../../../../node_modules/@types",
       "../../../../../../node_modules"
@@ -46,9 +46,7 @@
     "useUnknownInCatchVariables": false
   },
   "files": [
-    "../../../../../../front_end/models/issues_manager/DOMIssuesManager.test.ts",
-    "../../../../../../front_end/models/issues_manager/IssuesManager.test.ts",
-    "../../../../../../front_end/models/issues_manager/SelectivePermissionsInterventionIssue.test.ts",
+    "../../../../../../front_end/models/computed_style/ComputedStyleModel.test.ts",
     "../../../../../../front_end/legacy/legacy-defs.d.ts",
     "../../../../../../front_end/global_typings/global_defs.d.ts",
     "../../../../../../node_modules/@types/filesystem/index.d.ts",
