@@ -224,12 +224,15 @@ var CrUXManager = class _CrUXManager extends Common.ObjectWrapper.ObjectWrapper 
     }
     const responseData = await response.json();
     if (response.status === 404) {
-      if (responseData?.error?.status === "NOT_FOUND") {
-        return null;
+      if (typeof responseData === "object" && responseData && "error" in responseData) {
+        const error = responseData.error;
+        if (error?.status === "NOT_FOUND") {
+          return null;
+        }
       }
       throw new Error(`Failed to fetch data from CrUX server (Status code: ${response.status})`);
     }
-    if (!("record" in responseData)) {
+    if (typeof responseData !== "object" || !responseData || !("record" in responseData)) {
       throw new Error(`Failed to find data in CrUX response: ${JSON.stringify(responseData)}`);
     }
     return responseData;

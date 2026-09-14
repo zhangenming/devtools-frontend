@@ -3725,6 +3725,9 @@
   "panels/application/components/AdsView.ts | adIframesTitle": {
     "message": "Ad iframes (total {PH1})"
   },
+  "panels/application/components/AdsView.ts | adProvenance": {
+    "message": "Ad provenance"
+  },
   "panels/application/components/AdsView.ts | adScripts": {
     "message": "Ad scripts"
   },
@@ -3737,8 +3740,14 @@
   "panels/application/components/AdsView.ts | cpu": {
     "message": "CPU"
   },
+  "panels/application/components/AdsView.ts | creatorAdScriptAncestry": {
+    "message": "Creator ad script ancestry"
+  },
   "panels/application/components/AdsView.ts | elementId": {
     "message": "Element ID"
+  },
+  "panels/application/components/AdsView.ts | filterListRule": {
+    "message": "Filter list rule"
   },
   "panels/application/components/AdsView.ts | highlightAds": {
     "message": "Highlight ads"
@@ -3758,8 +3767,17 @@
   "panels/application/components/AdsView.ts | network": {
     "message": "Network"
   },
+  "panels/application/components/AdsView.ts | noProvenance": {
+    "message": "<no provenance>"
+  },
+  "panels/application/components/AdsView.ts | noProvenanceTooltip": {
+    "message": "No provenance data is available"
+  },
   "panels/application/components/AdsView.ts | notAvailable": {
     "message": "N/A"
+  },
+  "panels/application/components/AdsView.ts | rootScriptFilterListRule": {
+    "message": "Root script filter list rule"
   },
   "panels/application/components/AdsView.ts | settings": {
     "message": "Settings"
@@ -5259,34 +5277,34 @@
     "message": "(automatically fell back to prefetch)"
   },
   "panels/application/preloading/components/PreloadingDetailsReportView.ts | buttonClickToInspect": {
-    "message": "Click to inspect prerendered page"
+    "message": "Inspect prerendered page"
   },
   "panels/application/preloading/components/PreloadingDetailsReportView.ts | buttonClickToRevealRuleSet": {
-    "message": "Click to reveal rule set"
+    "message": "Reveal rule set"
   },
   "panels/application/preloading/components/PreloadingDetailsReportView.ts | buttonInspect": {
     "message": "Inspect"
   },
   "panels/application/preloading/components/PreloadingDetailsReportView.ts | detailedStatusFailure": {
-    "message": "Speculative load failed."
+    "message": "Speculative load failed"
   },
   "panels/application/preloading/components/PreloadingDetailsReportView.ts | detailedStatusFallbackToPrefetch": {
-    "message": "Speculative load failed, but fallback to prefetch succeeded."
+    "message": "Speculative load failed, but fallback to prefetch succeeded"
   },
   "panels/application/preloading/components/PreloadingDetailsReportView.ts | detailedStatusNotTriggered": {
-    "message": "Speculative load attempt is not yet triggered."
+    "message": "Speculative load attempt isn’t yet triggered"
   },
   "panels/application/preloading/components/PreloadingDetailsReportView.ts | detailedStatusPending": {
-    "message": "Speculative load attempt is eligible but pending."
+    "message": "Speculative load attempt is eligible but pending"
   },
   "panels/application/preloading/components/PreloadingDetailsReportView.ts | detailedStatusReady": {
-    "message": "Speculative load finished and the result is ready for the next navigation."
+    "message": "Speculative load finished and the result is ready for the next navigation"
   },
   "panels/application/preloading/components/PreloadingDetailsReportView.ts | detailedStatusRunning": {
-    "message": "Speculative load is running."
+    "message": "Speculative load is running"
   },
   "panels/application/preloading/components/PreloadingDetailsReportView.ts | detailedStatusSuccess": {
-    "message": "Speculative load finished and used for a navigation."
+    "message": "Speculative load finished and used for a navigation"
   },
   "panels/application/preloading/components/PreloadingDetailsReportView.ts | detailsAction": {
     "message": "Action"
@@ -5322,16 +5340,16 @@
     "message": "Yes"
   },
   "panels/application/preloading/components/PreloadingDisabledInfobar.ts | descriptionDisabledByBatterySaver": {
-    "message": "Speculative loading is disabled because of the operating system’s Battery Saver mode."
+    "message": "Speculative loading is disabled because of the operating system’s Battery Saver mode"
   },
   "panels/application/preloading/components/PreloadingDisabledInfobar.ts | descriptionDisabledByDataSaver": {
-    "message": "Speculative loading is disabled because of the operating system’s Data Saver mode."
+    "message": "Speculative loading is disabled because of the operating system’s Data Saver mode"
   },
   "panels/application/preloading/components/PreloadingDisabledInfobar.ts | descriptionDisabledByHoldbackPrefetchSpeculationRules": {
-    "message": "Prefetch is forced-enabled because DevTools is open. When DevTools is closed, prefetch will be disabled because this browser session is part of a holdback group used for performance comparisons."
+    "message": "Prefetch is force-enabled because DevTools is open. When DevTools is closed, prefetch will be disabled because this browser session is part of a holdback group used for performance comparisons."
   },
   "panels/application/preloading/components/PreloadingDisabledInfobar.ts | descriptionDisabledByHoldbackPrerenderSpeculationRules": {
-    "message": "Prerendering is forced-enabled because DevTools is open. When DevTools is closed, prerendering will be disabled because this browser session is part of a holdback group used for performance comparisons."
+    "message": "Prerendering is force-enabled because DevTools is open. When DevTools is closed, prerendering will be disabled because this browser session is part of a holdback group used for performance comparisons."
   },
   "panels/application/preloading/components/PreloadingDisabledInfobar.ts | descriptionDisabledByPreference": {
     "message": "Speculative loading is disabled because of user settings or an extension. Go to {PH1} to update your preference. Go to {PH2} to disable any extension that blocks speculative loading."
@@ -5367,7 +5385,7 @@
     "message": "Preload pages settings"
   },
   "panels/application/preloading/components/PreloadingDisabledInfobar.ts | titleReasonsPreventingPreloading": {
-    "message": "Reasons preventing speculative loading"
+    "message": "Reasons stopping speculative loading"
   },
   "panels/application/preloading/components/PreloadingGrid.ts | action": {
     "message": "Action"
@@ -5382,244 +5400,244 @@
     "message": "Status"
   },
   "panels/application/preloading/components/PreloadingString.ts | PrefetchEvictedAfterBrowsingDataRemoved": {
-    "message": "The prefetch was discarded because browsing data was removed."
+    "message": "The prefetch was discarded because browsing data was removed"
   },
   "panels/application/preloading/components/PreloadingString.ts | PrefetchEvictedAfterCandidateRemoved": {
-    "message": "The prefetch was discarded because no speculation rule in the initating page triggers a prefetch for this URL anymore."
+    "message": "The prefetch was discarded because no speculation rule in the initiating page triggers a prefetch for this URL anymore"
   },
   "panels/application/preloading/components/PreloadingString.ts | PrefetchEvictedForNewerPrefetch": {
-    "message": "The prefetch was discarded because the initiating page has too many prefetches ongoing, and this was one of the oldest."
+    "message": "The prefetch was discarded because the initiating page has too many prefetches ongoing, and this was one of the oldest"
   },
   "panels/application/preloading/components/PreloadingString.ts | PrefetchFailedIneligibleRedirect": {
-    "message": "The prefetch was redirected, but the redirect URL is not eligible for prefetch."
+    "message": "The prefetch was redirected, but the redirect URL isn’t eligible for prefetch"
   },
   "panels/application/preloading/components/PreloadingString.ts | PrefetchFailedInvalidRedirect": {
-    "message": "The prefetch was redirected, but there was a problem with the redirect."
+    "message": "The prefetch was redirected, but there was a problem with the redirect"
   },
   "panels/application/preloading/components/PreloadingString.ts | PrefetchFailedMIMENotSupported": {
-    "message": "The prefetch failed because the response’s Content-Type header was not supported."
+    "message": "The prefetch failed because the response’s Content-Type header was not supported"
   },
   "panels/application/preloading/components/PreloadingString.ts | PrefetchFailedNetError": {
-    "message": "The prefetch failed because of a network error."
+    "message": "The prefetch failed because of a network error"
   },
   "panels/application/preloading/components/PreloadingString.ts | PrefetchFailedNon2XX": {
-    "message": "The prefetch failed because of a non-2xx HTTP response status code."
+    "message": "The prefetch failed because of a non-2xx HTTP response status code"
   },
   "panels/application/preloading/components/PreloadingString.ts | PrefetchFailedNon2XXWithStatusCode": {
-    "message": "The prefetch failed because of a non-2xx HTTP response status code ({PH1})."
+    "message": "The prefetch failed because of a non-2xx HTTP response status code ({PH1})"
   },
   "panels/application/preloading/components/PreloadingString.ts | PrefetchIneligibleRetryAfter": {
-    "message": "A previous prefetch to the origin got a HTTP 503 response with an Retry-After header that has not elapsed yet."
+    "message": "A previous prefetch to the origin got an HTTP 503 response with a Retry-After header that hasn’t elapsed yet"
   },
   "panels/application/preloading/components/PreloadingString.ts | PrefetchIsPrivacyDecoy": {
-    "message": "The URL was not eligible to be prefetched because there was a registered service worker or cross-site cookies for that origin, but the prefetch was put on the network anyways and not used, to disguise that the user had some kind of previous relationship with the origin."
+    "message": "The URL was not eligible to be prefetched because there was a registered service worker or cross-site cookies for that origin, but the prefetch was put on the network anyways and not used, to disguise that the user had some kind of previous relationship with the origin"
   },
   "panels/application/preloading/components/PreloadingString.ts | PrefetchIsStale": {
-    "message": "Too much time elapsed between the prefetch and usage, so the prefetch was discarded."
+    "message": "Too much time elapsed between the prefetch and usage, so the prefetch was discarded"
   },
   "panels/application/preloading/components/PreloadingString.ts | PrefetchNotEligibleBatterySaverEnabled": {
-    "message": "The prefetch was not performed because the Battery Saver setting was enabled."
+    "message": "The prefetch was not performed because the Battery Saver setting was enabled"
   },
   "panels/application/preloading/components/PreloadingString.ts | PrefetchNotEligibleBrowserContextOffTheRecord": {
-    "message": "The prefetch was not performed because the browser is in Incognito or Guest mode."
+    "message": "The prefetch was not performed because the browser is in Incognito or Guest mode"
   },
   "panels/application/preloading/components/PreloadingString.ts | PrefetchNotEligibleDataSaverEnabled": {
-    "message": "The prefetch was not performed because the operating system is in Data Saver mode."
+    "message": "The prefetch was not performed because the operating system is in Data Saver mode"
   },
   "panels/application/preloading/components/PreloadingString.ts | PrefetchNotEligibleExistingProxy": {
-    "message": "The URL is not eligible to be prefetched, because in the default network context it is configured to use a proxy server."
+    "message": "The URL isn’t eligible to be prefetched, because in the default network context it is configured to use a proxy server"
   },
   "panels/application/preloading/components/PreloadingString.ts | PrefetchNotEligibleHostIsNonUnique": {
-    "message": "The URL was not eligible to be prefetched because its host was not unique (e.g., a non publicly routable IP address or a hostname which is not registry-controlled), but the prefetch was required to be proxied."
+    "message": "The URL was not eligible to be prefetched because its host was not unique (e.g., a non publicly routable IP address or a hostname which isn’t registry-controlled), but the prefetch was required to be proxied"
   },
   "panels/application/preloading/components/PreloadingString.ts | PrefetchNotEligibleNonDefaultStoragePartition": {
-    "message": "The URL was not eligible to be prefetched because it uses a non-default storage partition."
+    "message": "The URL was not eligible to be prefetched because it uses a non-default storage partition"
   },
   "panels/application/preloading/components/PreloadingString.ts | PrefetchNotEligiblePreloadingDisabled": {
-    "message": "The prefetch was not performed because speculative loading was disabled."
+    "message": "The prefetch was not performed because speculative loading was disabled"
   },
   "panels/application/preloading/components/PreloadingString.ts | PrefetchNotEligibleSameSiteCrossOriginPrefetchRequiredProxy": {
-    "message": "The URL was not eligible to be prefetched because the default network context cannot be configured to use the prefetch proxy for a same-site cross-origin prefetch request."
+    "message": "The URL was not eligible to be prefetched because the default network context can’t be configured to use the prefetch proxy for a same-site cross-origin prefetch request"
   },
   "panels/application/preloading/components/PreloadingString.ts | PrefetchNotEligibleSchemeIsNotHttps": {
-    "message": "The URL was not eligible to be prefetched because its scheme was not https:."
+    "message": "The URL was not eligible to be prefetched because its scheme was not https:"
   },
   "panels/application/preloading/components/PreloadingString.ts | PrefetchNotEligibleUserHasCookies": {
-    "message": "The URL was not eligible to be prefetched because it was cross-site, but the user had cookies for that origin."
+    "message": "The URL was not eligible to be prefetched because it was cross-site, but the user had cookies for that origin"
   },
   "panels/application/preloading/components/PreloadingString.ts | PrefetchNotEligibleUserHasServiceWorker": {
-    "message": "The URL was not eligible to be prefetched because there was a registered service worker for that origin, which is currently not supported."
+    "message": "The URL was not eligible to be prefetched because there was a registered service worker for that origin, which isn’t currently supported"
   },
   "panels/application/preloading/components/PreloadingString.ts | PrefetchNotUsedCookiesChanged": {
-    "message": "The prefetch was not used because it was a cross-site prefetch, and cookies were added for that URL while the prefetch was ongoing, so the prefetched response is now out-of-date."
+    "message": "The prefetch was not used because it was a cross-site prefetch, and cookies were added for that URL while the prefetch was ongoing, so the prefetched response is now out-of-date"
   },
   "panels/application/preloading/components/PreloadingString.ts | PrefetchNotUsedProbeFailed": {
-    "message": "The prefetch was blocked by your Internet Service Provider or network administrator."
+    "message": "The prefetch was blocked by your Internet Service Provider or network administrator"
   },
   "panels/application/preloading/components/PreloadingString.ts | PrefetchProxyNotAvailable": {
-    "message": "A network error was encountered when trying to set up a connection to the prefetching proxy."
+    "message": "A network error was encountered when trying to set up a connection to the prefetching proxy"
   },
   "panels/application/preloading/components/PreloadingString.ts | prerenderFinalStatusActivatedDuringMainFrameNavigation": {
-    "message": "Prerendered page activated during initiating page’s main frame navigation."
+    "message": "Prerendered page activated during initiating page’s main frame navigation"
   },
   "panels/application/preloading/components/PreloadingString.ts | prerenderFinalStatusActivatedWithAuxiliaryBrowsingContexts": {
-    "message": "The prerender was not used because during activation time, there were other windows with an active opener reference to the initiating page, which is currently not supported."
+    "message": "The prerender was not used because during activation time, there were other windows with an active opener reference to the initiating page, which isn’t currently supported"
   },
   "panels/application/preloading/components/PreloadingString.ts | prerenderFinalStatusActivationFramePolicyNotCompatible": {
-    "message": "The prerender was not used because the sandboxing flags or permissions policy of the initiating page was not compatible with those of the prerendering page."
+    "message": "The prerender was not used because the sandboxing flags or permissions policy of the initiating page was not compatible with those of the prerendering page"
   },
   "panels/application/preloading/components/PreloadingString.ts | prerenderFinalStatusActivationNavigationParameterMismatch": {
-    "message": "The prerender was not used because during activation time, different navigation parameters (e.g., HTTP headers) were calculated than during the original prerendering navigation request."
+    "message": "The prerender was not used because during activation time, different navigation parameters (e.g., HTTP headers) were calculated than during the original prerendering navigation request"
   },
   "panels/application/preloading/components/PreloadingString.ts | prerenderFinalStatusActivationUrlHasEffectiveUrl": {
     "message": "The prerender was not used because during activation time, navigation has an effective URL that is different from its normal URL. (For example, the New Tab Page, or hosted apps.)"
   },
   "panels/application/preloading/components/PreloadingString.ts | prerenderFinalStatusAllPrerenderingCanceled": {
-    "message": "All prerendered pages were unloaded by the browser for some reason (For example, WebViewCompat.addWebMessageListener() was called during prerendering.)"
+    "message": "All prerendered pages were unloaded by the browser for some reason. (For example, WebViewCompat.addWebMessageListener() was called during prerendering.)"
   },
   "panels/application/preloading/components/PreloadingString.ts | prerenderFinalStatusAudioOutputDeviceRequested": {
-    "message": "The prerendered page requested audio output, which is currently not supported."
+    "message": "The prerendered page requested audio output, which isn’t currently supported"
   },
   "panels/application/preloading/components/PreloadingString.ts | prerenderFinalStatusBatterySaverEnabled": {
-    "message": "The prerender was not performed because the user requested that the browser use less battery."
+    "message": "The prerender was not performed because the user requested that the browser use less battery"
   },
   "panels/application/preloading/components/PreloadingString.ts | prerenderFinalStatusBlockedByClient": {
-    "message": "Some resource load was blocked."
+    "message": "Some resource load was blocked"
   },
   "panels/application/preloading/components/PreloadingString.ts | prerenderFinalStatusBrowsingDataRemoved": {
-    "message": "The prerendered page was unloaded because browsing data was removed."
+    "message": "The prerendered page was unloaded because browsing data was removed"
   },
   "panels/application/preloading/components/PreloadingString.ts | prerenderFinalStatusClientCertRequested": {
-    "message": "The prerendering navigation required a HTTP client certificate."
+    "message": "The prerendering navigation required an HTTP client certificate"
   },
   "panels/application/preloading/components/PreloadingString.ts | prerenderFinalStatusCrossSiteNavigationInInitialNavigation": {
-    "message": "The prerendering navigation failed because it targeted a cross-site URL."
+    "message": "The prerendering navigation failed because it targeted a cross-site URL"
   },
   "panels/application/preloading/components/PreloadingString.ts | prerenderFinalStatusCrossSiteNavigationInMainFrameNavigation": {
-    "message": "The prerendered page navigated to a cross-site URL."
+    "message": "The prerendered page navigated to a cross-site URL"
   },
   "panels/application/preloading/components/PreloadingString.ts | prerenderFinalStatusCrossSiteRedirectInInitialNavigation": {
-    "message": "The prerendering navigation failed because the prerendered URL redirected to a cross-site URL."
+    "message": "The prerendering navigation failed because the prerendered URL redirected to a cross-site URL"
   },
   "panels/application/preloading/components/PreloadingString.ts | prerenderFinalStatusCrossSiteRedirectInMainFrameNavigation": {
-    "message": "The prerendered page navigated to a URL which redirected to a cross-site URL."
+    "message": "The prerendered page navigated to a URL which redirected to a cross-site URL"
   },
   "panels/application/preloading/components/PreloadingString.ts | prerenderFinalStatusDataSaverEnabled": {
-    "message": "The prerender was not performed because the user requested that the browser use less data."
+    "message": "The prerender was not performed because the user requested that the browser use less data"
   },
   "panels/application/preloading/components/PreloadingString.ts | prerenderFinalStatusDownload": {
-    "message": "The prerendered page attempted to initiate a download, which is currently not supported."
+    "message": "The prerendered page attempted to initiate a download, which isn’t currently supported"
   },
   "panels/application/preloading/components/PreloadingString.ts | prerenderFinalStatusHasEffectiveUrl": {
-    "message": "The initiating page cannot perform prerendering, because it has an effective URL that is different from its normal URL. (For example, the New Tab Page, or hosted apps.)"
+    "message": "The initiating page can’t perform prerendering, because it has an effective URL that is different from its normal URL. (For example, the New Tab Page, or hosted apps.)"
   },
   "panels/application/preloading/components/PreloadingString.ts | prerenderFinalStatusInvalidSchemeNavigation": {
-    "message": "The URL was not eligible to be prerendered because its scheme was not http: or https:."
+    "message": "The URL was not eligible to be prerendered because its scheme was not http: or https:"
   },
   "panels/application/preloading/components/PreloadingString.ts | prerenderFinalStatusInvalidSchemeRedirect": {
-    "message": "The prerendering navigation failed because it redirected to a URL whose scheme was not http: or https:."
+    "message": "The prerendering navigation failed because it redirected to a URL whose scheme was not http: or https:"
   },
   "panels/application/preloading/components/PreloadingString.ts | prerenderFinalStatusJavaScriptInterfaceAdded": {
-    "message": "The prerendered page was unloaded because a new JavaScript interface has been injected by WebView.addJavascriptInterface()."
+    "message": "The prerendered page was unloaded because a new JavaScript interface has been injected by WebView.addJavascriptInterface()"
   },
   "panels/application/preloading/components/PreloadingString.ts | prerenderFinalStatusJavaScriptInterfaceRemoved": {
-    "message": "The prerendered page was unloaded because a JavaScript interface has been removed by WebView.removeJavascriptInterface()."
+    "message": "The prerendered page was unloaded because a JavaScript interface has been removed by WebView.removeJavascriptInterface()"
   },
   "panels/application/preloading/components/PreloadingString.ts | prerenderFinalStatusLoginAuthRequested": {
-    "message": "The prerendering navigation required HTTP authentication, which is currently not supported."
+    "message": "The prerendering navigation required HTTP authentication, which isn’t currently supported"
   },
   "panels/application/preloading/components/PreloadingString.ts | prerenderFinalStatusLowEndDevice": {
-    "message": "The prerender was not performed because this device does not have enough total system memory to support prerendering."
+    "message": "The prerender was not performed because this device doesn’t have enough total system memory to support prerendering"
   },
   "panels/application/preloading/components/PreloadingString.ts | prerenderFinalStatusMaxNumOfRunningEagerPrerendersExceeded": {
     "message": "The prerender whose eagerness is \"eager\" was not performed because the initiating page already has too many prerenders ongoing. Remove other speculation rules with \"eager\" to enable further prerendering."
   },
   "panels/application/preloading/components/PreloadingString.ts | prerenderFinalStatusMaxNumOfRunningEmbedderPrerendersExceeded": {
-    "message": "The browser-triggered prerender was not performed because the initiating page already has too many prerenders ongoing."
+    "message": "The browser-triggered prerender was not performed because the initiating page already has too many prerenders ongoing"
   },
   "panels/application/preloading/components/PreloadingString.ts | prerenderFinalStatusMaxNumOfRunningNonEagerPrerendersExceeded": {
     "message": "The old non-eager prerender (with a \"moderate\" or \"conservative\" eagerness and triggered by hovering or clicking links) was automatically canceled due to starting a new non-eager prerender. It can be retriggered by interacting with the link again."
   },
   "panels/application/preloading/components/PreloadingString.ts | prerenderFinalStatusMemoryLimitExceeded": {
-    "message": "The prerender was not performed because the browser exceeded the prerendering memory limit."
+    "message": "The prerender was not performed because the browser exceeded the prerendering memory limit"
   },
   "panels/application/preloading/components/PreloadingString.ts | prerenderFinalStatusMemoryPressureAfterTriggered": {
-    "message": "The prerendered page was unloaded because the browser came under critical memory pressure."
+    "message": "The prerendered page was unloaded because the browser came under critical memory pressure"
   },
   "panels/application/preloading/components/PreloadingString.ts | prerenderFinalStatusMemoryPressureOnTrigger": {
-    "message": "The prerender was not performed because the browser was under critical memory pressure."
+    "message": "The prerender was not performed because the browser was under critical memory pressure"
   },
   "panels/application/preloading/components/PreloadingString.ts | prerenderFinalStatusMixedContent": {
-    "message": "The prerendered page contained mixed content."
+    "message": "The prerendered page contained mixed content"
   },
   "panels/application/preloading/components/PreloadingString.ts | prerenderFinalStatusMojoBinderPolicy": {
-    "message": "The prerendered page used a forbidden JavaScript API that is currently not supported. (Internal Mojo interface: {PH1})"
+    "message": "The prerendered page used a forbidden JavaScript API that isn’t currently supported. (Internal Mojo interface: {PH1})"
   },
   "panels/application/preloading/components/PreloadingString.ts | prerenderFinalStatusNavigationBadHttpStatus": {
-    "message": "The prerendering navigation failed because of a non-2xx HTTP response status code."
+    "message": "The prerendering navigation failed because of a non-2xx HTTP response status code"
   },
   "panels/application/preloading/components/PreloadingString.ts | prerenderFinalStatusNavigationBadHttpStatusWithStatusCode": {
-    "message": "The prerendering navigation failed because of a non-2xx HTTP response status code ({PH1})."
+    "message": "The prerendering navigation failed because of a non-2xx HTTP response status code ({PH1})"
   },
   "panels/application/preloading/components/PreloadingString.ts | prerenderFinalStatusNavigationRequestBlockedByCsp": {
-    "message": "The prerendering navigation was blocked by a Content Security Policy."
+    "message": "The prerendering navigation was blocked by a Content Security Policy"
   },
   "panels/application/preloading/components/PreloadingString.ts | prerenderFinalStatusNavigationRequestNetworkError": {
-    "message": "The prerendering navigation encountered a network error."
+    "message": "The prerendering navigation encountered a network error"
   },
   "panels/application/preloading/components/PreloadingString.ts | prerenderFinalStatusPreloadingDisabled": {
-    "message": "The prerender was not performed because the user disabled preloading in their browser settings."
+    "message": "The prerender was not performed because the user disabled preloading in their browser settings"
   },
   "panels/application/preloading/components/PreloadingString.ts | prerenderFinalStatusPrerenderingDisabledByDevTools": {
-    "message": "The prerender was not performed because DevTools has been used to disable prerendering."
+    "message": "The prerender was not performed because DevTools has been used to disable prerendering"
   },
   "panels/application/preloading/components/PreloadingString.ts | prerenderFinalStatusPrerenderingUrlHasEffectiveUrl": {
     "message": "The prerendering navigation failed because it has an effective URL that is different from its normal URL. (For example, the New Tab Page, or hosted apps.)"
   },
   "panels/application/preloading/components/PreloadingString.ts | prerenderFinalStatusPrimaryMainFrameRendererProcessCrashed": {
-    "message": "The initiating page crashed."
+    "message": "The initiating page crashed"
   },
   "panels/application/preloading/components/PreloadingString.ts | prerenderFinalStatusPrimaryMainFrameRendererProcessKilled": {
-    "message": "The initiating page was killed."
+    "message": "The initiating page was killed"
   },
   "panels/application/preloading/components/PreloadingString.ts | prerenderFinalStatusRedirectedPrerenderingUrlHasEffectiveUrl": {
     "message": "The prerendering navigation failed because it redirected to an effective URL that is different from its normal URL. (For example, the New Tab Page, or hosted apps.)"
   },
   "panels/application/preloading/components/PreloadingString.ts | prerenderFinalStatusRendererProcessCrashed": {
-    "message": "The prerendered page crashed."
+    "message": "The prerendered page crashed"
   },
   "panels/application/preloading/components/PreloadingString.ts | prerenderFinalStatusRendererProcessKilled": {
-    "message": "The prerendered page was killed."
+    "message": "The prerendered page was killed"
   },
   "panels/application/preloading/components/PreloadingString.ts | prerenderFinalStatusSameSiteCrossOriginNavigationNotOptInInInitialNavigation": {
-    "message": "The prerendering navigation failed because it was to a cross-origin same-site URL, but the destination response did not include the appropriate Supports-Loading-Mode header."
+    "message": "The prerendering navigation failed because it was to a cross-origin same-site URL, but the destination response didn’t include the appropriate Supports-Loading-Mode header"
   },
   "panels/application/preloading/components/PreloadingString.ts | prerenderFinalStatusSameSiteCrossOriginNavigationNotOptInInMainFrameNavigation": {
-    "message": "The prerendered page navigated to a cross-origin same-site URL, but the destination response did not include the appropriate Supports-Loading-Mode header."
+    "message": "The prerendered page navigated to a cross-origin same-site URL, but the destination response didn’t include the appropriate Supports-Loading-Mode header"
   },
   "panels/application/preloading/components/PreloadingString.ts | prerenderFinalStatusSameSiteCrossOriginRedirectNotOptInInInitialNavigation": {
-    "message": "The prerendering navigation failed because the prerendered URL redirected to a cross-origin same-site URL, but the destination response did not include the appropriate Supports-Loading-Mode header."
+    "message": "The prerendering navigation failed because the prerendered URL redirected to a cross-origin same-site URL, but the destination response didn’t include the appropriate Supports-Loading-Mode header"
   },
   "panels/application/preloading/components/PreloadingString.ts | prerenderFinalStatusSameSiteCrossOriginRedirectNotOptInInMainFrameNavigation": {
-    "message": "The prerendered page navigated to a URL which redirected to a cross-origin same-site URL, but the destination response did not include the appropriate Supports-Loading-Mode header."
+    "message": "The prerendered page navigated to a URL which redirected to a cross-origin same-site URL, but the destination response didn’t include the appropriate Supports-Loading-Mode header"
   },
   "panels/application/preloading/components/PreloadingString.ts | prerenderFinalStatusSpeculationRuleRemoved": {
-    "message": "The prerendered page was unloaded because the initiating page removed the corresponding prerender rule from <script type=\"speculationrules\">."
+    "message": "The prerendered page was unloaded because the initiating page removed the corresponding prerender rule from <script type=\"speculationrules\">"
   },
   "panels/application/preloading/components/PreloadingString.ts | prerenderFinalStatusSslCertificateError": {
-    "message": "The prerendering navigation failed because of an invalid SSL certificate."
+    "message": "The prerendering navigation failed because of an invalid SSL certificate"
   },
   "panels/application/preloading/components/PreloadingString.ts | prerenderFinalStatusTimeoutBackgrounded": {
-    "message": "The initiating page was backgrounded for a long time, so the prerendered page was discarded."
+    "message": "The initiating page was backgrounded for a long time, so the prerendered page was discarded"
   },
   "panels/application/preloading/components/PreloadingString.ts | prerenderFinalStatusTriggerBackgrounded": {
-    "message": "The initiating page was backgrounded, so the prerendered page was discarded."
+    "message": "The initiating page was backgrounded, so the prerendered page was discarded"
   },
   "panels/application/preloading/components/PreloadingString.ts | prerenderFinalStatusUaChangeRequiresReload": {
-    "message": "Changing User Agent occurred in prerendering navigation."
+    "message": "Changing user agent occurred in prerendering navigation"
   },
   "panels/application/preloading/components/PreloadingString.ts | prerenderFinalStatusWindowClosed": {
-    "message": "The prerendered page was unloaded because it called window.close()."
+    "message": "The prerendered page was unloaded because it called window.close()"
   },
   "panels/application/preloading/components/PreloadingString.ts | statusFailure": {
     "message": "Failure"
@@ -5649,10 +5667,10 @@
     "message": "Reveal speculative loads associated with this rule set"
   },
   "panels/application/preloading/components/RuleSetGrid.ts | clickToOpenInElementsPanel": {
-    "message": "Click to open in Elements panel"
+    "message": "Open in Elements panel"
   },
   "panels/application/preloading/components/RuleSetGrid.ts | clickToOpenInNetworkPanel": {
-    "message": "Click to open in Network panel"
+    "message": "Open in Network panel"
   },
   "panels/application/preloading/components/RuleSetGrid.ts | errors": {
     "message": "{errorCount, plural, =1 {# error} other {# errors}}"
@@ -5703,7 +5721,7 @@
     "message": "Value in initial navigation"
   },
   "panels/application/preloading/components/UsedPreloadingView.ts | learnMore": {
-    "message": "Learn more: Speculative loading on developer.chrome.com"
+    "message": "Learn more: speculative loading on developer.chrome.com"
   },
   "panels/application/preloading/components/UsedPreloadingView.ts | mismatchedHeadersDetail": {
     "message": "Mismatched HTTP request headers"
@@ -5712,22 +5730,22 @@
     "message": "(missing)"
   },
   "panels/application/preloading/components/UsedPreloadingView.ts | noPreloads": {
-    "message": "The initiating page did not attempt to speculatively load this page’s URL."
+    "message": "The initiating page didn’t attempt to speculatively load this page’s URL"
   },
   "panels/application/preloading/components/UsedPreloadingView.ts | prefetchFailed": {
-    "message": "The initiating page attempted to prefetch this page’s URL, but the prefetch failed, so a full navigation was performed instead."
+    "message": "The initiating page attempted to prefetch this page’s URL, but the prefetch failed, so a full navigation was performed instead"
   },
   "panels/application/preloading/components/UsedPreloadingView.ts | prefetchUsed": {
-    "message": "This page was successfully prefetched."
+    "message": "This page was successfully prefetched"
   },
   "panels/application/preloading/components/UsedPreloadingView.ts | preloadedURLs": {
     "message": "URLs being speculatively loaded by the initiating page"
   },
   "panels/application/preloading/components/UsedPreloadingView.ts | prerenderFailed": {
-    "message": "The initiating page attempted to prerender this page’s URL, but the prerender failed, so a full navigation was performed instead."
+    "message": "The initiating page attempted to prerender this page’s URL, but the prerender failed, so a full navigation was performed instead"
   },
   "panels/application/preloading/components/UsedPreloadingView.ts | prerenderUsed": {
-    "message": "This page was successfully prerendered."
+    "message": "This page was successfully prerendered"
   },
   "panels/application/preloading/components/UsedPreloadingView.ts | speculationsInitiatedByThisPage": {
     "message": "Speculations initiated by this page"
@@ -5760,13 +5778,13 @@
     "message": "no rule sets"
   },
   "panels/application/preloading/PreloadingView.ts | prefetchDescription": {
-    "message": "On this page you will see details on speculative loads."
+    "message": "On this page you will see details on speculative loads"
   },
   "panels/application/preloading/PreloadingView.ts | prettyPrint": {
     "message": "Pretty print"
   },
   "panels/application/preloading/PreloadingView.ts | rulesDescription": {
-    "message": "On this page you will see the speculation rules used to prefetch and prerender page navigations."
+    "message": "On this page you will see the speculation rules used to prefetch and prerender page navigations"
   },
   "panels/application/preloading/PreloadingView.ts | statusFailure": {
     "message": "Failure"

@@ -1541,6 +1541,14 @@ var Audits;
     PermissionElementIssueType2["NonSecureContext"] = "NonSecureContext";
     PermissionElementIssueType2["MissingTransientUserActivation"] = "MissingTransientUserActivation";
   })(PermissionElementIssueType = Audits2.PermissionElementIssueType || (Audits2.PermissionElementIssueType = {}));
+  let WebInstallIssueReason;
+  ((WebInstallIssueReason2) => {
+    WebInstallIssueReason2["ManifestParsingOrNetworkError"] = "ManifestParsingOrNetworkError";
+    WebInstallIssueReason2["StartUrlInvalid"] = "StartUrlInvalid";
+    WebInstallIssueReason2["ManifestMissingNameOrShortName"] = "ManifestMissingNameOrShortName";
+    WebInstallIssueReason2["ManifestMissingId"] = "ManifestMissingId";
+    WebInstallIssueReason2["NoManifest"] = "NoManifest";
+  })(WebInstallIssueReason = Audits2.WebInstallIssueReason || (Audits2.WebInstallIssueReason = {}));
   let InspectorIssueCode;
   ((InspectorIssueCode2) => {
     InspectorIssueCode2["CookieIssue"] = "CookieIssue";
@@ -1573,6 +1581,7 @@ var Audits;
     InspectorIssueCode2["SelectivePermissionsInterventionIssue"] = "SelectivePermissionsInterventionIssue";
     InspectorIssueCode2["EmailVerificationRequestIssue"] = "EmailVerificationRequestIssue";
     InspectorIssueCode2["LazyLoadImageIssue"] = "LazyLoadImageIssue";
+    InspectorIssueCode2["WebInstallIssue"] = "WebInstallIssue";
   })(InspectorIssueCode = Audits2.InspectorIssueCode || (Audits2.InspectorIssueCode = {}));
   let GetEncodedResponseRequestEncoding;
   ((GetEncodedResponseRequestEncoding2) => {
@@ -4207,6 +4216,7 @@ import * as Platform2 from "../../core/platform/platform.js";
 import * as SDK4 from "../../core/sdk/sdk.js";
 import * as SettingsUI from "../../ui/legacy/components/settings_ui/settings_ui.js";
 import * as UI5 from "../../ui/legacy/legacy.js";
+import { html as html5, render as render5 } from "../../ui/lit/lit.js";
 import * as VisualLogging5 from "../../ui/visual_logging/visual_logging.js";
 import * as MobileThrottling2 from "../mobile_throttling/mobile_throttling.js";
 import * as EmulationComponents from "../settings/emulation/components/components.js";
@@ -4387,9 +4397,9 @@ var NetworkConfigView = class _NetworkConfigView extends UI5.Widget.VBox {
     this.registerRequiredCSS(networkConfigView_css_default);
     this.contentElement.classList.add("network-config");
     this.createCacheSection();
-    this.contentElement.createChild("div").classList.add("panel-section-separator");
+    this.contentElement.createChild("div", "panel-section-separator");
     this.createNetworkThrottlingSection();
-    this.contentElement.createChild("div").classList.add("panel-section-separator");
+    this.contentElement.createChild("div", "panel-section-separator");
     this.createUserAgentSection();
   }
   static instance(opts = { forceNew: null }) {
@@ -4412,19 +4422,24 @@ var NetworkConfigView = class _NetworkConfigView extends UI5.Widget.VBox {
     );
     UI5.ARIAUtils.setLabel(userAgentSelectElement, title);
     const customOverride = { title: i18nString5(UIStrings5.custom), value: "custom" };
-    userAgentSelectElement.appendChild(UI5.UIUtils.createOption(customOverride.title, customOverride.value, "custom"));
-    for (const userAgentDescriptor of userAgentGroups) {
-      const groupElement = userAgentSelectElement.createChild("optgroup");
-      groupElement.label = userAgentDescriptor.title;
-      for (const userAgentVersion of userAgentDescriptor.values) {
-        const userAgentValue = SDK4.NetworkManager.MultitargetNetworkManager.patchUserAgentWithChromeVersion(userAgentVersion.value);
-        groupElement.appendChild(UI5.UIUtils.createOption(
-          userAgentVersion.title,
-          userAgentValue,
-          Platform2.StringUtilities.toKebabCase(userAgentVersion.title)
-        ));
-      }
-    }
+    const { patchUserAgentWithChromeVersion } = SDK4.NetworkManager.MultitargetNetworkManager;
+    const { toKebabCase } = Platform2.StringUtilities;
+    render5(html5`
+      <option value=${customOverride.value} jslog=${VisualLogging5.item("custom").track({ click: true })}>
+        ${customOverride.title}
+      </option>
+      ${userAgentGroups.map((group) => html5`
+        <optgroup label=${group.title}>
+          ${group.values.map((val) => html5`
+            <option
+                value=${patchUserAgentWithChromeVersion(val.value)}
+                jslog=${VisualLogging5.item(toKebabCase(val.title)).track({ click: true })}>
+              ${val.title}
+            </option>
+          `)}
+        </optgroup>
+      `)}
+    `, userAgentSelectElement);
     userAgentSelectElement.selectedIndex = 0;
     const otherUserAgentElement = UI5.UIUtils.createInput("", "text");
     otherUserAgentElement.setAttribute(
@@ -5060,7 +5075,7 @@ import * as DataGrid from "../../ui/legacy/components/data_grid/data_grid.js";
 import * as PerfUI from "../../ui/legacy/components/perf_ui/perf_ui.js";
 import * as Components from "../../ui/legacy/components/utils/utils.js";
 import * as UI6 from "../../ui/legacy/legacy.js";
-import { render as render5 } from "../../ui/lit/lit.js";
+import { render as render6 } from "../../ui/lit/lit.js";
 import { PanelUtils as PanelUtils3 } from "../utils/utils.js";
 var UIStrings6 = {
   /**
@@ -6214,7 +6229,7 @@ var NetworkRequestNode = class _NetworkRequestNode extends NetworkNode {
       });
       cell.addEventListener("focus", () => this.parentView().resetFocus());
       const iconElement = PanelUtils3.getIconForNetworkRequest(this.requestInternal);
-      render5(iconElement, cell);
+      render6(iconElement, cell);
       if (this.isConsoleOriginated()) {
         const consoleIcon = createIcon("terminal", "network-console-icon");
         UI6.Tooltip.Tooltip.install(consoleIcon, i18nString6(UIStrings6.requestOriginatedFromConsole));
@@ -6728,7 +6743,7 @@ var requestCookiesView_css_default = `/*
 /*# sourceURL=${import.meta.resolve("./requestCookiesView.css")} */`;
 
 // ../../front_end/panels/network/RequestCookiesView.ts
-var { render: render6, html: html5 } = Lit;
+var { render: render7, html: html6 } = Lit;
 var { widget: widget3 } = UI7.Widget;
 var UIStrings7 = {
   /**
@@ -6784,8 +6799,8 @@ var UIStrings7 = {
 var str_7 = i18n13.i18n.registerUIStrings("panels/network/RequestCookiesView.ts", UIStrings7);
 var i18nString7 = i18n13.i18n.getLocalizedString.bind(void 0, str_7);
 var DEFAULT_VIEW4 = (input, _output, target) => {
-  render6(
-    html5`
+  render7(
+    html6`
     <style>${requestCookiesView_css_default}</style>
     <style>${UI7.inspectorCommonStyles}</style>
     <div class="request-cookies-view">
@@ -6808,7 +6823,7 @@ var DEFAULT_VIEW4 = (input, _output, target) => {
         ${i18nString7(UIStrings7.noRequestCookiesWereSent)}
       </div>
 
-      ${input.requestCookies.cookies.length > 0 ? html5`
+      ${input.requestCookies.cookies.length > 0 ? html6`
         <devtools-widget ${widget3(CookieTable.CookiesTable.CookiesTable, {
       cookiesData: input.requestCookies,
       inline: true
@@ -6817,7 +6832,7 @@ var DEFAULT_VIEW4 = (input, _output, target) => {
 
       <div class="cookies-panel-item site-has-cookies-in-other-partition ${input.siteHasCookieInOtherPartition ? "" : "hidden"}">
         ${uiI18n2.getFormatLocalizedStringTemplate(str_7, UIStrings7.siteHasCookieInOtherPartition, {
-      PH1: html5`<devtools-link href="https://developer.chrome.com/en/docs/privacy-sandbox/chips/" .jslogContext=${"learn-more"}>${i18nString7(UIStrings7.learnMore)}</devtools-link>`
+      PH1: html6`<devtools-link href="https://developer.chrome.com/en/docs/privacy-sandbox/chips/" .jslogContext=${"learn-more"}>${i18nString7(UIStrings7.learnMore)}</devtools-link>`
     })}
       </div>
 
@@ -6826,7 +6841,7 @@ var DEFAULT_VIEW4 = (input, _output, target) => {
           ${i18nString7(UIStrings7.responseCookies)}
       </div>
 
-      ${input.responseCookies.cookies.length ? html5`
+      ${input.responseCookies.cookies.length ? html6`
         <devtools-widget ${widget3(CookieTable.CookiesTable.CookiesTable, {
       cookiesData: input.responseCookies,
       inline: true
@@ -6838,7 +6853,7 @@ var DEFAULT_VIEW4 = (input, _output, target) => {
       </div>
 
       <div class=${input.malformedResponseCookies.length ? "" : "hidden"}>
-        ${input.malformedResponseCookies.map((malformedCookie) => html5`
+        ${input.malformedResponseCookies.map((malformedCookie) => html6`
           <span class="cookie-line source-code" title=${getMalformedCookieTooltip(malformedCookie)}>
             <devtools-icon class="cookie-warning-icon small" .name=${"cross-circle-filled"}></devtools-icon>
             ${malformedCookie.cookieLine}
@@ -7023,7 +7038,7 @@ var UIStrings8 = {
 };
 var str_8 = i18n15.i18n.registerUIStrings("panels/network/ShowMoreDetailsWidget.ts", UIStrings8);
 var i18nString8 = i18n15.i18n.getLocalizedString.bind(void 0, str_8);
-var { render: render7, html: html6 } = Lit2;
+var { render: render8, html: html7 } = Lit2;
 var MAX_LENGTH = 3e3;
 var DEFAULT_VIEW5 = (input, output, target) => {
   const onContextMenuShowMore = (event) => {
@@ -7036,11 +7051,11 @@ var DEFAULT_VIEW5 = (input, output, target) => {
     }
     void contextMenu.show();
   };
-  render7(
-    html6`<span
+  render8(
+    html7`<span
             @contextmenu=${onContextMenuShowMore}
             >${input.showMore ? input.text : input.text.substr(0, MAX_LENGTH)}</span>
-          ${!input.showMore && input.text.length > MAX_LENGTH ? html6`<devtools-button
+          ${!input.showMore && input.text.length > MAX_LENGTH ? html7`<devtools-button
             .variant=${Buttons5.Button.Variant.OUTLINED}
             .jslogContext=${"show-more"}
             @click=${input.onToggle}>
@@ -7087,7 +7102,7 @@ var ShowMoreDetailsWidget = class extends UI8.Widget.Widget {
 };
 
 // ../../front_end/panels/network/RequestHeadersView.ts
-var { render: render8, html: html7 } = Lit3;
+var { render: render9, html: html8 } = Lit3;
 var { widget: widget4 } = UI9.Widget;
 var UIStrings9 = {
   /**
@@ -7192,7 +7207,7 @@ function renderGeneralRows(input) {
     statusClasses.push("status-with-comment");
   }
   const statusText = [input.request.statusCode, input.request.getInferredStatusText(), comment].join(" ");
-  return html7`<div jslog=${VisualLogging7.section("general")}>
+  return html8`<div jslog=${VisualLogging7.section("general")}>
     ${renderGeneralRow(input, i18nString9(UIStrings9.requestUrl), input.request.url(), "request-url")}
     ${input.request.statusCode ? renderGeneralRow(input, i18nString9(UIStrings9.requestMethod), input.request.requestMethod, "request-method") : Lit3.nothing}
     ${input.request.statusCode ? renderGeneralRow(input, i18nString9(UIStrings9.statusCode), statusText, "status-code", statusClasses) : Lit3.nothing}
@@ -7211,8 +7226,8 @@ function renderGeneralSection(input, forceOpen) {
 }
 var DEFAULT_VIEW6 = (input, _output, target) => {
   const requestHeadersText = input.request.requestHeadersText();
-  render8(
-    html7`
+  render9(
+    html8`
         <style>${NetworkComponents.RequestHeaderSection.requestHeadersViewStyles}</style>
         <style>${Input2.checkboxStyles}</style>
         ${renderGeneralSection(input, input.toReveal?.section === NetworkForward2.UIRequestLocation.UIHeaderSection.GENERAL)}
@@ -7225,9 +7240,9 @@ var DEFAULT_VIEW6 = (input, _output, target) => {
       additionalContent: void 0,
       forceOpen: input.toReveal?.section === NetworkForward2.UIRequestLocation.UIHeaderSection.EARLY_HINTS,
       loggingContext: "early-hints-headers",
-      contents: html7`
+      contents: html8`
               ${input.cacheDisabled && hasEarlyHintsPreload(input.request.earlyHintsHeaders) ? renderEarlyHintsWarning() : Lit3.nothing}
-              ${input.showResponseHeadersText ? renderRawHeaders(input.request.responseHeadersText) : html7`
+              ${input.showResponseHeadersText ? renderRawHeaders(input.request.responseHeadersText) : html8`
                   <devtools-early-hints-header-section .data=${{
         request: input.request,
         toReveal: input.toReveal
@@ -7244,7 +7259,7 @@ var DEFAULT_VIEW6 = (input, _output, target) => {
       additionalContent: renderHeaderOverridesLink(input),
       forceOpen: input.toReveal?.section === NetworkForward2.UIRequestLocation.UIHeaderSection.RESPONSE,
       loggingContext: "response-headers",
-      contents: input.showResponseHeadersText ? renderRawHeaders(input.request.responseHeadersText) : html7`
+      contents: input.showResponseHeadersText ? renderRawHeaders(input.request.responseHeadersText) : html8`
           <devtools-response-header-section .data=${{
         request: input.request,
         toReveal: input.toReveal
@@ -7259,7 +7274,7 @@ var DEFAULT_VIEW6 = (input, _output, target) => {
       checked: requestHeadersText ? input.showRequestHeadersText : void 0,
       forceOpen: input.toReveal?.section === NetworkForward2.UIRequestLocation.UIHeaderSection.REQUEST,
       loggingContext: "request-headers",
-      contents: input.showRequestHeadersText && requestHeadersText ? renderRawHeaders(requestHeadersText) : html7`
+      contents: input.showRequestHeadersText && requestHeadersText ? renderRawHeaders(requestHeadersText) : html8`
           <devtools-widget ${widget4(NetworkComponents.RequestHeaderSection.RequestHeaderSection, {
         request: input.request,
         toReveal: input.toReveal
@@ -7272,8 +7287,8 @@ var DEFAULT_VIEW6 = (input, _output, target) => {
   );
 };
 var GENERAL_HEADERS_ONLY_VIEW = (input, _output, target) => {
-  render8(
-    html7`
+  render9(
+    html8`
         <style>${NetworkComponents.RequestHeaderSection.requestHeadersViewStyles}</style>
         <style>${Input2.checkboxStyles}</style>
         ${renderGeneralRows(input)}
@@ -7440,7 +7455,7 @@ function hasEarlyHintsPreload(headers) {
   });
 }
 function renderEarlyHintsWarning() {
-  return html7`
+  return html8`
     <div class="early-hints-warning">
       <devtools-icon class="medium" name="warning-filled"></devtools-icon>
       <div>${i18nString9(UIStrings9.earlyPreloadsIgnoredCacheDisabledWarning)}</div>
@@ -7458,10 +7473,10 @@ function renderHeaderOverridesLink(input) {
   const overridesSetting = Common7.Settings.Settings.instance().resolve(
     Persistence.NetworkPersistenceManager.persistenceNetworkOverridesEnabledSettingDescriptor
   );
-  const fileIcon = html7`
+  const fileIcon = html8`
       <devtools-icon name="document" class=${"medium" + overridesSetting.get() ? "inline-icon dot purple" : "inline-icon"}>
       </devtools-icon>`;
-  return html7`
+  return html8`
       <devtools-link
           href="https://goo.gle/devtools-override"
           class="link devtools-link"
@@ -7481,12 +7496,12 @@ function renderHeaderOverridesLink(input) {
     `;
 }
 function renderRawHeaders(text) {
-  return html7`<div class="row raw-headers-row"><devtools-widget  class=raw-headers
+  return html8`<div class="row raw-headers-row"><devtools-widget  class=raw-headers
       ${widget4(ShowMoreDetailsWidget, { text })}></devtools-widget></div>`;
 }
 function renderGeneralRow(input, name, value, id, classNames) {
   const isHighlighted = input.toReveal?.section === NetworkForward2.UIRequestLocation.UIHeaderSection.GENERAL && name.toLowerCase() === input.toReveal?.header?.toLowerCase();
-  return html7`
+  return html8`
       <div class="row ${isHighlighted ? "header-highlight" : ""}">
         <div class="header-name">${name}</div>
         <div
@@ -7500,7 +7515,7 @@ function renderGeneralRow(input, name, value, id, classNames) {
 function renderCategory(data) {
   const expandedSetting = Common7.Settings.Settings.instance().createSetting("request-info-" + data.name + "-category-expanded", true);
   const isOpen = (expandedSetting ? expandedSetting.get() : true) || data.forceOpen;
-  return html7`
+  return html8`
       <details ?open=${isOpen} @toggle=${onToggle} aria-label=${data.title}>
         <summary
           class="header"
@@ -7509,10 +7524,10 @@ function renderCategory(data) {
         >
           <div class="header-grid-container">
             <div>
-              ${data.title}${data.headerCount !== void 0 ? html7`<span class="header-count"> (${data.headerCount})</span>` : Lit3.nothing}
+              ${data.title}${data.headerCount !== void 0 ? html8`<span class="header-count"> (${data.headerCount})</span>` : Lit3.nothing}
             </div>
             <div class="hide-when-closed">
-              ${data.checked !== void 0 ? html7`
+              ${data.checked !== void 0 ? html8`
                 <devtools-checkbox .checked=${data.checked} @change=${data.onToggleRawHeaders}
                          jslog=${VisualLogging7.toggle("raw-headers").track({ change: true })}>
                   ${i18nString9(UIStrings9.raw)}
@@ -7559,7 +7574,7 @@ import * as Bindings2 from "../../models/bindings/bindings.js";
 import * as Logs3 from "../../models/logs/logs.js";
 import * as Components2 from "../../ui/legacy/components/utils/utils.js";
 import * as UI10 from "../../ui/legacy/legacy.js";
-import { Directives as Directives3, html as html8, nothing as nothing7, render as render9 } from "../../ui/lit/lit.js";
+import { Directives as Directives3, html as html9, nothing as nothing7, render as render10 } from "../../ui/lit/lit.js";
 import * as VisualLogging8 from "../../ui/visual_logging/visual_logging.js";
 
 // gen/front_end/panels/network/requestInitiatorView.css.js
@@ -7650,8 +7665,8 @@ function trimUrl(url) {
 var DEFAULT_VIEW7 = (input, _output, target) => {
   const hasInitiatorData = input.initiatorGraph.initiators.size > 1 || input.initiatorGraph.initiated.size > 1 || input.stackTrace;
   if (!hasInitiatorData) {
-    render9(
-      html8`
+    render10(
+      html9`
       <div class="empty-view" style="display: flex; justify-content: center; align-items: center; height: 100%; color: var(--sys-color-token-subtle);">
         ${i18nString10(UIStrings10.noInitiator)}
       </div>
@@ -7662,9 +7677,9 @@ var DEFAULT_VIEW7 = (input, _output, target) => {
   }
   const renderStackTraceSection = () => {
     if (!input.stackTrace) {
-      return html8`${nothing7}`;
+      return html9`${nothing7}`;
     }
-    return html8`
+    return html9`
       <li role="treeitem" class="request-initiator-view-section-title" aria-expanded="true" open>
         ${i18nString10(UIStrings10.requestCallStack)}
         <ul role="group">
@@ -7674,7 +7689,7 @@ var DEFAULT_VIEW7 = (input, _output, target) => {
       stackTrace: input.stackTrace
     })}
           </li>
-          ${input.isConsoleOriginated ? html8`
+          ${input.isConsoleOriginated ? html9`
             <li role="treeitem" class="console-origin-label">
               ${i18nString10(UIStrings10.console)}
             </li>
@@ -7685,7 +7700,7 @@ var DEFAULT_VIEW7 = (input, _output, target) => {
   };
   const renderInitiatorNodes = (initiators, index, initiated, visited) => {
     if (index >= initiators.length) {
-      return html8`${nothing7}`;
+      return html9`${nothing7}`;
     }
     const request = initiators[index];
     const isCurrentRequest = index === initiators.length - 1;
@@ -7693,12 +7708,12 @@ var DEFAULT_VIEW7 = (input, _output, target) => {
     const renderedChildren = isCurrentRequest ? renderInitiatedNodes(initiated, request, visited) : nothing7;
     const url = request.url();
     const title = url.length < 2e3 ? url : void 0;
-    return html8`
+    return html9`
           <li role="treeitem" ?selected=${isCurrentRequest} aria-expanded="true" open>
             <span style=${isCurrentRequest ? "font-weight: bold" : ""} title=${Directives3.ifDefined(title)}>
               ${trimUrl(url)}
             </span>
-            ${hasFurtherInitiatedNodes || renderedChildren !== nothing7 ? html8`
+            ${hasFurtherInitiatedNodes || renderedChildren !== nothing7 ? html9`
               <ul role="group">
                 ${renderInitiatorNodes(initiators, index + 1, initiated, visited)}
                 ${renderedChildren}
@@ -7715,7 +7730,7 @@ var DEFAULT_VIEW7 = (input, _output, target) => {
     if (children.length === 0) {
       return nothing7;
     }
-    return html8`
+    return html9`
       ${children.map((child) => {
       const shouldRecurse = !visited.has(child);
       if (shouldRecurse) {
@@ -7724,12 +7739,12 @@ var DEFAULT_VIEW7 = (input, _output, target) => {
       const renderedChildren = shouldRecurse ? renderInitiatedNodes(initiated, child, visited) : nothing7;
       const url = child.url();
       const title = url.length < 2e3 ? url : void 0;
-      return html8`
+      return html9`
         <li role="treeitem" aria-expanded="true" open>
           <span title=${Directives3.ifDefined(title)}>
             ${trimUrl(url)}
           </span>
-          ${renderedChildren !== nothing7 ? html8`<ul role="group">${renderedChildren}</ul>` : nothing7}
+          ${renderedChildren !== nothing7 ? html9`<ul role="group">${renderedChildren}</ul>` : nothing7}
         </li>
       `;
     })}
@@ -7740,12 +7755,12 @@ var DEFAULT_VIEW7 = (input, _output, target) => {
     const visited = /* @__PURE__ */ new Set();
     visited.add(input.request);
     const hasInitiatorChain2 = initiators.length > 0;
-    return html8`
+    return html9`
       <li role="treeitem" class="request-initiator-view-section-title" aria-expanded="true" open>
         ${i18nString10(UIStrings10.requestInitiatorChain)}
-        ${hasInitiatorChain2 ? html8`
+        ${hasInitiatorChain2 ? html9`
           <ul role="group">
-            ${input.isConsoleOriginated ? html8`
+            ${input.isConsoleOriginated ? html9`
               <li role="treeitem" aria-expanded="true" open>
                 <span>${i18nString10(UIStrings10.console)}</span>
                 <ul role="group">
@@ -7756,11 +7771,11 @@ var DEFAULT_VIEW7 = (input, _output, target) => {
       </li>`;
   };
   const hasInitiatorChain = input.initiatorGraph.initiators.size > 1 || input.initiatorGraph.initiated.size > 1 || input.isConsoleOriginated;
-  render9(html8`
+  render10(html9`
     <div class="request-initiator-view-tree" jslog=${VisualLogging8.tree("initiator-tree")}>
-      <devtools-tree .template=${html8`
+      <devtools-tree .template=${html9`
         <style>${requestInitiatorViewTree_css_default}</style>
-        ${input.stackTrace || hasInitiatorChain ? html8`
+        ${input.stackTrace || hasInitiatorChain ? html9`
           <ul role="tree">
             ${renderStackTraceSection()}
             ${hasInitiatorChain ? renderInitiatorChain(input.initiatorGraph) : nothing7}
@@ -8084,7 +8099,7 @@ var objectValue_css_default = `/*
 
 // ../../front_end/panels/network/RequestPayloadView.ts
 import * as UI11 from "../../ui/legacy/legacy.js";
-import { Directives as Directives4, html as html9, nothing as nothing8, render as render10 } from "../../ui/lit/lit.js";
+import { Directives as Directives4, html as html10, nothing as nothing8, render as render11 } from "../../ui/lit/lit.js";
 import * as VisualLogging9 from "../../ui/visual_logging/visual_logging.js";
 
 // gen/front_end/panels/network/requestPayloadTree.css.js
@@ -8298,7 +8313,7 @@ var UIStrings11 = {
 var str_11 = i18n21.i18n.registerUIStrings("panels/network/RequestPayloadView.ts", UIStrings11);
 var i18nString11 = i18n21.i18n.getLocalizedString.bind(void 0, str_11);
 var DEFAULT_VIEW8 = (input, output, target) => {
-  const createViewSourceToggle = (viewSource, callback) => html9`<devtools-button
+  const createViewSourceToggle = (viewSource, callback) => html10`<devtools-button
       class="payload-toggle"
       jslog=${VisualLogging9.action().track({ click: true }).context("source-parse")}
       .variant=${Buttons6.Button.Variant.OUTLINED}
@@ -8315,20 +8330,20 @@ var DEFAULT_VIEW8 = (input, output, target) => {
     contextMenu.clipboardSection().appendItem(title, copyValueHandler, { jslogContext });
     void contextMenu.show();
   };
-  const createSourceText = (text) => html9`<li role=treeitem
+  const createSourceText = (text) => html10`<li role=treeitem
       @contextmenu=${copyValueContextmenu(i18nString11(UIStrings11.copyPayload), () => text, "copy-payload")}>
         <devtools-widget class='payload-value source-code' ${widget6(ShowMoreDetailsWidget, { text })}>
         </devtools-widget>
       </li>`;
   const createParsedParams = (params, decodeParameters) => params.map((param) => {
-    return html9`
+    return html10`
         <li role=treeitem
             @contextmenu=${copyValueContextmenu(
       i18nString11(UIStrings11.copyValue),
       () => decodeURIComponent(param.value),
       "copy-value"
     )}>
-          ${param.name !== "" ? html9`
+          ${param.name !== "" ? html10`
             ${RequestPayloadView.formatParameter(param.name, "payload-name", decodeParameters)}
             ${RequestPayloadView.formatParameter(param.value, "payload-value source-code", decodeParameters)}
           ` : RequestPayloadView.formatParameter(
@@ -8346,7 +8361,7 @@ var DEFAULT_VIEW8 = (input, output, target) => {
       input.onPayloadContextMenu(contextMenu);
       void contextMenu.show();
     };
-    return html9`
+    return html10`
       <li role=treeitem class="source-code object-properties-section-root-element object-properties-section"
           toggle-on-click
           ?open=${objectTree.expanded}
@@ -8382,8 +8397,8 @@ var DEFAULT_VIEW8 = (input, output, target) => {
     }
     void contextMenu.show();
   };
-  render10(html9`<style>${requestPayloadView_css_default}</style>
-   <devtools-tree dense show-selection-on-keyboard-focus class=request-payload-tree .template=${html9`
+  render11(html10`<style>${requestPayloadView_css_default}</style>
+   <devtools-tree dense show-selection-on-keyboard-focus class=request-payload-tree .template=${html10`
      <style>${objectValue_css_default}</style>
      <style>${objectPropertiesSection_css_default}</style>
      <style>${requestPayloadTree_css_default}</style>
@@ -8473,7 +8488,7 @@ var DEFAULT_VIEW8 = (input, output, target) => {
       </li>
      </ul>
      `}></devtools-tree>
-   ${input.binaryPayloadContentData ? html9`
+   ${input.binaryPayloadContentData ? html10`
      <div class="raw-payload-section"
           jslog=${VisualLogging9.section().context("binary-request-payload")}>
        ${widget6((element) => {
@@ -8698,8 +8713,8 @@ var RequestPayloadView = class extends UI11.Widget.VBox {
       }
     }
     const classes = classMap({ [className]: !!className, "empty-value": value === "" });
-    return html9`<div class=${classes}>
-      ${errorDecoding ? html9`<span class=payload-decode-error>${i18nString11(UIStrings11.unableToDecodeValue)}</span>` : value}
+    return html10`<div class=${classes}>
+      ${errorDecoding ? html10`<span class=payload-decode-error>${i18nString11(UIStrings11.unableToDecodeValue)}</span>` : value}
     </div>`;
   }
 };
@@ -8714,7 +8729,7 @@ import * as i18n25 from "../../core/i18n/i18n.js";
 import * as TextUtils2 from "../../core/text_utils/text_utils.js";
 import * as SourceFrame2 from "../../ui/legacy/components/source_frame/source_frame.js";
 import * as UI14 from "../../ui/legacy/legacy.js";
-import { render as render12 } from "../../ui/lit/lit.js";
+import { render as render13 } from "../../ui/lit/lit.js";
 import * as VisualLogging10 from "../../ui/visual_logging/visual_logging.js";
 
 // ../../front_end/panels/network/RequestHTMLView.ts
@@ -8724,7 +8739,7 @@ __export(RequestHTMLView_exports, {
   RequestHTMLView: () => RequestHTMLView
 });
 import * as UI12 from "../../ui/legacy/legacy.js";
-import { html as html10, nothing as nothing9, render as render11 } from "../../ui/lit/lit.js";
+import { html as html11, nothing as nothing9, render as render12 } from "../../ui/lit/lit.js";
 
 // gen/front_end/panels/network/requestHTMLView.css.js
 var requestHTMLView_css_default = `/*
@@ -8747,11 +8762,11 @@ var requestHTMLView_css_default = `/*
 
 // ../../front_end/panels/network/RequestHTMLView.ts
 var DEFAULT_VIEW9 = (input, _output, target) => {
-  render11(
-    html10`
+  render12(
+    html11`
     <style>${requestHTMLView_css_default}</style>
     <div class="html request-view widget vbox">
-      ${input.dataURL ? html10`
+      ${input.dataURL ? html11`
         <!-- @ts-ignore -->
         <iframe class="html-preview-frame" sandbox
           csp="default-src 'none';img-src data:;style-src 'unsafe-inline'" src=${input.dataURL}
@@ -9227,9 +9242,9 @@ var RequestPreviewView = class extends UI14.Widget.VBox {
     const toolbar5 = this.element.createChild("devtools-toolbar", "network-item-preview-toolbar");
     void view.toolbarItems().then((items) => {
       if (Array.isArray(items)) {
-        items.map((item3) => toolbar5.appendToolbarItem(item3));
+        items.map((item4) => toolbar5.appendToolbarItem(item4));
       } else {
-        render12(items, toolbar5);
+        render13(items, toolbar5);
       }
     });
     return view;
@@ -9288,7 +9303,7 @@ import * as TextUtils3 from "../../core/text_utils/text_utils.js";
 import * as SourceFrame3 from "../../ui/legacy/components/source_frame/source_frame.js";
 import * as UI15 from "../../ui/legacy/legacy.js";
 import * as Lit4 from "../../ui/lit/lit.js";
-var { html: html11, render: render13 } = Lit4;
+var { html: html12, render: render14 } = Lit4;
 var UIStrings14 = {
   /**
    * @description Text in Request Response View of the Network panel if no preview can be shown
@@ -9309,19 +9324,19 @@ var { widgetRef, widget: widget7 } = UI15.Widget;
 var DEFAULT_VIEW10 = (input, output, target) => {
   let widgetTemplate;
   if (TextUtils3.StreamingContentData.isError(input.contentData)) {
-    widgetTemplate = html11`${widget7((element) => new UI15.EmptyWidget.EmptyWidget(
+    widgetTemplate = html12`${widget7((element) => new UI15.EmptyWidget.EmptyWidget(
       i18nString14(UIStrings14.failedToLoadResponseData),
       input.contentData.error,
       element
     ))}`;
   } else if (input.request.statusCode === 204 || input.request.failed) {
-    widgetTemplate = html11`${widget7((element) => new UI15.EmptyWidget.EmptyWidget(
+    widgetTemplate = html12`${widget7((element) => new UI15.EmptyWidget.EmptyWidget(
       i18nString14(UIStrings14.noPreview),
       i18nString14(UIStrings14.thisRequestHasNoResponseData),
       element
     ))}`;
   } else if (input.renderAsText) {
-    widgetTemplate = html11`<devtools-widget ${widget7((element) => new SourceFrame3.ResourceSourceFrame.SearchableContainer(
+    widgetTemplate = html12`<devtools-widget ${widget7((element) => new SourceFrame3.ResourceSourceFrame.SearchableContainer(
       input.request,
       input.mimeType,
       element
@@ -9330,14 +9345,14 @@ var DEFAULT_VIEW10 = (input, output, target) => {
       output.revealPosition = widget8.revealPosition.bind(widget8);
     })}></devtools-widget>`;
   } else {
-    widgetTemplate = html11`${widget7((element) => new BinaryResourceView(
+    widgetTemplate = html12`${widget7((element) => new BinaryResourceView(
       input.contentData,
       input.request.url(),
       input.request.resourceType(),
       element
     ))}`;
   }
-  render13(widgetTemplate, target);
+  render14(widgetTemplate, target);
 };
 var RequestResponseView = class extends UI15.Widget.VBox {
   request;
@@ -9408,7 +9423,7 @@ import * as NetworkTimeCalculator from "../../models/network_time_calculator/net
 import * as uiI18n3 from "../../ui/i18n/i18n.js";
 import * as ObjectUI2 from "../../ui/legacy/components/object_ui/object_ui.js";
 import * as UI16 from "../../ui/legacy/legacy.js";
-import { Directives as Directives5, html as html12, nothing as nothing10, render as render14 } from "../../ui/lit/lit.js";
+import { Directives as Directives5, html as html13, nothing as nothing10, render as render15 } from "../../ui/lit/lit.js";
 import * as VisualLogging11 from "../../ui/visual_logging/visual_logging.js";
 
 // gen/front_end/panels/network/networkTimingTable.css.js
@@ -9978,15 +9993,15 @@ var DEFAULT_VIEW11 = (input, output, target) => {
       // Mark entries from a bespoke format
       ["synthetic"]: serverTiming.metric.startsWith("(c")
     });
-    return html12`
+    return html13`
       <tr class=${classes2}>
         <td title=${metricDesc} class=network-timing-metric>
           ${metricDesc}
         </td>
-        ${serverTiming.value === null ? nothing10 : html12`
+        ${serverTiming.value === null ? nothing10 : html13`
           <td class=server-timing-cell--value-bar>
             <div class=network-timing-row>
-              ${left < 0 ? nothing10 : html12`<span
+              ${left < 0 ? nothing10 : html13`<span
                     class="network-timing-bar server-timing"
                     data-background=${ifDefined2(isTotal ? void 0 : colorGenerator.colorForID(serverTiming.metric))}
                     data-left=${left}
@@ -10006,7 +10021,7 @@ var DEFAULT_VIEW11 = (input, output, target) => {
     const matchedSourceTypeString = String(matchedSourceType) || i18nString15(UIStrings15.unknown);
     const actualSourceType = serviceWorkerRouterInfo.actualSourceType;
     const actualSourceTypeString = String(actualSourceType) || i18nString15(UIStrings15.unknown);
-    return html12`<devtools-tree>
+    return html13`<devtools-tree>
       <ul role=tree>
         <li role=treeitem>
           <div class=network-fetch-details-treeitem>
@@ -10035,13 +10050,13 @@ var DEFAULT_VIEW11 = (input, output, target) => {
     const swResponseSource = input.request.serviceWorkerResponseSource();
     const responseCacheStorageName = input.request.getResponseCacheStorageCacheName();
     const retrievalTime = input.request.getResponseRetrievalTime();
-    return html12`<devtools-tree>
+    return html13`<devtools-tree>
       <ul role=tree>
-        ${origRequestTree ? html12`<li role=treeitem class="object-properties-section-root-element object-properties-section" open>
+        ${origRequestTree ? html13`<li role=treeitem class="object-properties-section-root-element object-properties-section" open>
             ${i18nString15(UIStrings15.originalRequest)}
             ${ObjectUI2.ObjectPropertiesSection.renderObjectTree(origRequestTree)}
           </li>` : nothing10}
-        ${responseTree ? html12`<li role=treeitem class="object-properties-section-root-element object-properties-section" open>
+        ${responseTree ? html13`<li role=treeitem class="object-properties-section-root-element object-properties-section" open>
             ${i18nString15(UIStrings15.responseReceived)}
             ${ObjectUI2.ObjectPropertiesSection.renderObjectTree(responseTree)}
           </li>` : nothing10}
@@ -10055,7 +10070,7 @@ var DEFAULT_VIEW11 = (input, output, target) => {
             ${responseCacheStorageName ? i18nString15(UIStrings15.cacheStorageCacheNameS, { PH1: responseCacheStorageName }) : i18nString15(UIStrings15.cacheStorageCacheNameUnknown)}
           </div>
         </li>
-        ${retrievalTime ? html12`<li role=treeitem>
+        ${retrievalTime ? html13`<li role=treeitem>
             <div class=network-fetch-details-treeitem>
               ${i18nString15(UIStrings15.retrievalTimeS, { PH1: retrievalTime.toString() })}
             </div>
@@ -10097,7 +10112,7 @@ var DEFAULT_VIEW11 = (input, output, target) => {
       tail.ranges.push(range);
     }
   }
-  render14(html12`
+  render15(html13`
     <style>${networkTimingTable_css_default}</style>
     <table
       class=${classes}
@@ -10132,7 +10147,7 @@ var DEFAULT_VIEW11 = (input, output, target) => {
             </td>
           </tr>
         </thead>
-        ${timeRangeGroups.map((group) => html12`
+        ${timeRangeGroups.map((group) => html13`
           <tr class=network-timing-table-header>
             <td role=heading aria-level=2>
               ${group.name}
@@ -10140,9 +10155,9 @@ var DEFAULT_VIEW11 = (input, output, target) => {
             <td></td>
             <td>${i18nString15(UIStrings15.durationC)}</td>
           </tr>
-          ${repeat2(group.ranges, (range) => html12`
+          ${repeat2(group.ranges, (range) => html13`
             <tr>
-              ${isClickable(range) ? html12`<td
+              ${isClickable(range) ? html13`<td
                   tabindex=0
                   role=button
                   aria-expanded=false
@@ -10150,7 +10165,7 @@ var DEFAULT_VIEW11 = (input, output, target) => {
                   @keydown=${onActivate}
                   class=network-fetch-timing-bar-clickable>
                     ${timeRangeTitle(range.name)}
-                </td>` : html12`<td>
+                </td>` : html13`<td>
                     ${timeRangeTitle(range.name)}
                 </td>`}
               <td>
@@ -10169,17 +10184,17 @@ var DEFAULT_VIEW11 = (input, output, target) => {
                 </div>
               </td>
             </tr>
-            ${range.name === "serviceworker-respondwith" && input.request.fetchedViaServiceWorker ? html12`
+            ${range.name === "serviceworker-respondwith" && input.request.fetchedViaServiceWorker ? html13`
               <tr class="network-fetch-timing-bar-details network-fetch-timing-bar-details-collapsed">
                 ${fetchDetailsTree()}
               </tr>` : nothing10}
-            ${range.name === "serviceworker-routerevaluation" && routerDetails ? html12`
+            ${range.name === "serviceworker-routerevaluation" && routerDetails ? html13`
               <tr class="router-evaluation-timing-bar-details network-fetch-timing-bar-details-collapsed">
                 ${routerDetailsTree(routerDetails)}
               </tr>` : nothing10}
           `)}
         `)}
-        ${requestUnfinished ? html12`
+        ${requestUnfinished ? html13`
           <tr>
             <td class=caution colspan=3>
               ${i18nString15(UIStrings15.cautionRequestIsNotFinishedYet)}
@@ -10195,7 +10210,7 @@ var DEFAULT_VIEW11 = (input, output, target) => {
            </devtools-link>
          <td></td>
          <td class=${input.wasThrottled ? "throttled" : ""} title=${ifDefined2(throttledRequestTitle)}>
-           ${input.wasThrottled ? html12` <devtools-icon name=watch @click=${revealThrottled}></devtools-icon>` : nothing10}
+           ${input.wasThrottled ? html13` <devtools-icon name=watch @click=${revealThrottled}></devtools-icon>` : nothing10}
            ${i18n29.TimeUtilities.secondsToString(input.totalDuration, true)}
          </td>
        </tr>
@@ -10209,12 +10224,12 @@ var DEFAULT_VIEW11 = (input, output, target) => {
          <td></td>
          <td>${i18nString15(UIStrings15.time)}</td>
        </tr>
-       ${repeat2(serverTimings.filter((item3) => item3.metric.toLowerCase() !== "total"), addServerTiming)}
-       ${repeat2(serverTimings.filter((item3) => item3.metric.toLowerCase() === "total"), addServerTiming)}
-       ${serverTimings.length === 0 ? html12`
+       ${repeat2(serverTimings.filter((item4) => item4.metric.toLowerCase() !== "total"), addServerTiming)}
+       ${repeat2(serverTimings.filter((item4) => item4.metric.toLowerCase() === "total"), addServerTiming)}
+       ${serverTimings.length === 0 ? html13`
          <tr>
            <td colspan=3>
-${uiI18n3.getFormatLocalizedStringTemplate(str_15, UIStrings15.duringDevelopmentYouCanUseSToAdd, { PH1: html12`<devtools-link href="https://web.dev/custom-metrics/#server-timing-api" .jslogContext=${"server-timing-api"}>${i18nString15(UIStrings15.theServerTimingApi)}</devtools-link>` })}
+${uiI18n3.getFormatLocalizedStringTemplate(str_15, UIStrings15.duringDevelopmentYouCanUseSToAdd, { PH1: html13`<devtools-link href="https://web.dev/custom-metrics/#server-timing-api" .jslogContext=${"server-timing-api"}>${i18nString15(UIStrings15.theServerTimingApi)}</devtools-link>` })}
            </td>
          </tr>` : nothing10}
       </table>`, target, { container: { classes: ["resource-timing-view"] } });
@@ -10379,7 +10394,7 @@ var resourceChunkView_css_default = `/*
 /*# sourceURL=${import.meta.resolve("./resourceChunkView.css")} */`;
 
 // ../../front_end/panels/network/ResourceChunkView.ts
-var { html: html13, render: render15, Directives: { ifDefined: ifDefined3 } } = Lit5;
+var { html: html14, render: render16, Directives: { ifDefined: ifDefined3 } } = Lit5;
 var UIStrings16 = {
   /**
    * @description Text in Event Source Messages View of the Network panel
@@ -10434,7 +10449,7 @@ var str_16 = i18n31.i18n.registerUIStrings("panels/network/ResourceChunkView.ts"
 var i18nString16 = i18n31.i18n.getLocalizedString.bind(void 0, str_16);
 var i18nLazyString = i18n31.i18n.getLazilyComputedLocalizedString.bind(void 0, str_16);
 function defaultHeaderTemplate() {
-  return html13`
+  return html14`
     <tr>
       <th id="data" weight="88">${i18nString16(UIStrings16.data)}</th>
       <th id="length" align="right" weight="5">${i18nString16(UIStrings16.length)}</th>
@@ -10442,8 +10457,8 @@ function defaultHeaderTemplate() {
     </tr>`;
 }
 var DEFAULT_VIEW12 = (input, _output, target) => {
-  render15(
-    html13`
+  render16(
+    html14`
       <style>${resourceChunkView_css_default}</style>
       <div class="resource-chunk-view vbox">
         <devtools-toolbar class="resource-chunk-view-toolbar" jslog=${VisualLogging12.toolbar()}>
@@ -10461,13 +10476,13 @@ var DEFAULT_VIEW12 = (input, _output, target) => {
               class="chrome-select"
               aria-label=${i18nString16(UIStrings16.filter)}
               @change=${input.onFilterTypeChange}>
-            ${FILTER_TYPES.map((item3) => html13`
+            ${FILTER_TYPES.map((item4) => html14`
               <option
-                  value=${item3.name}
-                  .selected=${input.selectedFilterType === item3.name}
-                  jslog=${VisualLogging12.item(item3.name).track({ click: true })}
-                  aria-label=${item3.label()}>
-                ${item3.label()}
+                  value=${item4.name}
+                  .selected=${input.selectedFilterType === item4.name}
+                  jslog=${VisualLogging12.item(item4.name).track({ click: true })}
+                  aria-label=${item4.label()}>
+                ${item4.label()}
               </option>
             `)}
           </select>
@@ -10484,11 +10499,11 @@ var DEFAULT_VIEW12 = (input, _output, target) => {
             <devtools-data-grid autoscroll name=${input.dataGridDisplayName} striped autofocus
                 resize="last"
                 @deselect=${input.onDeselect}
-                .template=${html13`
+                .template=${html14`
                   <style>${resourceChunkView_css_default}</style>
                   <table>
                     ${input.headerTemplate}
-                    ${Lit5.Directives.repeat(input.rows, (row) => row.chunk, (row) => html13`
+                    ${Lit5.Directives.repeat(input.rows, (row) => row.chunk, (row) => html14`
                       <tr class=${ifDefined3(row.cssClass)}
                           ?selected=${row.selected}
                           data-index=${row.index}
@@ -10501,7 +10516,7 @@ var DEFAULT_VIEW12 = (input, _output, target) => {
                         ${input.columns.map((col) => {
       const value = col.id === "time" ? row.timeText : row.item.data[col.id] ?? "";
       const title = col.id === "time" ? row.timeTooltip : void 0;
-      return html13`
+      return html14`
                               <td class="resource-chunk-view-td" title=${ifDefined3(title)}
                                   data-value=${ifDefined3(typeof value === "string" ? value : void 0)}>
                                 ${value}
@@ -10514,10 +10529,10 @@ var DEFAULT_VIEW12 = (input, _output, target) => {
             </devtools-data-grid>
           </div>
           <div slot="sidebar" class="vbox flex-auto" jslog=${VisualLogging12.pane("preview").track({ resize: true })}>
-            ${input.sidebarWidget ? html13`
+            ${input.sidebarWidget ? html14`
               <devtools-widget class="vbox flex-auto">
                 ${input.sidebarWidget.element}
-              </devtools-widget>` : html13`
+              </devtools-widget>` : html14`
               <devtools-widget
                   ${UI17.Widget.widget(UI17.EmptyWidget.EmptyWidget, {
       header: i18nString16(UIStrings16.noMessageSelected),
@@ -10629,12 +10644,12 @@ var ResourceChunkView = class extends UI17.Widget.VBox {
     }
     this.requestUpdate();
   }
-  async onChunkSelected(chunk, item3) {
-    if (this.selectedChunk === chunk && this.currentSelectedNode === item3 && this.sidebarWidget) {
+  async onChunkSelected(chunk, item4) {
+    if (this.selectedChunk === chunk && this.currentSelectedNode === item4 && this.sidebarWidget) {
       return;
     }
     this.selectedChunk = chunk;
-    this.currentSelectedNode = item3;
+    this.currentSelectedNode = item4;
     await this.updateSidebar();
   }
   onChunkDeselected() {
@@ -10680,14 +10695,14 @@ var ResourceChunkView = class extends UI17.Widget.VBox {
     const offset = clearChunkOffsets.get(this.request) || 0;
     chunks = chunks.slice(offset).filter(this.chunkFilter.bind(this));
     const rows = chunks.map((chunk, index) => {
-      const item3 = this.createGridItem(chunk);
-      const time = new Date(item3.getTime() * 1e3);
+      const item4 = this.createGridItem(chunk);
+      const time = new Date(item4.getTime() * 1e3);
       const timeText = ("0" + time.getHours()).slice(-2) + ":" + ("0" + time.getMinutes()).slice(-2) + ":" + ("0" + time.getSeconds()).slice(-2) + "." + ("00" + time.getMilliseconds()).slice(-3);
       return {
         chunk,
-        item: item3,
+        item: item4,
         selected: chunk === this.selectedChunk,
-        cssClass: item3.cssClass,
+        cssClass: item4.cssClass,
         index,
         timeTooltip: time.toLocaleString(),
         timeText
@@ -10716,8 +10731,8 @@ var ResourceChunkView = class extends UI17.Widget.VBox {
         }
       },
       onDeselect: this.onChunkDeselected.bind(this),
-      onContextMenu: (item3, menu) => {
-        this.onRowContextMenu(menu, item3);
+      onContextMenu: (item4, menu) => {
+        this.onRowContextMenu(menu, item4);
       },
       sidebarWidget: this.sidebarWidget
     };
@@ -10738,7 +10753,7 @@ var clearChunkOffsets = /* @__PURE__ */ new WeakMap();
 
 // ../../front_end/panels/network/ResourceDirectSocketChunkView.ts
 var {
-  html: html14
+  html: html15
 } = Lit6;
 var UIStrings17 = {
   /**
@@ -10774,7 +10789,7 @@ var str_17 = i18n33.i18n.registerUIStrings("panels/network/ResourceDirectSocketC
 var i18nString17 = i18n33.i18n.getLocalizedString.bind(void 0, str_17);
 var i18nLazyString2 = i18n33.i18n.getLazilyComputedLocalizedString.bind(void 0, str_17);
 function udpBoundHeaderTemplate() {
-  return html14`
+  return html15`
     <tr>
       <th id="data" weight="63">${i18nLazyString2(UIStrings17.data)}</th>
           <th id="address" align="right" weight="15">${i18nLazyString2(UIStrings17.address)}</th>
@@ -12518,38 +12533,38 @@ var NetworkManageCustomHeadersView = class extends UI20.Widget.VBox {
   addButtonClicked() {
     this.list.addNewItem(this.columnConfigs.size, { header: "" });
   }
-  renderItem(item3, _editable) {
+  renderItem(item4, _editable) {
     const element = document.createElement("div");
     element.classList.add("custom-headers-list-item");
     const header = element.createChild("div", "custom-header-name");
-    header.textContent = item3.header;
-    UI20.Tooltip.Tooltip.install(header, item3.header);
+    header.textContent = item4.header;
+    UI20.Tooltip.Tooltip.install(header, item4.header);
     return element;
   }
-  removeItemRequested(item3, _index) {
-    this.removeHeaderColumnCallback(item3.header);
-    this.columnConfigs.delete(item3.header.toLowerCase());
+  removeItemRequested(item4, _index) {
+    this.removeHeaderColumnCallback(item4.header);
+    this.columnConfigs.delete(item4.header.toLowerCase());
     this.headersUpdated();
   }
-  commitEdit(item3, editor, isNew) {
+  commitEdit(item4, editor, isNew) {
     const headerId = editor.control("header").value.trim();
     let success;
     if (isNew) {
       success = this.addHeaderColumnCallback(headerId);
     } else {
-      success = this.changeHeaderColumnCallback(item3.header, headerId);
+      success = this.changeHeaderColumnCallback(item4.header, headerId);
     }
     if (success && !isNew) {
-      this.columnConfigs.delete(item3.header.toLowerCase());
+      this.columnConfigs.delete(item4.header.toLowerCase());
     }
     if (success) {
       this.columnConfigs.set(headerId.toLowerCase(), { title: headerId, editable: true });
     }
     this.headersUpdated();
   }
-  beginEdit(item3) {
+  beginEdit(item4) {
     const editor = this.createEditor();
-    editor.control("header").value = item3.header;
+    editor.control("header").value = item4.header;
     return editor;
   }
   createEditor() {
@@ -12564,10 +12579,10 @@ var NetworkManageCustomHeadersView = class extends UI20.Widget.VBox {
     const fields = content.createChild("div", "custom-headers-edit-row");
     fields.createChild("div", "custom-headers-header").appendChild(editor.createInput("header", "text", "x-custom-header", validateHeader.bind(this)));
     return editor;
-    function validateHeader(item3, _index, _input) {
+    function validateHeader(item4, _index, _input) {
       let valid = true;
       const headerId = editor.control("header").value.trim().toLowerCase();
-      if (this.columnConfigs.has(headerId) && item3.header !== headerId) {
+      if (this.columnConfigs.has(headerId) && item4.header !== headerId) {
         valid = false;
       }
       return {
