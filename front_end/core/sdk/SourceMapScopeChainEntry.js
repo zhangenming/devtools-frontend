@@ -34,16 +34,20 @@ export class SourceMapScopeChainEntry {
     #range;
     #isInnerMostFunction;
     #returnValue;
+    #scopeNumber;
     /**
      * @param isInnerMostFunction If `scope` is the innermost 'function' scope. Only used for labeling as we name the
      * scope of the paused function 'Local', while other outer 'function' scopes are named 'Closure'.
+     * @param scopeNumber The V8 scope in which `scope`s binding expressions must be evaluated. Defaults to the
+     * inner-most scope.
      */
-    constructor(callFrame, scope, range, isInnerMostFunction, returnValue) {
+    constructor(callFrame, scope, range, isInnerMostFunction, returnValue, scopeNumber) {
         this.#callFrame = callFrame;
         this.#scope = scope;
         this.#range = range;
         this.#isInnerMostFunction = isInnerMostFunction;
         this.#returnValue = returnValue;
+        this.#scopeNumber = scopeNumber;
     }
     extraProperties() {
         if (this.#returnValue) {
@@ -56,22 +60,25 @@ export class SourceMapScopeChainEntry {
         return this.#callFrame;
     }
     type() {
-        switch (this.#scope.kind) {
+        if (this.#scope.isStackFrame) {
+            return this.#isInnerMostFunction ? "local" /* Protocol.Debugger.ScopeType.Local */ : "closure" /* Protocol.Debugger.ScopeType.Closure */;
+        }
+        // `kind` is a free-form label. The spec encourages 'Global'/'Block' but doesn't mandate the casing.
+        switch (this.#scope.kind?.toLowerCase()) {
             case 'global':
                 return "global" /* Protocol.Debugger.ScopeType.Global */;
-            case 'function':
-                return this.#isInnerMostFunction ? "local" /* Protocol.Debugger.ScopeType.Local */ : "closure" /* Protocol.Debugger.ScopeType.Closure */;
             case 'block':
                 return "block" /* Protocol.Debugger.ScopeType.Block */;
         }
         return this.#scope.kind ?? '';
     }
     typeName() {
-        switch (this.#scope.kind) {
+        if (this.#scope.isStackFrame) {
+            return this.#isInnerMostFunction ? i18nString(UIStrings.local) : i18nString(UIStrings.closure);
+        }
+        switch (this.#scope.kind?.toLowerCase()) {
             case 'global':
                 return i18nString(UIStrings.global);
-            case 'function':
-                return this.#isInnerMostFunction ? i18nString(UIStrings.local) : i18nString(UIStrings.closure);
             case 'block':
                 return i18nString(UIStrings.block);
         }
@@ -84,7 +91,7 @@ export class SourceMapScopeChainEntry {
         return null;
     }
     object() {
-        return new SourceMapScopeRemoteObject(this.#callFrame, this.#scope, this.#range);
+        return new SourceMapScopeRemoteObject(this.#callFrame, this.#scope, this.#range, this.#scopeNumber);
     }
     description() {
         return '';
@@ -97,14 +104,16 @@ class SourceMapScopeRemoteObject extends RemoteObjectImpl {
     #callFrame;
     #scope;
     #range;
-    constructor(callFrame, scope, range) {
+    #scopeNumber;
+    constructor(callFrame, scope, range, scopeNumber) {
         super(callFrame.debuggerModel.runtimeModel(), /* objectId */ undefined, 'object', /* sub type */ undefined, 
         /* value */ null);
         this.#callFrame = callFrame;
         this.#scope = scope;
         this.#range = range;
+        this.#scopeNumber = scopeNumber;
     }
-    async doGetProperties(_ownProperties, accessorPropertiesOnly, generatePreview) {
+    async doGetProperties(_ownProperties, accessorPropertiesOnly, _nonIndexedPropertiesOnly, generatePreview) {
         if (accessorPropertiesOnly) {
             return { properties: [], internalProperties: [] };
         }
@@ -115,9 +124,7 @@ class SourceMapScopeRemoteObject extends RemoteObjectImpl {
                 properties.push(SourceMapScopeRemoteObject.#unavailableProperty(variable));
                 continue;
             }
-            // TODO(crbug.com/40277685): Once we can evaluate expressions in scopes other than the innermost one,
-            //         we need to find the find the CDP scope that matches `this.#range` and evaluate in that.
-            const result = await this.#callFrame.evaluate({ expression, generatePreview });
+            const result = await this.#callFrame.evaluate({ expression, generatePreview, scopeNumber: this.#scopeNumber });
             if ('error' in result || result.exceptionDetails) {
                 // TODO(crbug.com/40277685): Make these errors user-visible to aid tooling developers.
                 //         E.g. show the error on hover or expose it in the developer resources panel.

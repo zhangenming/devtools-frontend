@@ -3022,6 +3022,7 @@ __export(MarkdownIssueDescription_exports, {
   resolveLazyDescription: () => resolveLazyDescription,
   substitutePlaceholders: () => substitutePlaceholders
 });
+import * as Platform from "../../core/platform/platform.js";
 import * as Marked from "../../third_party/marked/marked.js";
 function resolveLazyDescription(lazyDescription) {
   function linksMap(currentLink) {
@@ -3040,8 +3041,7 @@ function resolveLazyDescription(lazyDescription) {
 }
 async function getFileContent(url) {
   try {
-    const response = await fetch(url.toString());
-    return await response.text();
+    return await Platform.HostRuntime.HOST_RUNTIME.loadTextFile(url);
   } catch {
     throw new Error(
       `Markdown file ${url.toString()} not found. Make sure it is correctly listed in the relevant BUILD.gn files.`
@@ -3455,7 +3455,7 @@ var UIStrings6 = {
   /**
    * @description Text to show in Console panel when a third-party cookie is blocked in Chrome.
    */
-  consoleTpcdErrorMessage: "Third-party cookie blocked in Chrome due to Chrome flags or browser settings."
+  consoleTpcdErrorMessage: "Third-party cookie blocked in Chrome due to Chrome flags or browser settings"
 };
 var str_6 = i18n11.i18n.registerUIStrings("models/issues_manager/CookieIssue.ts", UIStrings6);
 var i18nLazyString4 = i18n11.i18n.getLazilyComputedLocalizedString.bind(void 0, str_6);
@@ -4618,12 +4618,12 @@ var UIStrings10 = {
   /**
    * @description This links to the Chrome feature status page when one exists.
    */
-  feature: "Check the feature status page for more details.",
+  feature: "Check the feature status page for more details",
   /**
    * @description This links to the Chromium Dash schedule when a milestone is set.
    * @example {100} milestone
    */
-  milestone: "This change will go into effect with milestone {milestone}.",
+  milestone: "This change will go into effect with milestone {milestone}",
   /**
    * @description Title of issue raised when a deprecated feature is used.
    */
@@ -4704,7 +4704,7 @@ __export(DOMIssuesManager_exports, {
   Events: () => Events2
 });
 import * as Common2 from "../../core/common/common.js";
-import * as Platform from "../../core/platform/platform.js";
+import * as Platform2 from "../../core/platform/platform.js";
 import * as SDK2 from "../../core/sdk/sdk.js";
 
 // ../../front_end/models/issues_manager/IssuesManagerEvents.ts
@@ -4726,8 +4726,8 @@ var DOMIssuesManager = class extends Common2.ObjectWrapper.ObjectWrapper {
   #issuesManager;
   #targetManager;
   #currentIssues = /* @__PURE__ */ new Set();
-  #nodeToIssues = new Platform.MapUtilities.Multimap();
-  #nodeIdSubscribers = new Platform.MapUtilities.Multimap();
+  #nodeToIssues = new Platform2.MapUtilities.Multimap();
+  #nodeIdSubscribers = new Platform2.MapUtilities.Multimap();
   constructor(issuesManager, targetManager) {
     super();
     this.#issuesManager = issuesManager;

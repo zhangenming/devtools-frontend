@@ -1690,7 +1690,7 @@ export class DOMTreeWidget extends UI.Widget.Widget {
     async removeNode(node) {
         if (this.isToggledToHidden(node)) {
             // Unhide the node before removing. This avoids inconsistent state if the node is restored via undo.
-            this.toggleHideElement(node);
+            await node.toggleHideElement();
         }
         if (node.pseudoType()) {
             return;
@@ -1917,7 +1917,9 @@ export class DOMTreeWidget extends UI.Widget.Widget {
             return;
         }
         const wasExpanded = this.#draggedNodeWasExpanded;
-        draggedNode.moveTo(parentNode, anchorNode, (error, newNode) => this.selectNodeAfterEdit(wasExpanded, error, newNode));
+        draggedNode.moveTo(parentNode, anchorNode, (error, newNode) => {
+            this.selectNodeAfterEdit(wasExpanded, error, newNode);
+        });
     }
     selectNodeAfterEdit(wasExpanded, error, newNode, moveDirection) {
         if (error || !newNode) {
@@ -2206,12 +2208,17 @@ export class DOMTreeWidget extends UI.Widget.Widget {
             return;
         }
         const wasExpanded = this.isNodeExpanded(this.#clipboardData.node);
+        const clipboardNode = this.#clipboardData.node;
         if (this.#clipboardData.isCut) {
-            this.#clipboardData.node.moveTo(targetNode, null, this.selectNodeAfterEdit.bind(this, wasExpanded));
+            clipboardNode.moveTo(targetNode, null, (error, newNode) => {
+                this.selectNodeAfterEdit(wasExpanded, error, newNode);
+            });
             this.setClipboardData(null);
         }
         else {
-            this.#clipboardData.node.copyTo(targetNode, null, this.selectNodeAfterEdit.bind(this, wasExpanded));
+            clipboardNode.copyTo(targetNode, null, (error, newNode) => {
+                this.selectNodeAfterEdit(wasExpanded, error, newNode);
+            });
         }
     }
     onCopyOrCut(isCut, event) {

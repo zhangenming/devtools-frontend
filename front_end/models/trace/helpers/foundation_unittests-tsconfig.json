@@ -27,7 +27,7 @@
     "noImplicitReturns": true,
     "outDir": ".",
     "preserveConstEnums": true,
-    "rootDir": "../../../../../../../front_end/models/trace/extras",
+    "rootDir": "../../../../../../../front_end/models/trace/helpers",
     "rootDirs": [
       "../../../../../../../",
       "../../../../"
@@ -35,7 +35,7 @@
     "skipLibCheck": true,
     "sourceMap": true,
     "strict": true,
-    "target": "ES2023",
+    "target": "es2023",
     "typeRoots": [
       "../../../../../../../node_modules/@types",
       "../../../../../../../node_modules"
@@ -46,14 +46,11 @@
     "useUnknownInCatchVariables": false
   },
   "files": [
-    "../../../../../../../front_end/models/trace/extras/FilmStrip.test.ts",
-    "../../../../../../../front_end/models/trace/extras/Initiators.test.ts",
-    "../../../../../../../front_end/models/trace/extras/MainThreadActivity.test.ts",
-    "../../../../../../../front_end/models/trace/extras/ScriptDuplication.test.ts",
-    "../../../../../../../front_end/models/trace/extras/StackTraceForEvent.test.ts",
-    "../../../../../../../front_end/models/trace/extras/ThirdParties.test.ts",
-    "../../../../../../../front_end/models/trace/extras/TraceFilter.test.ts",
-    "../../../../../../../front_end/models/trace/extras/TraceTree.test.ts",
+    "../../../../../../../front_end/models/trace/helpers/SamplesIntegrator.test.ts",
+    "../../../../../../../front_end/models/trace/helpers/SyntheticEvents.test.ts",
+    "../../../../../../../front_end/models/trace/helpers/Timing.test.ts",
+    "../../../../../../../front_end/models/trace/helpers/Trace.test.ts",
+    "../../../../../../../front_end/models/trace/helpers/TreeHelpers.test.ts",
     "../../../../../../../front_end/legacy/legacy-defs.d.ts",
     "../../../../../../../front_end/global_typings/global_defs.d.ts",
     "../../../../../../../node_modules/@types/filesystem/index.d.ts",
@@ -61,34 +58,16 @@
   ],
   "references": [
     {
-      "path": "bundle-tsconfig.ref.json"
-    },
-    {
-      "path": "../../../core/common/bundle-tsconfig.ref.json"
-    },
-    {
-      "path": "../../../core/platform/bundle-tsconfig.ref.json"
-    },
-    {
-      "path": "../../../core/sdk/bundle-tsconfig.ref.json"
-    },
-    {
       "path": "../../../generated/generated-tsconfig.ref.json"
     },
     {
       "path": "../bundle-tsconfig.ref.json"
     },
     {
-      "path": "../../../panels/timeline/bundle-tsconfig.ref.json"
-    },
-    {
       "path": "../../../testing/testing-tsconfig.ref.json"
     },
     {
-      "path": "../handlers/bundle-tsconfig.ref.json"
-    },
-    {
-      "path": "../types/bundle-tsconfig.ref.json"
+      "path": "../../cpu_profile/bundle-tsconfig.ref.json"
     }
   ]
 }

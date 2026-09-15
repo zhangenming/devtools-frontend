@@ -94,7 +94,7 @@ const UIStrings = {
      * @description Hint element title in the DOM tree of the Elements panel.
      * @example {0} PH1
      */
-    useSInTheConsoleToReferToThis: 'Use {PH1} in the console to refer to this element.',
+    useSInTheConsoleToReferToThis: 'Use {PH1} in the console to refer to this element',
     /**
      * @description Text to cut an element, cut should be used as a verb.
      */
@@ -2074,7 +2074,9 @@ export class ElementsTreeWidget extends UI.Widget.Widget {
             }
         }
         if (attributeName !== null && (attributeName.trim() || newText.trim()) && oldText !== newText) {
-            this.node.setAttribute(attributeName, newText, moveToNextAttributeIfNeeded.bind(this));
+            this.node.setAttribute(attributeName, newText, (error) => {
+                moveToNextAttributeIfNeeded.call(this, error);
+            });
             Badges.UserBadges.instance().recordAction(Badges.BadgeAction.DOM_ELEMENT_OR_ATTRIBUTE_EDITED);
             return;
         }
@@ -2110,7 +2112,7 @@ export class ElementsTreeWidget extends UI.Widget.Widget {
             }
         }
         newText = newText.trim();
-        if (newText === oldText) {
+        if (!newText || newText === oldText) {
             cancel();
             return;
         }
@@ -2120,11 +2122,10 @@ export class ElementsTreeWidget extends UI.Widget.Widget {
                 cancel();
                 return;
             }
-            if (!this.selectNodeAfterEdit) {
-                return;
-            }
             Badges.UserBadges.instance().recordAction(Badges.BadgeAction.DOM_ELEMENT_OR_ATTRIBUTE_EDITED);
-            this.selectNodeAfterEdit(wasExpanded, error, newNode, moveDirection);
+            if (this.selectNodeAfterEdit) {
+                this.selectNodeAfterEdit(wasExpanded, error, newNode, moveDirection);
+            }
         });
     }
     textNodeEditingCommitted(textNode, _element, newText) {
@@ -2274,11 +2275,11 @@ export class ElementsTreeWidget extends UI.Widget.Widget {
                 callback(!error);
             }
         }
-        function commitChange(initialValue, value) {
+        const commitChange = (initialValue, value) => {
             if (initialValue !== value) {
                 node.setOuterHTML(value, selectNode);
             }
-        }
+        };
         function disposeCallback() {
             if (callback) {
                 callback(false);

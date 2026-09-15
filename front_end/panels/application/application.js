@@ -3161,7 +3161,7 @@ var UIStrings = {
   /**
    * @description Description text on manifests in App Manifest View of the Application panel which describes the app manifest view tab
    */
-  manifestDescription: "A manifest defines how your app appears on phone\u2019s home screens and what the app looks like on launch.",
+  manifestDescription: "A manifest defines how your app appears on phone\u2019s home screens and what the app looks like on launch",
   /**
    * @description Text in App Manifest View of the Application panel
    */
@@ -3213,7 +3213,7 @@ var UIStrings = {
   /**
    * @description Popup-text explaining what the App Id is used for.
    */
-  appIdExplainer: "This is used by the browser to know whether the manifest should be updating an existing application, or whether it refers to a new web app that can be installed.",
+  appIdExplainer: "This is used by the browser to know whether the manifest should be updating an existing application, or whether it refers to a new web app that can be installed",
   /**
    * @description Text which is a hyperlink to more documentation
    */
@@ -3267,7 +3267,7 @@ var UIStrings = {
   /**
    * @description Text in App Manifest View of the Application panel
    */
-  descriptionMayBeTruncated: "Description may be truncated.",
+  descriptionMayBeTruncated: "Description may be truncated",
   /**
    * @description Warning text about too many shortcuts
    */
@@ -3332,7 +3332,7 @@ var UIStrings = {
    * @description Manifest installability error in the Application panel
    * @example {100} PH1
    */
-  manifestDoesNotContainASuitable: "Manifest does not contain a suitable icon\u2014PNG, SVG, or WebP format of at least {PH1}px is required, the '`sizes`' attribute must be set, and the '`purpose`' attribute, if set, must include '`any`'.",
+  manifestDoesNotContainASuitable: "Manifest does not contain a suitable icon\u2014PNG, SVG, or WebP format of at least {PH1}px is required, the '`sizes`' attribute must be set, and the '`purpose`' attribute, if set, must include '`any`'",
   /**
    * @description Manifest installability error in the Application panel
    */
@@ -3341,7 +3341,7 @@ var UIStrings = {
    * @description Manifest installability error in the Application panel
    * @example {100} PH1
    */
-  noSuppliedIconIsAtLeastSpxSquare: "No supplied icon is at least {PH1} pixels square in `PNG`, `SVG`, or `WebP` format, with the purpose attribute unset or set to '`any`'.",
+  noSuppliedIconIsAtLeastSpxSquare: "No supplied icon is at least {PH1} pixels square in `PNG`, `SVG`, or `WebP` format, with the purpose attribute unset or set to '`any`'",
   /**
    * @description Manifest installability error in the Application panel
    */
@@ -3389,7 +3389,7 @@ var UIStrings = {
   /**
    * @description Manifest installability error in the Application panel
    */
-  preferrelatedapplicationsIsOnly: "'`prefer_related_applications`' is only supported on `Chrome` Beta and Stable channels on `Android`.",
+  preferrelatedapplicationsIsOnly: "'`prefer_related_applications`' is only supported on `Chrome` Beta and Stable channels on `Android`",
   /**
    * @description Manifest installability error in the Application panel
    */
@@ -3513,7 +3513,7 @@ var UIStrings = {
    * @description Manifest installability error in the Application panel
    * @example {https://example.com/image.png} url
    */
-  screenshotPixelSize: "Screenshot {url} should specify a pixel size `[width]x[height]` instead of `any` as first size.",
+  screenshotPixelSize: "Screenshot {url} should specify a pixel size `[width]x[height]` instead of `any` as first size",
   /**
    * @description Warning text about screenshots for Richer PWA Install UI on desktop
    */
@@ -3540,12 +3540,12 @@ var UIStrings = {
    * @example {https://developer.mozilla.org/en-US/docs/Web/Manifest/display_override} PH2
    * @example {https://developer.mozilla.org/en-US/docs/Web/Manifest} PH3
    */
-  wcoFound: "Chrome has successfully found the {PH1} value for the {PH2} field in the {PH3}.",
+  wcoFound: "Chrome has successfully found the {PH1} value for the {PH2} field in the {PH3}",
   /**
    * @description Message for Windows Control Overlay value not found with link to documentation
    * @example {https://developer.mozilla.org/en-US/docs/Web/Manifest/display_override} PH1
    */
-  wcoNotFound: "Define {PH1} in the manifest to use the Window Controls Overlay API and customize your app\u2019s title bar.",
+  wcoNotFound: "Define {PH1} in the manifest to use the Window Controls Overlay API and customize your app\u2019s title bar",
   /**
    * @description Link text for more information on customizing Window Controls Overlay title bar in the Application panel
    */
@@ -4869,7 +4869,7 @@ var UIStrings3 = {
    * @example {Start recording events} PH1
    * @example {Ctrl + E} PH2
    */
-  startRecordingToDebug: 'Start to debug background services by using the "{PH1}" button or by pressing {PH2}.',
+  startRecordingToDebug: 'Start to debug background services by using the "{PH1}" button or by pressing {PH2}',
   /**
    * @description Text to show an item is empty
    */
@@ -6521,7 +6521,7 @@ var UIStrings7 = {
   /**
    * @description Explanation for why the additional information section is being shown
    */
-  thisAdditionalDebugging: "This additional (debugging) information is shown because the 'Protocol Monitor' experiment is enabled.",
+  thisAdditionalDebugging: "This additional (debugging) information is shown because the 'Protocol Monitor' experiment is enabled",
   /**
    * @description Label for subtitle of frame details view
    */
@@ -6633,7 +6633,7 @@ var UIStrings7 = {
    *(https://web.dev/why-coop-coep/)
    *(for a lot of languages 'cross-origin isolation' does not need to be translated, please translate only where necessary)
    */
-  availabilityOfCertainApisDepends: "Availability of certain APIs depends on the document being cross-origin isolated.",
+  availabilityOfCertainApisDepends: "Availability of certain APIs depends on the document being cross-origin isolated",
   /**
    * @description Description of the SharedArrayBuffer status
    */
@@ -6704,11 +6704,11 @@ var UIStrings7 = {
   /**
    * @description Text descripting why a frame has been indentified as an advertisement.
    */
-  parentIsAdExplanation: "This frame is considered an ad frame because its parent frame is an ad frame.",
+  parentIsAdExplanation: "This frame is considered an ad frame because its parent frame is an ad frame",
   /**
    * @description Text descripting why a frame has been indentified as an advertisement.
    */
-  matchedBlockingRuleExplanation: "This frame is considered an ad frame because its current (or previous) main document is an ad resource.",
+  matchedBlockingRuleExplanation: "This frame is considered an ad frame because its current (or previous) main document is an ad resource",
   /**
    * @description Text descripting why a frame has been indentified as an advertisement.
    */
@@ -6730,7 +6730,7 @@ var UIStrings7 = {
    *(https://developer.chrome.com/docs/web-platform/origin-trials/)
    *(please don't translate 'origin trials').
    */
-  originTrialsExplanation: "Origin trials give you access to a new or experimental feature."
+  originTrialsExplanation: "Origin trials give you access to a new or experimental feature"
 };
 var str_7 = i18n13.i18n.registerUIStrings("panels/application/FrameDetailsView.ts", UIStrings7);
 var i18nString7 = i18n13.i18n.getLocalizedString.bind(void 0, str_7);
@@ -7930,7 +7930,7 @@ var UIStrings8 = {
   /**
    * @description Explanation text in Application panel IndexedDB delete confirmation dialog
    */
-  databaseWillBeRemoved: "The selected database and contained data will be removed.",
+  databaseWillBeRemoved: "The selected database and contained data will be removed",
   /**
    * @description Title of the confirmation dialog in the IndexedDB tab of the Application panel
    *              that the user is about to clear an object store and this cannot be undone.
@@ -7941,7 +7941,7 @@ var UIStrings8 = {
    * @description Description in the confirmation dialog in the IndexedDB tab of the Application
    *              panel that the user is about to clear an object store and this cannot be undone.
    */
-  objectStoreWillBeCleared: "The data contained in the selected object store will be removed.",
+  objectStoreWillBeCleared: "The data contained in the selected object store will be removed",
   /**
    * @description Text in Indexed DBViews of the Application panel
    */
@@ -8134,7 +8134,7 @@ var renderDataGrid = (input) => {
         ${input.isIndex ? html6`<th id="primary-key" weight="2">${renderKeyColumnHeader(i18nString8(UIStrings8.primaryKey), input.objectStore.keyPath)}</th>` : nothing4}
         <th id="value" weight="8">${i18nString8(UIStrings8.valueString)}</th>
       </tr>
-      ${repeat(input.entries, (_entry, index) => index, (entry, index) => {
+      ${repeat(input.entries, (entry) => entry, (entry, index) => {
     return html6`
           <tr ?selected=${index + input.skipCount === input.selectedRowNumber}
               class="data-grid-data-row"
@@ -10097,7 +10097,7 @@ var UIStrings13 = {
    *             An endpoint is a URL where the report is sent to.
    *             (https://developer.chrome.com/docs/capabilities/web-apis/reporting-api)
    */
-  reportingApiDescription: "On this page you will be able to inspect `Reporting API` reports and endpoints.",
+  reportingApiDescription: "On this page you will be able to inspect `Reporting API` reports and endpoints",
   /**
    * @description Placeholder text that shows if no report was selected for viewing
    *report body (https://developers.google.com/web/updates/2018/09/reportingapi#sending).
@@ -11020,7 +11020,7 @@ var UIStrings16 = {
   /**
    * @description Description text in Application Panel describing the cache storage tab
    */
-  cacheStorageDescription: "On this page you can view and delete cache data.",
+  cacheStorageDescription: "On this page you can view and delete cache data",
   /**
    * @description A context menu item in the Application Panel Sidebar of the Application panel
    */
@@ -11904,7 +11904,7 @@ var UIStrings18 = {
   /**
    * @description Text in Service Workers View of the Application panel
    */
-  testPushMessageFromDevtools: "Test push message from DevTools.",
+  testPushMessageFromDevtools: "Test push message from DevTools",
   /**
    * @description Button label for service worker network requests
    */
@@ -12707,7 +12707,7 @@ var UIStrings19 = {
    * Storage Buckets allow developers to separate site data into buckets so that they can be
    * deleted independently. https://developer.chrome.com/docs/web-platform/storage-buckets.
    */
-  storageBucketsDescription: "On this page you can view and delete storage buckets, and their associated `Storage APIs`."
+  storageBucketsDescription: "On this page you can view and delete storage buckets, and their associated `Storage APIs`"
 };
 var str_19 = i18n37.i18n.registerUIStrings("panels/application/StorageBucketsTreeElement.ts", UIStrings19);
 var i18nString19 = i18n37.i18n.getLocalizedString.bind(void 0, str_19);
@@ -13644,7 +13644,7 @@ var UIStrings22 = {
   /**
    *@description Placeholder text when no row is selected in a table of events.
    */
-  selectEventToViewDetails: "Select an event row to view more details.",
+  selectEventToViewDetails: "Select an event row to view more details",
   /**
    *@description Column heading for the type of event that has occurred.
    */
@@ -13668,7 +13668,7 @@ var UIStrings22 = {
   /**
    *@description Default message when no events have appeared yet.
    */
-  noEvents: "No events have been logged yet.",
+  noEvents: "No events have been logged yet",
   /**
    *@description Text to keep the log of events after refreshing.
    */
@@ -15008,7 +15008,7 @@ var UIStrings24 = {
   /**
    * @description Text for announcing a DOM Storage key/value item has been deleted
    */
-  domStorageItemDeleted: "The storage item was deleted.",
+  domStorageItemDeleted: "The storage item was deleted",
   /**
    * @description Text of a context menu item to start a chat with AI
    */
@@ -16994,7 +16994,7 @@ var UIStrings28 = {
   /**
    * @description Text to display when no calls have been made
    */
-  noCallsPlaceholder: "Start interacting with your `WebMCP` agent to see real-time tool calls and executions here.",
+  noCallsPlaceholder: "Start interacting with your `WebMCP` agent to see real-time tool calls and executions here",
   /**
    * @description Text for the header of the tool details section
    */
@@ -18362,7 +18362,7 @@ var UIStrings29 = {
   /**
    * @description Text in the Application panel describing the local storage tab.
    */
-  localStorageDescription: "On this page you can view, add, edit, and delete local storage key-value pairs.",
+  localStorageDescription: "On this page you can view, add, edit, and delete local storage key-value pairs",
   /**
    * @description Text in Application Panel Sidebar of the Application panel
    */
@@ -18374,7 +18374,7 @@ var UIStrings29 = {
   /**
    * @description Text in the Application panel describing the session storage tab.
    */
-  sessionStorageDescription: "On this page you can view, add, edit, and delete session storage key-value pairs.",
+  sessionStorageDescription: "On this page you can view, add, edit, and delete session storage key-value pairs",
   /**
    * @description Text in Application Panel Sidebar of the Application panel
    */
@@ -18386,7 +18386,7 @@ var UIStrings29 = {
   /**
    * @description Text in the Application panel describing the extension storage tab.
    */
-  extensionStorageDescription: "On this page you can view, add, edit, and delete extension storage key-value pairs.",
+  extensionStorageDescription: "On this page you can view, add, edit, and delete extension storage key-value pairs",
   /**
    * @description Text for extension session storage in Application panel
    */
@@ -18414,7 +18414,7 @@ var UIStrings29 = {
   /**
    * @description Text for web cookies
    */
-  cookiesDescription: "On this page you can view, add, edit, and delete cookies.",
+  cookiesDescription: "On this page you can view, add, edit, and delete cookies",
   /**
    * @description Text in Application Panel Sidebar of the Application panel
    */
@@ -18438,7 +18438,7 @@ var UIStrings29 = {
   /**
    * @description Text in the Application panel describing the extension storage tab.
    */
-  indexeddbDescription: "On this page you can view and delete indexedDB key-value pairs and databases.",
+  indexeddbDescription: "On this page you can view and delete indexedDB key-value pairs and databases",
   /**
    * @description A context menu item in the Application Panel Sidebar of the Application panel
    */
@@ -18478,7 +18478,7 @@ var UIStrings29 = {
   /**
    * @description Text in Frames View of the Application panel
    */
-  openedWindowsDescription: "On this page you can view windows opened via window.open().",
+  openedWindowsDescription: "On this page you can view windows opened via window.open()",
   /**
    * @description Label for plural of worker type: web workers
    */
@@ -18490,7 +18490,7 @@ var UIStrings29 = {
   /**
    * @description Description of content of unavailable document in Application panel
    */
-  theContentOfThisDocumentHasBeen: "The content of this document has been generated dynamically via 'document.write()'.",
+  theContentOfThisDocumentHasBeen: "The content of this document has been generated dynamically via 'document.write()'",
   /**
    * @description Text in Frames View of the Application panel
    */
@@ -18502,7 +18502,7 @@ var UIStrings29 = {
   /**
    * @description Description text for describing the dedicated worker tab.
    */
-  workerDescription: "On this page you can view dedicated workers that are created by the parent frame.",
+  workerDescription: "On this page you can view dedicated workers that are created by the parent frame",
   /**
    * @description Aria text for screen reader to announce they can scroll to top of manifest if invoked
    */
@@ -18524,7 +18524,7 @@ var UIStrings29 = {
   /**
    * @description Description text in the Application Panel describing a frame's resources
    */
-  resourceDescription: "On this page you can view the frame\u2019s resources."
+  resourceDescription: "On this page you can view the frame\u2019s resources"
 };
 var str_29 = i18n57.i18n.registerUIStrings("panels/application/ApplicationPanelSidebar.ts", UIStrings29);
 var i18nString29 = i18n57.i18n.getLocalizedString.bind(void 0, str_29);
