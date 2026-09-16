@@ -3752,6 +3752,11 @@ var DOM;
     GetElementByRelationRequestRelation2["InterestTarget"] = "InterestTarget";
     GetElementByRelationRequestRelation2["CommandFor"] = "CommandFor";
   })(GetElementByRelationRequestRelation = DOM2.GetElementByRelationRequestRelation || (DOM2.GetElementByRelationRequestRelation = {}));
+  let SetTextMarkerRequestType;
+  ((SetTextMarkerRequestType2) => {
+    SetTextMarkerRequestType2["Spelling"] = "spelling";
+    SetTextMarkerRequestType2["Grammar"] = "grammar";
+  })(SetTextMarkerRequestType = DOM2.SetTextMarkerRequestType || (DOM2.SetTextMarkerRequestType = {}));
 })(DOM || (DOM = {}));
 var DOMDebugger;
 ((DOMDebugger2) => {
@@ -14275,6 +14280,9 @@ var TimelineTreeView = class _TimelineTreeView extends TimelineTreeViewBase {
   #compactMode = false;
   #maxLinkLength = void 0;
   #maxRows = void 0;
+  // Tracks whether a tree refresh was deferred while detached from the DOM,
+  // so it can be performed when the widget becomes visible again.
+  #dirty = false;
   /**
    * Determines if the first child in the data grid will be selected
    * by default when refreshTree() gets called.
@@ -14430,7 +14438,9 @@ var TimelineTreeView = class _TimelineTreeView extends TimelineTreeViewBase {
   }
   wasShown() {
     super.wasShown();
-    this.refreshTree();
+    if (this.#dirty) {
+      this.refreshTree();
+    }
     this.dataGrid.addEventListener(DataGrid.DataGrid.Events.SELECTED_NODE, this.#onDataGridSelectionChange, this);
     this.dataGrid.addEventListener(DataGrid.DataGrid.Events.DESELECTED_NODE, this.#onDataGridDeselection, this);
   }
@@ -14533,8 +14543,10 @@ var TimelineTreeView = class _TimelineTreeView extends TimelineTreeViewBase {
    */
   refreshTree(forceRefresh = false) {
     if (!this.element.parentElement && !forceRefresh) {
+      this.#dirty = true;
       return;
     }
+    this.#dirty = false;
     this.linkifier.reset();
     this.dataGrid.rootNode().removeChildren();
     if (!this.#parsedTrace) {
@@ -18586,6 +18598,53 @@ var timelineFlameChartView_css_default = `/*
   }
 }
 
+
+.overlay-type-COMMENT_PIN {
+  z-index: 5;
+  pointer-events: none;
+  border: var(--sys-size-2) dashed var(--sys-color-primary);
+  background-color: color-mix(in srgb, var(--sys-color-primary), transparent 90%);
+  box-sizing: border-box;
+
+  .comment-pin {
+    position: absolute;
+    top: 0;
+    right: 0;
+    transform: translate(50%, -50%);
+    pointer-events: auto;
+    cursor: pointer;
+    user-select: none;
+    transition: transform 0.1s ease;
+    transform-origin: center center;
+    outline: none;
+
+    &:hover,
+    &:focus-visible {
+      transform: translate(50%, -50%) scale(1.15);
+    }
+
+    &:focus-visible .comment-cursor {
+      outline: var(--sys-size-2) solid var(--sys-color-state-focus-ring);
+      outline-offset: 2px;
+    }
+  }
+
+  .comment-cursor {
+    display: flex;
+    width: var(--sys-size-9);
+    height: var(--sys-size-9);
+    box-sizing: border-box;
+    padding: 0;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    flex-shrink: 0;
+    box-shadow: var(--sys-elevation-level2);
+    border-radius: 100px 100px 100px var(--sys-shape-corner-extra-small, 4px);
+    background: var(--sys-color-primary);
+    color: var(--sys-color-on-primary);
+  }
+}
 
 .overlay-type-ENTRY_SELECTED,
 .overlay-type-ENTRY_OUTLINE {

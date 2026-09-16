@@ -88,6 +88,11 @@ import * as MarkdownView from "../../ui/components/markdown_view/markdown_view.j
 import * as Lit from "../../ui/lit/lit.js";
 var { html } = Lit;
 var MarkdownRendererWithCodeBlock = class extends MarkdownView.MarkdownView.MarkdownInsightRenderer {
+  constructor(options = {}) {
+    super();
+    this.options = options;
+  }
+  options;
   #revealableLink(revealable, label) {
     return html`<devtools-link @click=${(e) => {
       e.preventDefault();
@@ -106,8 +111,10 @@ var MarkdownRendererWithCodeBlock = class extends MarkdownView.MarkdownView.Mark
       return html`${fallbackText}`;
     }
     if (href.startsWith("#file-")) {
-      const file = AiAssistanceModel.ContextSelectionAgent.ContextSelectionAgent.getUISourceCodes().find(
-        (file2) => AiAssistanceModel.ContextSelectionAgent.ContextSelectionAgent.uiSourceCodeId.get(file2) === Number(href.substring(6))
+      const fileId = Number(href.substring(6));
+      const file = AiAssistanceModel.ContextSelectionAgent.ContextSelectionAgent.getSourceById(
+        fileId,
+        this.options.getEstablishedOrigin?.()
       );
       if (file) {
         return this.#revealableLink(file, file.name());
@@ -4452,6 +4459,11 @@ var DOM;
     GetElementByRelationRequestRelation2["InterestTarget"] = "InterestTarget";
     GetElementByRelationRequestRelation2["CommandFor"] = "CommandFor";
   })(GetElementByRelationRequestRelation = DOM2.GetElementByRelationRequestRelation || (DOM2.GetElementByRelationRequestRelation = {}));
+  let SetTextMarkerRequestType;
+  ((SetTextMarkerRequestType2) => {
+    SetTextMarkerRequestType2["Spelling"] = "spelling";
+    SetTextMarkerRequestType2["Grammar"] = "grammar";
+  })(SetTextMarkerRequestType = DOM2.SetTextMarkerRequestType || (DOM2.SetTextMarkerRequestType = {}));
 })(DOM || (DOM = {}));
 var DOMDebugger;
 ((DOMDebugger2) => {
@@ -9675,7 +9687,9 @@ function getMarkdownRenderer(conversation) {
     const mainDocumentURL = domModel?.existingDocument()?.documentURL;
     return new AccessibilityAgentMarkdownRenderer(mainDocumentURL);
   }
-  return new MarkdownRendererWithCodeBlock();
+  return new MarkdownRendererWithCodeBlock({
+    getEstablishedOrigin: () => conversation?.origin
+  });
 }
 var ViewState = /* @__PURE__ */ ((ViewState2) => {
   ViewState2["DISABLED_VIEW"] = "disabled-view";

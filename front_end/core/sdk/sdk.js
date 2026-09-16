@@ -911,6 +911,11 @@ var DOM;
     GetElementByRelationRequestRelation2["InterestTarget"] = "InterestTarget";
     GetElementByRelationRequestRelation2["CommandFor"] = "CommandFor";
   })(GetElementByRelationRequestRelation = DOM2.GetElementByRelationRequestRelation || (DOM2.GetElementByRelationRequestRelation = {}));
+  let SetTextMarkerRequestType;
+  ((SetTextMarkerRequestType2) => {
+    SetTextMarkerRequestType2["Spelling"] = "spelling";
+    SetTextMarkerRequestType2["Grammar"] = "grammar";
+  })(SetTextMarkerRequestType = DOM2.SetTextMarkerRequestType || (DOM2.SetTextMarkerRequestType = {}));
 })(DOM || (DOM = {}));
 var DOMDebugger;
 ((DOMDebugger2) => {
@@ -29568,6 +29573,16 @@ var DOMNode = class _DOMNode extends Common20.ObjectWrapper.ObjectWrapper {
       return null;
     }
     return this.domModel().nodeForId(response.nodeId);
+  }
+  async getImplicitAnchorCandidates() {
+    const response = await this.#agent.invoke_getImplicitAnchorCandidates({
+      nodeId: this.id
+    });
+    if (response.getError() || !response.backendNodeIds) {
+      return [];
+    }
+    const target = this.domModel().target();
+    return response.backendNodeIds.map((backendNodeId) => new DeferredDOMNode(target, backendNodeId));
   }
   async takeSnapshot(ownerDocumentSnapshot) {
     const snapshot = this instanceof DOMDocument ? new DOMDocumentSnapshot(this.domModel(), {
