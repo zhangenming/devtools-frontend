@@ -509,6 +509,9 @@
   "core/sdk/SourceMapScopeChainEntry.ts | closure": {
     "message": "Closure"
   },
+  "core/sdk/SourceMapScopeChainEntry.ts | exception": {
+    "message": "Exception"
+  },
   "core/sdk/SourceMapScopeChainEntry.ts | global": {
     "message": "Global"
   },

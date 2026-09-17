@@ -4,7 +4,6 @@
 import * as Host from '../../../core/host/host.js';
 import * as i18n from '../../../core/i18n/i18n.js';
 import * as Workspace from '../../workspace/workspace.js';
-import { FileContext } from '../contexts/FileContext.js';
 import { isOriginAllowedByLock, resolveOriginFromLock, } from './Tool.js';
 const UIStringsNotTranslate = {
     listingSources: 'Listing workspace sources',
@@ -46,7 +45,7 @@ export class ListSourcesTool {
             }
         }
         const originLock = { status: 'ESTABLISHED_ORIGIN', origin: establishedOrigin };
-        return [...uiSourceCodes.values()].filter(file => isOriginAllowedByLock(originLock, FileContext.originForUISourceCode(file)));
+        return [...uiSourceCodes.values()].filter(file => isOriginAllowedByLock(originLock, file.securityOrigin()));
     }
     static getSourceById(id, establishedOrigin, 
     // eslint-disable-next-line @devtools/no-instance-of-migrated-singletons
