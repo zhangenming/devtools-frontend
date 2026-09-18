@@ -7921,15 +7921,21 @@ var ListSourcesTool = class _ListSourcesTool {
     _ListSourcesTool.lastSourceId = 0;
     _ListSourcesTool.uiSourceCodeId = /* @__PURE__ */ new WeakMap();
   }
-  static getUISourceCodes(establishedOrigin, workspace = Workspace3.Workspace.WorkspaceImpl.instance()) {
-    if (establishedOrigin.isOpaque()) {
+  static getUISourceCodes(originLock, workspace = Workspace3.Workspace.WorkspaceImpl.instance()) {
+    if (originLock.status !== "ESTABLISHED_ORIGIN" || originLock.origin.isOpaque()) {
       return [];
     }
-    const projects = workspace.projects().filter((project) => project.type() === Workspace3.Workspace.projectTypes.Network);
     const uiSourceCodes = /* @__PURE__ */ new Map();
-    for (const project of projects) {
+    for (const project of workspace.projectsForType(Workspace3.Workspace.projectTypes.Network)) {
+      const projectOrigin = project.securityOrigin?.();
+      if (projectOrigin && !isOriginAllowedByLock(originLock, projectOrigin)) {
+        continue;
+      }
       for (const uiSourceCode of project.uiSourceCodes()) {
         if (uiSourceCode.isIgnoreListed()) {
+          continue;
+        }
+        if (!projectOrigin && !isOriginAllowedByLock(originLock, uiSourceCode.securityOrigin())) {
           continue;
         }
         const url = uiSourceCode.url();
@@ -7941,11 +7947,13 @@ var ListSourcesTool = class _ListSourcesTool {
         }
       }
     }
-    const originLock = { status: "ESTABLISHED_ORIGIN", origin: establishedOrigin };
-    return [...uiSourceCodes.values()].filter((file) => isOriginAllowedByLock(originLock, file.securityOrigin()));
+    return Array.from(uiSourceCodes.values());
   }
-  static getSourceById(id, establishedOrigin, workspace = Workspace3.Workspace.WorkspaceImpl.instance()) {
-    return _ListSourcesTool.getUISourceCodes(establishedOrigin, workspace).find((file) => _ListSourcesTool.uiSourceCodeId.get(file) === id);
+  static getSourceById(id, originLock, workspace = Workspace3.Workspace.WorkspaceImpl.instance()) {
+    if (!Number.isInteger(id) || id <= 0) {
+      return void 0;
+    }
+    return _ListSourcesTool.getUISourceCodes(originLock, workspace).find((file) => _ListSourcesTool.uiSourceCodeId.get(file) === id);
   }
   parameters = {
     type: Host9.AidaClient.ParametersTypes.OBJECT,
@@ -7961,11 +7969,12 @@ var ListSourcesTool = class _ListSourcesTool {
     };
   }
   async handler(_params, context) {
-    const originResult = resolveOriginFromLock(context.getOriginLock());
+    const originLock = context.getOriginLock();
+    const originResult = resolveOriginFromLock(originLock);
     if ("error" in originResult) {
       return originResult;
     }
-    const files = _ListSourcesTool.getUISourceCodes(originResult.origin);
+    const files = _ListSourcesTool.getUISourceCodes(originLock);
     return {
       result: {
         files: files.map((file) => ({
@@ -8004,11 +8013,12 @@ var GetSourceContentTool = class {
     };
   }
   async handler(args, context) {
-    const originResult = resolveOriginFromLock(context.getOriginLock());
+    const originLock = context.getOriginLock();
+    const originResult = resolveOriginFromLock(originLock);
     if ("error" in originResult) {
       return originResult;
     }
-    const file = ListSourcesTool.getSourceById(args.id, originResult.origin);
+    const file = ListSourcesTool.getSourceById(args.id, originLock);
     if (!file) {
       return {
         error: "Unable to find file."

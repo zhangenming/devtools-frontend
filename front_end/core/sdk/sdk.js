@@ -21861,1124 +21861,18 @@ var CSSStyleSheetHeader = class {
   }
 };
 
-// ../../front_end/core/sdk/SourceMapManager.ts
-var SourceMapManager_exports = {};
-__export(SourceMapManager_exports, {
-  Events: () => Events8,
-  SourceMapManager: () => SourceMapManager,
-  lazyLoadingSettingDescriptor: () => lazyLoadingSettingDescriptor,
-  tryLoadSourceMap: () => tryLoadSourceMap
-});
-import * as Common13 from "../common/common.js";
-import * as Platform10 from "../platform/platform.js";
-
-// ../../front_end/core/sdk/PageResourceLoader.ts
-var PageResourceLoader_exports = {};
-__export(PageResourceLoader_exports, {
-  Events: () => Events7,
-  PageResourceLoader: () => PageResourceLoader,
-  ResourceKey: () => ResourceKey
-});
-import * as Common11 from "../common/common.js";
-import * as Host3 from "../host/host.js";
-import * as i18n5 from "../i18n/i18n.js";
-import * as Root3 from "../root/root.js";
-
-// ../../front_end/core/sdk/IOModel.ts
-var IOModel_exports = {};
-__export(IOModel_exports, {
-  IOModel: () => IOModel
-});
-import * as Common8 from "../common/common.js";
-var IOModel = class extends SDKModel {
-  async read(handle, size, offset) {
-    const result = await this.target().ioAgent().invoke_read({ handle, offset, size });
-    if (result.getError()) {
-      throw new Error(result.getError());
-    }
-    if (result.eof) {
-      return null;
-    }
-    if (result.base64Encoded) {
-      return Common8.Base64.decode(result.data);
-    }
-    return result.data;
-  }
-  async close(handle) {
-    await this.target().ioAgent().invoke_close({ handle });
-  }
-  async resolveBlob(objectOrObjectId) {
-    const objectId = objectOrObjectId instanceof RemoteObject ? objectOrObjectId.objectId : objectOrObjectId;
-    if (!objectId) {
-      throw new Error("Remote object has undefined objectId");
-    }
-    const result = await this.target().ioAgent().invoke_resolveBlob({ objectId });
-    if (result.getError()) {
-      throw new Error(result.getError());
-    }
-    return `blob:${result.uuid}`;
-  }
-  async readToString(handle) {
-    const strings = [];
-    const decoder = new TextDecoder();
-    for (; ; ) {
-      const data = await this.read(handle, 1024 * 1024);
-      if (data === null) {
-        strings.push(decoder.decode());
-        break;
-      }
-      if (data instanceof Uint8Array) {
-        strings.push(decoder.decode(data, { stream: true }));
-      } else {
-        strings.push(data);
-      }
-    }
-    return strings.join("");
-  }
-  async readToBuffer(handle) {
-    const items = [];
-    for (; ; ) {
-      const data = await this.read(handle, 1024 * 1024);
-      if (data === null) {
-        break;
-      }
-      if (data instanceof Uint8Array) {
-        items.push(data);
-      } else {
-        throw new Error("Unexpected stream data type: expected binary, got a string");
-      }
-    }
-    let length = 0;
-    for (const item of items) {
-      length += item.length;
-    }
-    const result = new Uint8Array(length);
-    let offset = 0;
-    for (const item of items) {
-      result.set(item, offset);
-      offset += item.length;
-    }
-    return result;
-  }
-};
-SDKModel.register(IOModel, { capabilities: 131072 /* IO */, autostart: true });
-
-// ../../front_end/core/sdk/TargetManager.ts
-var TargetManager_exports = {};
-__export(TargetManager_exports, {
-  Events: () => Events6,
-  Observer: () => Observer,
-  SDKModelObserver: () => SDKModelObserver,
-  TargetManager: () => TargetManager
-});
-import * as Common10 from "../common/common.js";
-import * as Host2 from "../host/host.js";
-import * as Platform7 from "../platform/platform.js";
-import { assertNotNullOrUndefined as assertNotNullOrUndefined2 } from "../platform/platform.js";
-import * as Root2 from "../root/root.js";
-
-// ../../front_end/core/sdk/FrameManager.ts
-var FrameManager_exports = {};
-__export(FrameManager_exports, {
-  Events: () => Events5,
-  FrameManager: () => FrameManager
-});
-import * as Common9 from "../common/common.js";
-import * as Root from "../root/root.js";
-var FrameManager = class _FrameManager extends Common9.ObjectWrapper.ObjectWrapper {
-  #eventListeners = /* @__PURE__ */ new WeakMap();
-  // Maps frameIds to #frames and a count of how many ResourceTreeModels contain this frame.
-  // (OOPIFs are usually first attached to a new target and then detached from their old target,
-  // therefore being contained in 2 models for a short period of time.)
-  #frames = /* @__PURE__ */ new Map();
-  #framesForTarget = /* @__PURE__ */ new Map();
-  #outermostFrame = null;
-  #transferringFramesDataCache = /* @__PURE__ */ new Map();
-  #awaitedFrames = /* @__PURE__ */ new Map();
-  constructor(targetManager) {
-    super();
-    targetManager.observeModels(ResourceTreeModel, this);
-  }
-  static instance({ forceNew } = { forceNew: false }) {
-    if (!Root.DevToolsContext.globalInstance().has(_FrameManager) || forceNew) {
-      Root.DevToolsContext.globalInstance().set(_FrameManager, new _FrameManager(TargetManager.instance()));
-    }
-    return Root.DevToolsContext.globalInstance().get(_FrameManager);
-  }
-  static removeInstance() {
-    Root.DevToolsContext.globalInstance().delete(_FrameManager);
-  }
-  modelAdded(resourceTreeModel) {
-    const addListener = resourceTreeModel.addEventListener("FrameAdded" /* FrameAdded */, this.frameAdded, this);
-    const detachListener = resourceTreeModel.addEventListener("FrameDetached" /* FrameDetached */, this.frameDetached, this);
-    const navigatedListener = resourceTreeModel.addEventListener("FrameNavigated" /* FrameNavigated */, this.frameNavigated, this);
-    const resourceAddedListener = resourceTreeModel.addEventListener("ResourceAdded" /* ResourceAdded */, this.resourceAdded, this);
-    this.#eventListeners.set(
-      resourceTreeModel,
-      [addListener, detachListener, navigatedListener, resourceAddedListener]
-    );
-    this.#framesForTarget.set(resourceTreeModel.target().id(), /* @__PURE__ */ new Set());
-  }
-  modelRemoved(resourceTreeModel) {
-    const listeners = this.#eventListeners.get(resourceTreeModel);
-    if (listeners) {
-      Common9.EventTarget.removeEventListeners(listeners);
-    }
-    const frameSet = this.#framesForTarget.get(resourceTreeModel.target().id());
-    if (frameSet) {
-      for (const frameId of frameSet) {
-        this.decreaseOrRemoveFrame(frameId);
-      }
-    }
-    this.#framesForTarget.delete(resourceTreeModel.target().id());
-  }
-  frameAdded(event) {
-    const frame = event.data;
-    const frameData = this.#frames.get(frame.id);
-    if (frameData) {
-      frame.setCreationStackTrace(frameData.frame.getCreationStackTraceData());
-      this.#frames.set(frame.id, { frame, count: frameData.count + 1 });
-    } else {
-      const cachedFrameAttributes = this.#transferringFramesDataCache.get(frame.id);
-      if (cachedFrameAttributes?.creationStackTrace && cachedFrameAttributes?.creationStackTraceTarget) {
-        frame.setCreationStackTrace({
-          creationStackTrace: cachedFrameAttributes.creationStackTrace,
-          creationStackTraceTarget: cachedFrameAttributes.creationStackTraceTarget
-        });
-      }
-      this.#frames.set(frame.id, { frame, count: 1 });
-      this.#transferringFramesDataCache.delete(frame.id);
-    }
-    this.resetOutermostFrame();
-    const frameSet = this.#framesForTarget.get(frame.resourceTreeModel().target().id());
-    if (frameSet) {
-      frameSet.add(frame.id);
-    }
-    this.dispatchEventToListeners("FrameAddedToTarget" /* FRAME_ADDED_TO_TARGET */, { frame });
-    this.resolveAwaitedFrame(frame);
-  }
-  frameDetached(event) {
-    const { frame, isSwap } = event.data;
-    this.decreaseOrRemoveFrame(frame.id);
-    if (isSwap && !this.#frames.get(frame.id)) {
-      const traceData = frame.getCreationStackTraceData();
-      const cachedFrameAttributes = {
-        ...traceData.creationStackTrace && { creationStackTrace: traceData.creationStackTrace },
-        ...traceData.creationStackTrace && { creationStackTraceTarget: traceData.creationStackTraceTarget }
-      };
-      this.#transferringFramesDataCache.set(frame.id, cachedFrameAttributes);
-    }
-    const frameSet = this.#framesForTarget.get(frame.resourceTreeModel().target().id());
-    if (frameSet) {
-      frameSet.delete(frame.id);
-    }
-  }
-  frameNavigated(event) {
-    const frame = event.data;
-    this.dispatchEventToListeners("FrameNavigated" /* FRAME_NAVIGATED */, { frame });
-    if (frame.isOutermostFrame()) {
-      this.dispatchEventToListeners("OutermostFrameNavigated" /* OUTERMOST_FRAME_NAVIGATED */, { frame });
-    }
-  }
-  resourceAdded(event) {
-    this.dispatchEventToListeners("ResourceAdded" /* RESOURCE_ADDED */, { resource: event.data });
-  }
-  decreaseOrRemoveFrame(frameId) {
-    const frameData = this.#frames.get(frameId);
-    if (frameData) {
-      if (frameData.count === 1) {
-        this.#frames.delete(frameId);
-        this.resetOutermostFrame();
-        this.dispatchEventToListeners("FrameRemoved" /* FRAME_REMOVED */, { frameId });
-      } else {
-        frameData.count--;
-      }
-    }
-  }
-  /**
-   * Looks for the outermost frame in `#frames` and sets `#outermostFrame` accordingly.
-   *
-   * Important: This method needs to be called everytime `#frames` is updated.
-   */
-  resetOutermostFrame() {
-    const outermostFrames = this.getAllFrames().filter((frame) => frame.isOutermostFrame());
-    this.#outermostFrame = outermostFrames.length > 0 ? outermostFrames[0] : null;
-  }
-  /**
-   * Returns the ResourceTreeFrame with a given frameId.
-   * When a frame is being detached a new ResourceTreeFrame but with the same
-   * frameId is created. Consequently getFrame() will return a different
-   * ResourceTreeFrame after detachment. Callers of getFrame() should therefore
-   * immediately use the function return value and not store it for later use.
-   */
-  getFrame(frameId) {
-    const frameData = this.#frames.get(frameId);
-    if (frameData) {
-      return frameData.frame;
-    }
-    return null;
-  }
-  getAllFrames() {
-    return Array.from(this.#frames.values(), (frameData) => frameData.frame);
-  }
-  getOutermostFrame() {
-    return this.#outermostFrame;
-  }
-  async getOrWaitForFrame(frameId, notInTarget) {
-    const frame = this.getFrame(frameId);
-    if (frame && (!notInTarget || notInTarget !== frame.resourceTreeModel().target())) {
-      return frame;
-    }
-    return await new Promise((resolve) => {
-      const waiting = this.#awaitedFrames.get(frameId);
-      if (waiting) {
-        waiting.push({ notInTarget, resolve });
-      } else {
-        this.#awaitedFrames.set(frameId, [{ notInTarget, resolve }]);
-      }
-    });
-  }
-  resolveAwaitedFrame(frame) {
-    const waiting = this.#awaitedFrames.get(frame.id);
-    if (!waiting) {
-      return;
-    }
-    const newWaiting = waiting.filter(({ notInTarget, resolve }) => {
-      if (!notInTarget || notInTarget !== frame.resourceTreeModel().target()) {
-        resolve(frame);
-        return false;
-      }
-      return true;
-    });
-    if (newWaiting.length > 0) {
-      this.#awaitedFrames.set(frame.id, newWaiting);
-    } else {
-      this.#awaitedFrames.delete(frame.id);
-    }
-  }
-};
-var Events5 = /* @__PURE__ */ ((Events35) => {
-  Events35["FRAME_ADDED_TO_TARGET"] = "FrameAddedToTarget";
-  Events35["FRAME_NAVIGATED"] = "FrameNavigated";
-  Events35["FRAME_REMOVED"] = "FrameRemoved";
-  Events35["RESOURCE_ADDED"] = "ResourceAdded";
-  Events35["OUTERMOST_FRAME_NAVIGATED"] = "OutermostFrameNavigated";
-  return Events35;
-})(Events5 || {});
-
-// ../../front_end/core/sdk/TargetManager.ts
-var TargetManager = class _TargetManager extends Common10.ObjectWrapper.ObjectWrapper {
-  /**
-   * @deprecated
-   *
-   * Intended for {@link SDKModel} classes to be able to retrieve scoped singletons like
-   * the "PageResourceLoader" or the "FrameManager".
-   *
-   * This is only an intermediate step to migrate towards our "layering vision" where
-   * SDKModels don't require things from the next layer.
-   */
-  context;
-  #targets;
-  #observers;
-  get settings() {
-    return this.context.get(Common10.Settings.Settings);
-  }
-  // TODO(crbug.com/493763857): Remove fallback once all unit tests use TestUniverse.
-  getConsole() {
-    if ("has" in this.context && typeof this.context.has === "function" && !this.context.has(Common10.Console.Console)) {
-      return Common10.Console.Console.instance();
-    }
-    return this.context.get(Common10.Console.Console);
-  }
-  // TODO(crbug.com/493763857): Remove fallback once all unit tests use TestUniverse.
-  getFrameManager() {
-    if ("has" in this.context && typeof this.context.has === "function" && !this.context.has(FrameManager)) {
-      return FrameManager.instance();
-    }
-    return this.context.get(FrameManager);
-  }
-  // TODO(crbug.com/493763857): Remove fallback once all unit tests use TestUniverse.
-  getNetworkManager() {
-    if ("has" in this.context && typeof this.context.has === "function" && !this.context.has(MultitargetNetworkManager)) {
-      return MultitargetNetworkManager.instance();
-    }
-    return this.context.get(MultitargetNetworkManager);
-  }
-  // TODO(crbug.com/493763857): Remove fallback once all unit tests use TestUniverse.
-  getPageResourceLoader() {
-    if ("has" in this.context && typeof this.context.has === "function" && !this.context.has(PageResourceLoader)) {
-      return PageResourceLoader.instance();
-    }
-    return this.context.get(PageResourceLoader);
-  }
-  /* eslint-disable @typescript-eslint/no-explicit-any */
-  #modelListeners;
-  #modelObservers;
-  #scopedObservers;
-  /* eslint-enable @typescript-eslint/no-explicit-any */
-  #isSuspended;
-  #browserTarget;
-  #scopeTarget;
-  #defaultScopeSet;
-  #scopeChangeListeners;
-  #overrideAutoStartModels;
-  /**
-   * @param overrideAutoStartModels If provided, then the `autostart` flag on {@link RegistrationInfo} will be ignored.
-   */
-  constructor(context, overrideAutoStartModels) {
-    super();
-    this.context = context;
-    this.#targets = /* @__PURE__ */ new Set();
-    this.#observers = /* @__PURE__ */ new Set();
-    this.#modelListeners = new Platform7.MapUtilities.Multimap();
-    this.#modelObservers = new Platform7.MapUtilities.Multimap();
-    this.#isSuspended = false;
-    this.#browserTarget = null;
-    this.#scopeTarget = null;
-    this.#scopedObservers = /* @__PURE__ */ new WeakSet();
-    this.#defaultScopeSet = false;
-    this.#scopeChangeListeners = /* @__PURE__ */ new Set();
-    this.#overrideAutoStartModels = overrideAutoStartModels;
-  }
-  static instance({ forceNew } = { forceNew: false }) {
-    if (!Root2.DevToolsContext.globalInstance().has(_TargetManager) || forceNew) {
-      Root2.DevToolsContext.globalInstance().set(
-        _TargetManager,
-        new _TargetManager(Root2.DevToolsContext.globalInstance())
-      );
-    }
-    return Root2.DevToolsContext.globalInstance().get(_TargetManager);
-  }
-  static removeInstance() {
-    Root2.DevToolsContext.globalInstance().delete(_TargetManager);
-  }
-  // TODO(crbug.com/542394587): Should be `Symbol.dispose`
-  dispose() {
-    for (const target of this.targets()) {
-      target.dispose("TargetManager disposed");
-    }
-    if (this.#browserTarget) {
-      this.#browserTarget.dispose("TargetManager disposed");
-      this.#browserTarget = null;
-    }
-    this.#targets.clear();
-    this.#observers.clear();
-    this.#modelObservers.clear();
-    this.#modelListeners.clear();
-    this.#scopeChangeListeners.clear();
-    this.#scopeTarget = null;
-    this.#scopedObservers = /* @__PURE__ */ new WeakSet();
-  }
-  onInspectedURLChange(target) {
-    if (target !== this.#scopeTarget) {
-      return;
-    }
-    Host2.InspectorFrontendHost.InspectorFrontendHostInstance.inspectedURLChanged(
-      target.inspectedURL() || Platform7.DevToolsPath.EmptyUrlString
-    );
-    this.dispatchEventToListeners("InspectedURLChanged" /* INSPECTED_URL_CHANGED */, target);
-  }
-  onNameChange(target) {
-    this.dispatchEventToListeners("NameChanged" /* NAME_CHANGED */, target);
-  }
-  async suspendAllTargets(reason) {
-    if (this.#isSuspended) {
-      return;
-    }
-    this.#isSuspended = true;
-    this.dispatchEventToListeners("SuspendStateChanged" /* SUSPEND_STATE_CHANGED */);
-    const suspendPromises = Array.from(this.#targets.values(), (target) => target.suspend(reason));
-    await Promise.all(suspendPromises);
-  }
-  async #waitForPromiseWithTimeout(promise, timeoutMessage) {
-    const { promise: timeoutPromise, resolve: timeoutResolve } = Promise.withResolvers();
-    const timeoutId = globalThis.setTimeout(() => {
-      this.getConsole().warn(timeoutMessage);
-      timeoutResolve();
-    }, 2e3);
-    await Promise.race([promise, timeoutPromise]);
-    globalThis.clearTimeout(timeoutId);
-    timeoutResolve();
-  }
-  async resumeAllTargets() {
-    if (!this.#isSuspended) {
-      return;
-    }
-    this.#isSuspended = false;
-    this.dispatchEventToListeners("SuspendStateChanged" /* SUSPEND_STATE_CHANGED */);
-    const resumePromises = Array.from(this.#targets.values(), async (target) => {
-      await this.#waitForPromiseWithTimeout(target.resume(), `Timeout waiting for target ${target.name()} to resume`);
-    });
-    await Promise.all(resumePromises);
-  }
-  allTargetsSuspended() {
-    return this.#isSuspended;
-  }
-  models(modelClass, opts) {
-    const result = [];
-    for (const target of this.#targets) {
-      if (opts?.scoped && !this.isInScope(target)) {
-        continue;
-      }
-      const model = target.model(modelClass);
-      if (!model) {
-        continue;
-      }
-      result.push(model);
-    }
-    return result;
-  }
-  inspectedURL() {
-    const mainTarget = this.primaryPageTarget();
-    return mainTarget ? mainTarget.inspectedURL() : "";
-  }
-  observeModels(modelClass, observer, opts) {
-    const models = this.models(modelClass, opts);
-    this.#modelObservers.set(modelClass, observer);
-    if (opts?.scoped) {
-      this.#scopedObservers.add(observer);
-    }
-    for (const model of models) {
-      observer.modelAdded(model);
-    }
-  }
-  unobserveModels(modelClass, observer) {
-    this.#modelObservers.delete(modelClass, observer);
-    this.#scopedObservers.delete(observer);
-  }
-  modelAdded(modelClass, model, inScope) {
-    for (const observer of this.#modelObservers.get(modelClass).values()) {
-      if (!this.#scopedObservers.has(observer) || inScope) {
-        observer.modelAdded(model);
-      }
-    }
-  }
-  modelRemoved(modelClass, model, inScope) {
-    for (const observer of this.#modelObservers.get(modelClass).values()) {
-      if (!this.#scopedObservers.has(observer) || inScope) {
-        observer.modelRemoved(model);
-      }
-    }
-  }
-  addModelListener(modelClass, eventType, listener, thisObject, opts) {
-    const wrappedListener = (event) => {
-      if (!opts?.scoped || this.isInScope(event)) {
-        listener.call(thisObject, event);
-      }
-    };
-    for (const model of this.models(modelClass)) {
-      model.addEventListener(eventType, wrappedListener);
-    }
-    this.#modelListeners.set(eventType, { modelClass, thisObject, listener, wrappedListener });
-  }
-  removeModelListener(modelClass, eventType, listener, thisObject) {
-    if (!this.#modelListeners.has(eventType)) {
-      return;
-    }
-    let wrappedListener = null;
-    for (const info of this.#modelListeners.get(eventType)) {
-      if (info.modelClass === modelClass && info.listener === listener && info.thisObject === thisObject) {
-        wrappedListener = info.wrappedListener;
-        this.#modelListeners.delete(eventType, info);
-      }
-    }
-    if (wrappedListener) {
-      for (const model of this.models(modelClass)) {
-        model.removeEventListener(eventType, wrappedListener);
-      }
-    }
-  }
-  observeTargets(targetObserver, opts) {
-    if (this.#observers.has(targetObserver)) {
-      throw new Error("Observer can only be registered once");
-    }
-    if (opts?.scoped) {
-      this.#scopedObservers.add(targetObserver);
-    }
-    for (const target of this.#targets) {
-      if (!opts?.scoped || this.isInScope(target)) {
-        targetObserver.targetAdded(target);
-      }
-    }
-    this.#observers.add(targetObserver);
-  }
-  unobserveTargets(targetObserver) {
-    this.#observers.delete(targetObserver);
-    this.#scopedObservers.delete(targetObserver);
-  }
-  /** @returns The set of models we create unconditionally for new targets in the order in which they should be created */
-  #autoStartModels() {
-    const earlyModels = /* @__PURE__ */ new Set();
-    const models = /* @__PURE__ */ new Set();
-    const shouldAutostart = (model, info) => this.#overrideAutoStartModels ? this.#overrideAutoStartModels.has(model) : info.autostart;
-    for (const [model, info] of SDKModel.registeredModels) {
-      if (info.early) {
-        earlyModels.add(model);
-      } else if (shouldAutostart(model, info) || this.#modelObservers.has(model)) {
-        models.add(model);
-      }
-    }
-    return [...earlyModels, ...models];
-  }
-  createTarget(id, name, type, parentTarget, sessionId, waitForDebuggerInPage, connection, targetInfo) {
-    const target = new Target2(
-      this,
-      id,
-      name,
-      type,
-      parentTarget,
-      sessionId || "",
-      this.#isSuspended,
-      connection || null,
-      targetInfo
-    );
-    if (waitForDebuggerInPage) {
-      void target.pageAgent().invoke_waitForDebugger();
-    }
-    target.createModels(this.#autoStartModels());
-    this.#targets.add(target);
-    const inScope = this.isInScope(target);
-    for (const observer of [...this.#observers]) {
-      if (!this.#scopedObservers.has(observer) || inScope) {
-        observer.targetAdded(target);
-      }
-    }
-    for (const [modelClass, model] of target.models().entries()) {
-      this.modelAdded(modelClass, model, inScope);
-    }
-    for (const key of this.#modelListeners.keysArray()) {
-      for (const info of this.#modelListeners.get(key)) {
-        const model = target.model(info.modelClass);
-        if (model) {
-          model.addEventListener(key, info.wrappedListener);
-        }
-      }
-    }
-    if (target === target.outermostTarget() && (target.type() !== "frame" /* FRAME */ || target === this.primaryPageTarget()) && !this.#defaultScopeSet) {
-      this.setScopeTarget(target);
-    }
-    return target;
-  }
-  removeTarget(target) {
-    if (!this.#targets.has(target)) {
-      return;
-    }
-    const inScope = this.isInScope(target);
-    this.#targets.delete(target);
-    for (const modelClass of target.models().keys()) {
-      const model = target.models().get(modelClass);
-      assertNotNullOrUndefined2(model);
-      this.modelRemoved(modelClass, model, inScope);
-    }
-    for (const observer of [...this.#observers]) {
-      if (!this.#scopedObservers.has(observer) || inScope) {
-        observer.targetRemoved(target);
-      }
-    }
-    for (const key of this.#modelListeners.keysArray()) {
-      for (const info of this.#modelListeners.get(key)) {
-        const model = target.model(info.modelClass);
-        if (model) {
-          model.removeEventListener(key, info.wrappedListener);
-        }
-      }
-    }
-  }
-  targets() {
-    return [...this.#targets];
-  }
-  targetById(id) {
-    return this.targets().find((target) => target.id() === id) || null;
-  }
-  rootTarget() {
-    if (this.#targets.size === 0) {
-      return null;
-    }
-    return this.#targets.values().next().value ?? null;
-  }
-  primaryPageTarget() {
-    let target = this.rootTarget();
-    if (target?.type() === "tab" /* TAB */) {
-      target = this.targets().find(
-        (t) => t.parentTarget() === target && t.type() === "frame" /* FRAME */ && !t.targetInfo()?.subtype?.length
-      ) || null;
-    }
-    return target;
-  }
-  browserTarget() {
-    return this.#browserTarget;
-  }
-  async maybeAttachInitialTarget() {
-    if (!Boolean(Root2.Runtime.Runtime.queryParam("browserConnection"))) {
-      return false;
-    }
-    if (!this.#browserTarget) {
-      this.#browserTarget = new Target2(
-        this,
-        /* #id*/
-        "main",
-        /* #name*/
-        "browser",
-        "browser" /* BROWSER */,
-        /* #parentTarget*/
-        null,
-        /* #sessionId */
-        "",
-        /* suspended*/
-        false,
-        /* #connection*/
-        null,
-        /* targetInfo*/
-        void 0
-      );
-      this.#browserTarget.createModels(this.#autoStartModels());
-    }
-    const targetId = await Host2.InspectorFrontendHost.InspectorFrontendHostInstance.initialTargetId();
-    void this.#browserTarget.targetAgent().invoke_autoAttachRelated({
-      targetId,
-      waitForDebuggerOnStart: true
-    });
-    return true;
-  }
-  clearAllTargetsForTest() {
-    this.#targets.clear();
-  }
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  isInScope(arg) {
-    if (!arg) {
-      return false;
-    }
-    if (isSDKModelEvent(arg)) {
-      arg = arg.source;
-    }
-    if (arg instanceof SDKModel) {
-      arg = arg.target();
-    }
-    while (arg && arg !== this.#scopeTarget) {
-      arg = arg.parentTarget();
-    }
-    return Boolean(arg) && arg === this.#scopeTarget;
-  }
-  // Sets a root of a scope substree.
-  // TargetManager API invoked with `scoped: true` will behave as if targets
-  // outside of the scope subtree don't exist. Concretely this means that
-  // target observers, model observers and model listeners won't be invoked for targets outside of the
-  // scope tree. This method will invoke targetRemoved and modelRemoved for
-  // objects in the previous scope, as if they disappear and then will invoke
-  // targetAdded and modelAdded as if they just appeared.
-  // Note that scopeTarget could be null, which will effectively prevent scoped
-  // observes from getting any events.
-  setScopeTarget(scopeTarget) {
-    if (scopeTarget === this.#scopeTarget) {
-      return;
-    }
-    for (const target of this.targets()) {
-      if (!this.isInScope(target)) {
-        continue;
-      }
-      for (const modelClass of this.#modelObservers.keysArray()) {
-        const model = target.models().get(modelClass);
-        if (!model) {
-          continue;
-        }
-        for (const observer of [...this.#modelObservers.get(modelClass)].filter((o) => this.#scopedObservers.has(o))) {
-          observer.modelRemoved(model);
-        }
-      }
-      for (const observer of [...this.#observers].filter((o) => this.#scopedObservers.has(o))) {
-        observer.targetRemoved(target);
-      }
-    }
-    this.#scopeTarget = scopeTarget;
-    for (const target of this.targets()) {
-      if (!this.isInScope(target)) {
-        continue;
-      }
-      for (const observer of [...this.#observers].filter((o) => this.#scopedObservers.has(o))) {
-        observer.targetAdded(target);
-      }
-      for (const [modelClass, model] of target.models().entries()) {
-        for (const observer of [...this.#modelObservers.get(modelClass)].filter((o) => this.#scopedObservers.has(o))) {
-          observer.modelAdded(model);
-        }
-      }
-    }
-    for (const scopeChangeListener of this.#scopeChangeListeners) {
-      scopeChangeListener();
-    }
-    if (scopeTarget?.inspectedURL()) {
-      this.onInspectedURLChange(scopeTarget);
-    }
-  }
-  addScopeChangeListener(listener) {
-    this.#scopeChangeListeners.add(listener);
-  }
-  scopeTarget() {
-    return this.#scopeTarget;
-  }
-};
-var Events6 = /* @__PURE__ */ ((Events35) => {
-  Events35["AVAILABLE_TARGETS_CHANGED"] = "AvailableTargetsChanged";
-  Events35["INSPECTED_URL_CHANGED"] = "InspectedURLChanged";
-  Events35["NAME_CHANGED"] = "NameChanged";
-  Events35["SUSPEND_STATE_CHANGED"] = "SuspendStateChanged";
-  return Events35;
-})(Events6 || {});
-var Observer = class {
-  targetAdded(_target) {
-  }
-  targetRemoved(_target) {
-  }
-};
-var SDKModelObserver = class {
-  modelAdded(_model) {
-  }
-  modelRemoved(_model) {
-  }
-};
-function isSDKModelEvent(arg) {
-  return "source" in arg && arg.source instanceof SDKModel;
-}
-
-// ../../front_end/core/sdk/PageResourceLoader.ts
-var UIStrings3 = {
-  /**
-   * @description Error message for canceled source map loads.
-   */
-  loadCanceledDueToReloadOf: "Load canceled due to reload of inspected page"
-};
-var str_3 = i18n5.i18n.registerUIStrings("core/sdk/PageResourceLoader.ts", UIStrings3);
-var i18nString3 = i18n5.i18n.getLocalizedString.bind(void 0, str_3);
-function isExtensionInitiator(initiator) {
-  return "extensionId" in initiator;
-}
-var ResourceKey = class {
-  key;
-  constructor(key) {
-    this.key = key;
-  }
-};
-var PageResourceLoader = class _PageResourceLoader extends Common11.ObjectWrapper.ObjectWrapper {
-  #targetManager;
-  #settings;
-  #userAgentProvider;
-  #currentlyLoading = 0;
-  #currentlyLoadingPerTarget = /* @__PURE__ */ new Map();
-  #maxConcurrentLoads;
-  #pageResources = /* @__PURE__ */ new Map();
-  #queuedLoads = [];
-  #loadOverride;
-  constructor(targetManager, settings, userAgentProvider, loadOverride, maxConcurrentLoads = 500) {
-    super();
-    this.#targetManager = targetManager;
-    this.#settings = settings;
-    this.#userAgentProvider = userAgentProvider;
-    this.#maxConcurrentLoads = maxConcurrentLoads;
-    this.#targetManager.addModelListener(
-      ResourceTreeModel,
-      "PrimaryPageChanged" /* PrimaryPageChanged */,
-      this.onPrimaryPageChanged,
-      this
-    );
-    this.#loadOverride = loadOverride;
-  }
-  static instance({ forceNew, targetManager, settings, userAgentProvider, loadOverride, maxConcurrentLoads } = {
-    forceNew: false,
-    loadOverride: null
-  }) {
-    if (forceNew) {
-      Root3.DevToolsContext.globalInstance().set(
-        _PageResourceLoader,
-        new _PageResourceLoader(
-          targetManager ?? TargetManager.instance(),
-          settings ?? Common11.Settings.Settings.instance(),
-          userAgentProvider ?? MultitargetNetworkManager.instance(),
-          loadOverride,
-          maxConcurrentLoads
-        )
-      );
-    }
-    return Root3.DevToolsContext.globalInstance().get(_PageResourceLoader);
-  }
-  static removeInstance() {
-    Root3.DevToolsContext.globalInstance().delete(_PageResourceLoader);
-  }
-  onPrimaryPageChanged(event) {
-    const { frame: mainFrame, type } = event.data;
-    if (!mainFrame.isOutermostFrame()) {
-      return;
-    }
-    for (const { reject } of this.#queuedLoads) {
-      reject(new Error(i18nString3(UIStrings3.loadCanceledDueToReloadOf)));
-    }
-    this.#queuedLoads = [];
-    const mainFrameTarget = mainFrame.resourceTreeModel().target();
-    const keptResources = /* @__PURE__ */ new Map();
-    for (const [key, pageResource] of this.#pageResources.entries()) {
-      if (type === "Activation" /* ACTIVATION */ && mainFrameTarget === pageResource.initiator.target) {
-        keptResources.set(key, pageResource);
-      }
-    }
-    this.#pageResources = keptResources;
-    this.dispatchEventToListeners("Update" /* UPDATE */);
-  }
-  getResourcesLoaded() {
-    return this.#pageResources;
-  }
-  getScopedResourcesLoaded() {
-    return new Map([...this.#pageResources].filter(
-      ([_, pageResource]) => this.#targetManager.isInScope(pageResource.initiator.target) || isExtensionInitiator(pageResource.initiator)
-    ));
-  }
-  /**
-   * Loading is the number of currently loading and queued items. Resources is the total number of resources,
-   * including loading and queued resources, but not including resources that are still loading but scheduled
-   * for cancelation.;
-   */
-  getNumberOfResources() {
-    return { loading: this.#currentlyLoading, queued: this.#queuedLoads.length, resources: this.#pageResources.size };
-  }
-  getScopedNumberOfResources() {
-    let loadingCount = 0;
-    for (const [targetId, count] of this.#currentlyLoadingPerTarget) {
-      const target = this.#targetManager.targetById(targetId);
-      if (this.#targetManager.isInScope(target)) {
-        loadingCount += count;
-      }
-    }
-    return { loading: loadingCount, resources: this.getScopedResourcesLoaded().size };
-  }
-  async acquireLoadSlot(target) {
-    this.#currentlyLoading++;
-    if (target) {
-      const currentCount = this.#currentlyLoadingPerTarget.get(target.id()) || 0;
-      this.#currentlyLoadingPerTarget.set(target.id(), currentCount + 1);
-    }
-    if (this.#currentlyLoading > this.#maxConcurrentLoads) {
-      const {
-        promise: waitForCapacity,
-        resolve,
-        reject
-      } = Promise.withResolvers();
-      this.#queuedLoads.push({ resolve, reject });
-      await waitForCapacity;
-    }
-  }
-  releaseLoadSlot(target) {
-    this.#currentlyLoading--;
-    if (target) {
-      const currentCount = this.#currentlyLoadingPerTarget.get(target.id());
-      if (currentCount) {
-        this.#currentlyLoadingPerTarget.set(target.id(), currentCount - 1);
-      }
-    }
-    const entry = this.#queuedLoads.shift();
-    if (entry) {
-      entry.resolve();
-    }
-  }
-  static makeExtensionKey(url, initiator) {
-    if (isExtensionInitiator(initiator) && initiator.extensionId) {
-      return `${url}-${initiator.extensionId}`;
-    }
-    throw new Error("Invalid initiator");
-  }
-  static makeKey(url, initiator) {
-    if (initiator.frameId) {
-      return `${url}-${initiator.frameId}`;
-    }
-    if (initiator.target) {
-      return `${url}-${initiator.target.id()}`;
-    }
-    throw new Error("Invalid initiator");
-  }
-  resourceLoadedThroughExtension(pageResource) {
-    const key = _PageResourceLoader.makeExtensionKey(pageResource.url, pageResource.initiator);
-    this.#pageResources.set(key, pageResource);
-    this.dispatchEventToListeners("Update" /* UPDATE */);
-  }
-  async loadResource(url, initiator, isBinary = false) {
-    if (isExtensionInitiator(initiator)) {
-      throw new Error("Invalid initiator");
-    }
-    const key = _PageResourceLoader.makeKey(url, initiator);
-    const pageResource = {
-      success: null,
-      size: null,
-      duration: null,
-      url,
-      initiator
-    };
-    this.#pageResources.set(key, pageResource);
-    this.dispatchEventToListeners("Update" /* UPDATE */);
-    const startTime = performance.now();
-    try {
-      await this.acquireLoadSlot(initiator.target);
-      const resultPromise = this.dispatchLoad(url, initiator, isBinary);
-      const result = await resultPromise;
-      pageResource.errorMessage = result.errorDescription.message;
-      pageResource.success = result.success;
-      if (result.success) {
-        pageResource.size = result.content.length;
-        return { content: result.content };
-      }
-      throw new Error(result.errorDescription.message);
-    } catch (e) {
-      if (pageResource.errorMessage === void 0) {
-        pageResource.errorMessage = e.message;
-      }
-      if (pageResource.success === null) {
-        pageResource.success = false;
-      }
-      throw e;
-    } finally {
-      pageResource.duration = performance.now() - startTime;
-      this.releaseLoadSlot(initiator.target);
-      this.dispatchEventToListeners("Update" /* UPDATE */);
-    }
-  }
-  async dispatchLoad(url, initiator, isBinary) {
-    if (isExtensionInitiator(initiator)) {
-      throw new Error("Invalid initiator");
-    }
-    const failureReason = null;
-    if (this.#loadOverride) {
-      return await this.#loadOverride(url);
-    }
-    const parsedURL = new Common11.ParsedURL.ParsedURL(url);
-    const eligibleForLoadFromTarget = this.getLoadThroughTargetSetting().get() && parsedURL && parsedURL.scheme !== "file" && parsedURL.scheme !== "data" && parsedURL.scheme !== "devtools" && initiator.target;
-    Host3.userMetrics.developerResourceScheme(this.getDeveloperResourceScheme(parsedURL));
-    if (eligibleForLoadFromTarget) {
-      const isHttp = parsedURL.scheme === "http" || parsedURL.scheme === "https";
-      let mustEnforceCSP = isHttp;
-      if (isHttp && initiator.target) {
-        const networkManager = initiator.target.model(NetworkManager);
-        if (networkManager) {
-          let status = await networkManager.getSecurityIsolationStatus(initiator.frameId);
-          if (!status && initiator.frameId) {
-            status = await networkManager.getSecurityIsolationStatus(null);
-          }
-          if (status) {
-            const csps = status.csp ?? [];
-            mustEnforceCSP = csps.some((csp) => csp.effectiveDirectives.includes("connect-src") || csp.effectiveDirectives.includes("default-src"));
-          }
-        }
-      }
-      try {
-        Host3.userMetrics.developerResourceLoaded(Host3.UserMetrics.DeveloperResourceLoaded.LOAD_THROUGH_PAGE_VIA_TARGET);
-        const result2 = await this.loadFromTarget(initiator.target, initiator.frameId, url, isBinary);
-        return result2;
-      } catch (e) {
-        if (e instanceof Error) {
-          Host3.userMetrics.developerResourceLoaded(Host3.UserMetrics.DeveloperResourceLoaded.LOAD_THROUGH_PAGE_FAILURE);
-          if (mustEnforceCSP || e.message.includes("CSP violation")) {
-            return {
-              success: false,
-              content: "",
-              errorDescription: {
-                statusCode: 0,
-                message: e.message
-              }
-            };
-          }
-        }
-      }
-      Host3.userMetrics.developerResourceLoaded(Host3.UserMetrics.DeveloperResourceLoaded.LOAD_THROUGH_PAGE_FALLBACK);
-    } else {
-      const code = this.getLoadThroughTargetSetting().get() ? Host3.UserMetrics.DeveloperResourceLoaded.FALLBACK_PER_PROTOCOL : Host3.UserMetrics.DeveloperResourceLoaded.FALLBACK_PER_OVERRIDE;
-      Host3.userMetrics.developerResourceLoaded(code);
-    }
-    const result = await this.loadFromHostBindings(url);
-    if (eligibleForLoadFromTarget && !result.success) {
-      Host3.userMetrics.developerResourceLoaded(Host3.UserMetrics.DeveloperResourceLoaded.FALLBACK_FAILURE);
-    }
-    if (failureReason) {
-      result.errorDescription.message = `Fetch through target failed: ${failureReason}; Fallback: ${result.errorDescription.message}`;
-    }
-    return result;
-  }
-  getDeveloperResourceScheme(parsedURL) {
-    if (!parsedURL || parsedURL.scheme === "") {
-      return Host3.UserMetrics.DeveloperResourceScheme.UKNOWN;
-    }
-    const isLocalhost = parsedURL.host === "localhost" || parsedURL.host.endsWith(".localhost");
-    switch (parsedURL.scheme) {
-      case "file":
-        return Host3.UserMetrics.DeveloperResourceScheme.FILE;
-      case "data":
-        return Host3.UserMetrics.DeveloperResourceScheme.DATA;
-      case "blob":
-        return Host3.UserMetrics.DeveloperResourceScheme.BLOB;
-      case "http":
-        return isLocalhost ? Host3.UserMetrics.DeveloperResourceScheme.HTTP_LOCALHOST : Host3.UserMetrics.DeveloperResourceScheme.HTTP;
-      case "https":
-        return isLocalhost ? Host3.UserMetrics.DeveloperResourceScheme.HTTPS_LOCALHOST : Host3.UserMetrics.DeveloperResourceScheme.HTTPS;
-    }
-    return Host3.UserMetrics.DeveloperResourceScheme.OTHER;
-  }
-  async loadFromTarget(target, frameId, url, isBinary) {
-    const networkManager = target.model(NetworkManager);
-    const ioModel = target.model(IOModel);
-    const disableCache = this.#settings.resolve(cacheDisabledSettingDescriptor).get();
-    const resource = await networkManager.loadNetworkResource(frameId, url, { disableCache, includeCredentials: true });
-    try {
-      const content = resource.stream ? isBinary ? await ioModel.readToBuffer(resource.stream) : await ioModel.readToString(resource.stream) : "";
-      return {
-        success: resource.success,
-        content,
-        errorDescription: {
-          statusCode: resource.httpStatusCode || 0,
-          netError: resource.netError,
-          netErrorName: resource.netErrorName,
-          message: Host3.ResourceLoader.netErrorToMessage(
-            resource.netError,
-            resource.httpStatusCode,
-            resource.netErrorName
-          ) || ""
-        }
-      };
-    } finally {
-      if (resource.stream) {
-        void ioModel.close(resource.stream);
-      }
-    }
-  }
-  async loadFromHostBindings(url) {
-    const headers = {};
-    const currentUserAgent = this.#userAgentProvider.currentUserAgent();
-    if (currentUserAgent) {
-      headers["User-Agent"] = currentUserAgent;
-    }
-    if (this.#settings.resolve(cacheDisabledSettingDescriptor).get()) {
-      headers["Cache-Control"] = "no-cache";
-    }
-    const allowRemoteFilePaths = this.#settings.resolve(enableRemoteFileLoadingSettingDescriptor).get();
-    return await new Promise(
-      (resolve) => Host3.ResourceLoader.load(url, headers, (success, _responseHeaders, content, errorDescription) => {
-        resolve({ success, content, errorDescription });
-      }, allowRemoteFilePaths)
-    );
-  }
-  getLoadThroughTargetSetting() {
-    return this.#settings.createSetting("load-through-target", true);
-  }
-};
-var Events7 = /* @__PURE__ */ ((Events35) => {
-  Events35["UPDATE"] = "Update";
-  return Events35;
-})(Events7 || {});
-
 // ../../front_end/core/sdk/SourceMap.ts
 var SourceMap_exports = {};
 __export(SourceMap_exports, {
   SourceMap: () => SourceMap,
   SourceMapEntry: () => SourceMapEntry,
+  SourceMapProvenance: () => SourceMapProvenance,
   TokenIterator: () => TokenIterator,
   parseSourceMap: () => parseSourceMap
 });
 import * as ScopesCodec from "../../third_party/source-map-scopes-codec/source-map-scopes-codec.js";
-import * as Common12 from "../common/common.js";
-import * as Platform8 from "../platform/platform.js";
+import * as Common8 from "../common/common.js";
+import * as Platform7 from "../platform/platform.js";
 import * as TextUtils15 from "../text_utils/text_utils.js";
 
 // ../../front_end/core/sdk/ScopeTreeCache.ts
@@ -23142,8 +22036,8 @@ var SourceMapScopeChainEntry_exports = {};
 __export(SourceMapScopeChainEntry_exports, {
   SourceMapScopeChainEntry: () => SourceMapScopeChainEntry
 });
-import * as i18n7 from "../i18n/i18n.js";
-var UIStrings4 = {
+import * as i18n5 from "../i18n/i18n.js";
+var UIStrings3 = {
   /**
    * @description Title of a section in the debugger showing local JavaScript variables.
    */
@@ -23169,8 +22063,8 @@ var UIStrings4 = {
    */
   returnValue: "Return value"
 };
-var str_4 = i18n7.i18n.registerUIStrings("core/sdk/SourceMapScopeChainEntry.ts", UIStrings4);
-var i18nString4 = i18n7.i18n.getLocalizedString.bind(void 0, str_4);
+var str_3 = i18n5.i18n.registerUIStrings("core/sdk/SourceMapScopeChainEntry.ts", UIStrings3);
+var i18nString3 = i18n5.i18n.getLocalizedString.bind(void 0, str_3);
 var SourceMapScopeChainEntry = class {
   #callFrame;
   #scope;
@@ -23178,6 +22072,7 @@ var SourceMapScopeChainEntry = class {
   #isInnerMostFunction;
   #returnValue;
   #scopeNumber;
+  #object;
   /**
    * @param isInnerMostFunction If `scope` is the innermost 'function' scope. Only used for labeling as we name the
    * scope of the paused function 'Local', while other outer 'function' scopes are named 'Closure'.
@@ -23192,11 +22087,14 @@ var SourceMapScopeChainEntry = class {
     this.#returnValue = returnValue;
     this.#scopeNumber = scopeNumber;
   }
+  originalScope() {
+    return this.#scope;
+  }
   extraProperties() {
     const extraProperties = [];
     if (this.#isInnerMostFunction && this.#callFrame.exception) {
       extraProperties.push(new RemoteObjectProperty(
-        i18nString4(UIStrings4.exception),
+        i18nString3(UIStrings3.exception),
         this.#callFrame.exception,
         void 0,
         void 0,
@@ -23209,7 +22107,7 @@ var SourceMapScopeChainEntry = class {
     }
     if (this.#returnValue) {
       extraProperties.push(new RemoteObjectProperty(
-        i18nString4(UIStrings4.returnValue),
+        i18nString3(UIStrings3.returnValue),
         this.#returnValue,
         void 0,
         void 0,
@@ -23240,13 +22138,13 @@ var SourceMapScopeChainEntry = class {
   }
   typeName() {
     if (this.#scope.isStackFrame) {
-      return this.#isInnerMostFunction ? i18nString4(UIStrings4.local) : i18nString4(UIStrings4.closure);
+      return this.#isInnerMostFunction ? i18nString3(UIStrings3.local) : i18nString3(UIStrings3.closure);
     }
     switch (this.#scope.kind?.toLowerCase()) {
       case "global":
-        return i18nString4(UIStrings4.global);
+        return i18nString3(UIStrings3.global);
       case "block":
-        return i18nString4(UIStrings4.block);
+        return i18nString3(UIStrings3.block);
     }
     return this.#scope.kind ?? "";
   }
@@ -23257,7 +22155,10 @@ var SourceMapScopeChainEntry = class {
     return null;
   }
   object() {
-    return new SourceMapScopeRemoteObject(this.#callFrame, this.#scope, this.#range, this.#scopeNumber);
+    if (!this.#object) {
+      this.#object = new SourceMapScopeRemoteObject(this.#callFrame, this.#scope, this.#range, this.#scopeNumber);
+    }
+    return this.#object;
   }
   description() {
     return "";
@@ -23271,6 +22172,8 @@ var SourceMapScopeRemoteObject = class _SourceMapScopeRemoteObject extends Remot
   #scope;
   #range;
   #scopeNumber;
+  #propertiesPromise;
+  #cachedWithPreview = false;
   constructor(callFrame, scope, range, scopeNumber) {
     super(
       callFrame.debuggerModel.runtimeModel(),
@@ -23291,59 +22194,98 @@ var SourceMapScopeRemoteObject = class _SourceMapScopeRemoteObject extends Remot
     if (accessorPropertiesOnly) {
       return { properties: [], internalProperties: [] };
     }
+    if (!this.#propertiesPromise || generatePreview && !this.#cachedWithPreview) {
+      this.#cachedWithPreview = generatePreview;
+      this.#propertiesPromise = this.#evaluateProperties(generatePreview);
+    }
+    return await this.#propertiesPromise;
+  }
+  async #evaluateProperties(generatePreview) {
     if (this.#scope.variables.length === 0) {
       return { properties: [], internalProperties: [] };
     }
     const expressions = this.#scope.variables.map((_, index) => this.#findExpression(index));
-    if (expressions.every((expr) => expr === null)) {
-      const properties2 = this.#scope.variables.map((v) => _SourceMapScopeRemoteObject.#unavailableProperty(v));
-      return { properties: properties2, internalProperties: [] };
-    }
-    const spreadEntries = [];
-    for (const [index, expr] of expressions.entries()) {
-      if (expr !== null) {
-        spreadEntries.push(`...(() => { try { return {${index}: eval(${JSON.stringify(expr)})}; } catch {} })()`);
+    const values = await this.#evaluateAsBatch(expressions, generatePreview) ?? await this.#evaluateSeparately(expressions, generatePreview);
+    const properties = this.#scope.variables.map((variable, index) => {
+      const value = values[index];
+      if (value === null) {
+        return _SourceMapScopeRemoteObject.#unavailableProperty(variable);
+      }
+      return new RemoteObjectProperty(
+        variable,
+        value,
+        /* enumerable */
+        false,
+        /* writable */
+        false,
+        /* isOwn */
+        true,
+        /* wasThrown */
+        false
+      );
+    });
+    return { properties, internalProperties: [] };
+  }
+  /**
+   * Evaluates all binding expressions of this scope with a single `evaluateOnCallFrame` call.
+   *
+   * We build an object literal that spreads in one `{index: value}` object per binding, each produced by
+   * its own arrow function wrapped in `try`/`catch`. A binding that throws contributes nothing, which is
+   * how we tell it apart from one that legitimately evaluates to `undefined`, and it doesn't take the
+   * rest of the scope down with it.
+   *
+   * The expressions are inlined rather than passed to `eval`. `eval` in the evaluated code is the page's
+   * `eval`, which a `script-src` CSP without `'unsafe-eval'` blocks. `Runtime.evaluate` can opt out of
+   * that via `allowUnsafeEvalBlockedByCSP`, but `Debugger.evaluateOnCallFrame` has no such option.
+   * Inlining also means we don't introduce bindings of our own that could shadow the names a binding
+   * expression refers to, and arrow functions keep `this` pointing at the paused frame's receiver.
+   *
+   * @returns The value for each expression, or null if the batch failed as a whole. The latter happens
+   *          when a binding expression doesn't parse, since that takes out the entire object literal.
+   */
+  async #evaluateAsBatch(expressions, generatePreview) {
+    const spreads = [];
+    for (const [index, expression] of expressions.entries()) {
+      if (expression !== null) {
+        spreads.push(`...(() => { try { return {${index}: (${expression})}; } catch {} })()`);
       }
     }
-    const batchExpression = `({ __proto__: null, ${spreadEntries.join(", ")} })`;
+    if (spreads.length === 0) {
+      return expressions.map(() => null);
+    }
     const result = await this.#callFrame.evaluate({
-      expression: batchExpression,
+      expression: `({__proto__: null, ${spreads.join(", ")}})`,
+      // The wrapper object is a throw-away. We only need previews for the values inside of it.
       generatePreview: false,
       scopeNumber: this.#scopeNumber
     });
     if ("error" in result || result.exceptionDetails || !result.object) {
-      const properties2 = this.#scope.variables.map((v) => _SourceMapScopeRemoteObject.#unavailableProperty(v));
-      return { properties: properties2, internalProperties: [] };
+      return null;
     }
-    const { properties: objectProperties } = await result.object.getOwnProperties(generatePreview);
+    const { properties } = await result.object.getOwnProperties(generatePreview);
     result.object.release();
-    const propertyMap = /* @__PURE__ */ new Map();
-    if (objectProperties) {
-      for (const prop of objectProperties) {
-        propertyMap.set(prop.name, prop);
+    const valueByIndex = new Map(properties?.map(({ name, value }) => [name, value]));
+    return expressions.map((_, index) => valueByIndex.get(String(index)) ?? null);
+  }
+  /**
+   * Fallback for when {@link #evaluateAsBatch} fails as a whole, so that a single binding expression
+   * that doesn't parse only costs us that one variable.
+   */
+  async #evaluateSeparately(expressions, generatePreview) {
+    const values = [];
+    for (const expression of expressions) {
+      if (expression === null) {
+        values.push(null);
+        continue;
       }
-    }
-    const properties = [];
-    for (const [index, variable] of this.#scope.variables.entries()) {
-      const prop = propertyMap.get(String(index));
-      if (!prop || !prop.value) {
-        properties.push(_SourceMapScopeRemoteObject.#unavailableProperty(variable));
+      const result = await this.#callFrame.evaluate({ expression, generatePreview, scopeNumber: this.#scopeNumber });
+      if ("error" in result || result.exceptionDetails) {
+        values.push(null);
       } else {
-        properties.push(new RemoteObjectProperty(
-          variable,
-          prop.value,
-          /* enumerable */
-          false,
-          /* writable */
-          false,
-          /* isOwn */
-          true,
-          /* wasThrown */
-          false
-        ));
+        values.push(result.object);
       }
     }
-    return { properties, internalProperties: [] };
+    return values;
   }
   /** @returns null if the variable is unavailable at the current paused location */
   #findExpression(index) {
@@ -23354,7 +22296,7 @@ var SourceMapScopeRemoteObject = class _SourceMapScopeRemoteObject extends Remot
     if (typeof expressionOrSubRanges === "string") {
       return expressionOrSubRanges;
     }
-    if (expressionOrSubRanges === null || expressionOrSubRanges === void 0) {
+    if (!expressionOrSubRanges) {
       return null;
     }
     const pausedPosition = this.#callFrame.location();
@@ -23908,6 +22850,12 @@ var SourceMapEntry = class {
     return entry1.columnNumber - entry2.columnNumber;
   }
 };
+var SourceMapProvenance = /* @__PURE__ */ ((SourceMapProvenance2) => {
+  SourceMapProvenance2["CDP"] = "cdp";
+  SourceMapProvenance2["EXTENSION"] = "extension";
+  SourceMapProvenance2["USER"] = "user";
+  return SourceMapProvenance2;
+})(SourceMapProvenance || {});
 var SourceMap = class _SourceMap {
   static retainRawSourceMaps = false;
   #json;
@@ -23922,24 +22870,29 @@ var SourceMap = class _SourceMap {
   #debugId;
   #scopesFallbackPromise;
   #console;
+  #provenance;
   /**
    * Implements Source Map V3 model. See https://github.com/google/closure-compiler/wiki/Source-Maps
    * for format description.
    */
-  constructor(compiledURL, sourceMappingURL, payload, console2, script) {
+  constructor(compiledURL, sourceMappingURL, payload, console2, script, provenance = "cdp" /* CDP */) {
     this.#json = payload;
     this.#script = script;
     this.#compiledURL = compiledURL;
     this.#sourceMappingURL = sourceMappingURL;
-    this.#baseURL = Common12.ParsedURL.schemeIs(sourceMappingURL, "data:") ? compiledURL : sourceMappingURL;
+    this.#baseURL = Common8.ParsedURL.schemeIs(sourceMappingURL, "data:") ? compiledURL : sourceMappingURL;
     this.#debugId = "debugId" in payload ? payload.debugId : void 0;
     this.#console = console2;
+    this.#provenance = provenance;
     if ("sections" in this.#json) {
       if (this.#json.sections.find((section) => "url" in section)) {
         this.#console.warn(`SourceMap "${sourceMappingURL}" contains unsupported "URL" field in one of its sections.`);
       }
     }
     this.eachSection(this.parseSources.bind(this));
+  }
+  provenance() {
+    return this.#provenance;
   }
   json() {
     return this.#json;
@@ -23999,7 +22952,7 @@ var SourceMap = class _SourceMap {
   findEntry(lineNumber, columnNumber) {
     this.#ensureSourceMapProcessed();
     const mappings = this.mappings();
-    const index = Platform8.ArrayUtilities.upperBound(
+    const index = Platform7.ArrayUtilities.upperBound(
       mappings,
       void 0,
       (_, entry) => lineNumber - entry.lineNumber || columnNumber - entry.columnNumber
@@ -24016,7 +22969,7 @@ var SourceMap = class _SourceMap {
   }
   findEntryRanges(lineNumber, columnNumber) {
     const mappings = this.mappings();
-    const endIndex = Platform8.ArrayUtilities.upperBound(
+    const endIndex = Platform7.ArrayUtilities.upperBound(
       mappings,
       void 0,
       (_, entry) => lineNumber - entry.lineNumber || columnNumber - entry.columnNumber
@@ -24040,7 +22993,7 @@ var SourceMap = class _SourceMap {
     const reverseMappings = this.reversedMappings(sourceURL);
     const startSourceLine = mappings[startIndex].sourceLineNumber;
     const startSourceColumn = mappings[startIndex].sourceColumnNumber;
-    const endReverseIndex = Platform8.ArrayUtilities.upperBound(
+    const endReverseIndex = Platform7.ArrayUtilities.upperBound(
       reverseMappings,
       void 0,
       (_, i) => startSourceLine - mappings[i].sourceLineNumber || startSourceColumn - mappings[i].sourceColumnNumber
@@ -24056,8 +23009,8 @@ var SourceMap = class _SourceMap {
   sourceLineMapping(sourceURL, lineNumber, columnNumber) {
     const mappings = this.mappings();
     const reverseMappings = this.reversedMappings(sourceURL);
-    const first = Platform8.ArrayUtilities.lowerBound(reverseMappings, lineNumber, lineComparator);
-    const last = Platform8.ArrayUtilities.upperBound(reverseMappings, lineNumber, lineComparator);
+    const first = Platform7.ArrayUtilities.lowerBound(reverseMappings, lineNumber, lineComparator);
+    const last = Platform7.ArrayUtilities.upperBound(reverseMappings, lineNumber, lineComparator);
     if (first >= reverseMappings.length || mappings[reverseMappings[first]].sourceLineNumber !== lineNumber) {
       return null;
     }
@@ -24065,7 +23018,7 @@ var SourceMap = class _SourceMap {
     if (!columnMappings.length) {
       return null;
     }
-    const index = Platform8.ArrayUtilities.lowerBound(
+    const index = Platform7.ArrayUtilities.lowerBound(
       columnMappings,
       columnNumber,
       (columnNumber2, i) => columnNumber2 - mappings[i].sourceColumnNumber
@@ -24078,7 +23031,7 @@ var SourceMap = class _SourceMap {
   findReverseIndices(sourceURL, lineNumber, columnNumber) {
     const mappings = this.mappings();
     const reverseMappings = this.reversedMappings(sourceURL);
-    const endIndex = Platform8.ArrayUtilities.upperBound(
+    const endIndex = Platform7.ArrayUtilities.upperBound(
       reverseMappings,
       void 0,
       (_, i) => lineNumber - mappings[i].sourceLineNumber || columnNumber - mappings[i].sourceColumnNumber
@@ -24207,14 +23160,14 @@ var SourceMap = class _SourceMap {
     const ignoreList = new Set(sourceMap.ignoreList ?? sourceMap.x_google_ignoreList);
     for (let i = 0; i < sourceMap.sources.length; ++i) {
       let href = sourceMap.sources[i];
-      if (Common12.ParsedURL.ParsedURL.isRelativeURL(href)) {
+      if (Common8.ParsedURL.ParsedURL.isRelativeURL(href)) {
         if (sourceRoot && !sourceRoot.endsWith("/") && href && !href.startsWith("/")) {
           href = sourceRoot.concat("/", href);
         } else {
           href = sourceRoot.concat(href);
         }
       }
-      const url = Common12.ParsedURL.ParsedURL.completeURL(this.#baseURL, href) || href;
+      const url = Common8.ParsedURL.ParsedURL.completeURL(this.#baseURL, href) || href;
       const source = sourceMap.sourcesContent?.[i];
       const sourceInfo = {
         sourceURL: url,
@@ -24381,7 +23334,7 @@ var SourceMap = class _SourceMap {
     if (reverseMappings.length === 0) {
       return [];
     }
-    let startReverseIndex = Platform8.ArrayUtilities.lowerBound(reverseMappings, textRange, ({ startLine, startColumn }, index) => {
+    let startReverseIndex = Platform7.ArrayUtilities.lowerBound(reverseMappings, textRange, ({ startLine, startColumn }, index) => {
       const { sourceLineNumber, sourceColumnNumber } = mappings[index];
       return startLine - sourceLineNumber || startColumn - sourceColumnNumber;
     });
@@ -24481,7 +23434,7 @@ var SourceMap = class _SourceMap {
   }
   resolveScopeChain(frame) {
     this.#ensureSourceMapProcessed();
-    if (this.#scopesInfo === null) {
+    if (this.#provenance === "user" /* USER */ || !this.#scopesInfo?.hasVariablesAndBindings()) {
       return null;
     }
     return this.#scopesInfo.resolveMappedScopeChain(frame);
@@ -24572,7 +23525,7 @@ var TokenIterator = class {
         throw new Error("Unsigned VLQ number does not fit into 32 bits!");
       }
       const charCode = this.nextCharCode();
-      digit = Common12.Base64.BASE64_CODES[charCode];
+      digit = Common8.Base64.BASE64_CODES[charCode];
       if (charCode !== 65 && digit === 0) {
         throw new Error(`Unexpected char '${String.fromCharCode(charCode)}' encountered while decoding`);
       }
@@ -24599,6 +23552,1113 @@ var TokenIterator = class {
     }
   }
 };
+
+// ../../front_end/core/sdk/SourceMapManager.ts
+var SourceMapManager_exports = {};
+__export(SourceMapManager_exports, {
+  Events: () => Events8,
+  SourceMapManager: () => SourceMapManager,
+  lazyLoadingSettingDescriptor: () => lazyLoadingSettingDescriptor,
+  tryLoadSourceMap: () => tryLoadSourceMap
+});
+import * as Common13 from "../common/common.js";
+import * as Platform10 from "../platform/platform.js";
+
+// ../../front_end/core/sdk/PageResourceLoader.ts
+var PageResourceLoader_exports = {};
+__export(PageResourceLoader_exports, {
+  Events: () => Events7,
+  PageResourceLoader: () => PageResourceLoader,
+  ResourceKey: () => ResourceKey
+});
+import * as Common12 from "../common/common.js";
+import * as Host3 from "../host/host.js";
+import * as i18n7 from "../i18n/i18n.js";
+import * as Root3 from "../root/root.js";
+
+// ../../front_end/core/sdk/IOModel.ts
+var IOModel_exports = {};
+__export(IOModel_exports, {
+  IOModel: () => IOModel
+});
+import * as Common9 from "../common/common.js";
+var IOModel = class extends SDKModel {
+  async read(handle, size, offset) {
+    const result = await this.target().ioAgent().invoke_read({ handle, offset, size });
+    if (result.getError()) {
+      throw new Error(result.getError());
+    }
+    if (result.eof) {
+      return null;
+    }
+    if (result.base64Encoded) {
+      return Common9.Base64.decode(result.data);
+    }
+    return result.data;
+  }
+  async close(handle) {
+    await this.target().ioAgent().invoke_close({ handle });
+  }
+  async resolveBlob(objectOrObjectId) {
+    const objectId = objectOrObjectId instanceof RemoteObject ? objectOrObjectId.objectId : objectOrObjectId;
+    if (!objectId) {
+      throw new Error("Remote object has undefined objectId");
+    }
+    const result = await this.target().ioAgent().invoke_resolveBlob({ objectId });
+    if (result.getError()) {
+      throw new Error(result.getError());
+    }
+    return `blob:${result.uuid}`;
+  }
+  async readToString(handle) {
+    const strings = [];
+    const decoder = new TextDecoder();
+    for (; ; ) {
+      const data = await this.read(handle, 1024 * 1024);
+      if (data === null) {
+        strings.push(decoder.decode());
+        break;
+      }
+      if (data instanceof Uint8Array) {
+        strings.push(decoder.decode(data, { stream: true }));
+      } else {
+        strings.push(data);
+      }
+    }
+    return strings.join("");
+  }
+  async readToBuffer(handle) {
+    const items = [];
+    for (; ; ) {
+      const data = await this.read(handle, 1024 * 1024);
+      if (data === null) {
+        break;
+      }
+      if (data instanceof Uint8Array) {
+        items.push(data);
+      } else {
+        throw new Error("Unexpected stream data type: expected binary, got a string");
+      }
+    }
+    let length = 0;
+    for (const item of items) {
+      length += item.length;
+    }
+    const result = new Uint8Array(length);
+    let offset = 0;
+    for (const item of items) {
+      result.set(item, offset);
+      offset += item.length;
+    }
+    return result;
+  }
+};
+SDKModel.register(IOModel, { capabilities: 131072 /* IO */, autostart: true });
+
+// ../../front_end/core/sdk/TargetManager.ts
+var TargetManager_exports = {};
+__export(TargetManager_exports, {
+  Events: () => Events6,
+  Observer: () => Observer,
+  SDKModelObserver: () => SDKModelObserver,
+  TargetManager: () => TargetManager
+});
+import * as Common11 from "../common/common.js";
+import * as Host2 from "../host/host.js";
+import * as Platform8 from "../platform/platform.js";
+import { assertNotNullOrUndefined as assertNotNullOrUndefined2 } from "../platform/platform.js";
+import * as Root2 from "../root/root.js";
+
+// ../../front_end/core/sdk/FrameManager.ts
+var FrameManager_exports = {};
+__export(FrameManager_exports, {
+  Events: () => Events5,
+  FrameManager: () => FrameManager
+});
+import * as Common10 from "../common/common.js";
+import * as Root from "../root/root.js";
+var FrameManager = class _FrameManager extends Common10.ObjectWrapper.ObjectWrapper {
+  #eventListeners = /* @__PURE__ */ new WeakMap();
+  // Maps frameIds to #frames and a count of how many ResourceTreeModels contain this frame.
+  // (OOPIFs are usually first attached to a new target and then detached from their old target,
+  // therefore being contained in 2 models for a short period of time.)
+  #frames = /* @__PURE__ */ new Map();
+  #framesForTarget = /* @__PURE__ */ new Map();
+  #outermostFrame = null;
+  #transferringFramesDataCache = /* @__PURE__ */ new Map();
+  #awaitedFrames = /* @__PURE__ */ new Map();
+  constructor(targetManager) {
+    super();
+    targetManager.observeModels(ResourceTreeModel, this);
+  }
+  static instance({ forceNew } = { forceNew: false }) {
+    if (!Root.DevToolsContext.globalInstance().has(_FrameManager) || forceNew) {
+      Root.DevToolsContext.globalInstance().set(_FrameManager, new _FrameManager(TargetManager.instance()));
+    }
+    return Root.DevToolsContext.globalInstance().get(_FrameManager);
+  }
+  static removeInstance() {
+    Root.DevToolsContext.globalInstance().delete(_FrameManager);
+  }
+  modelAdded(resourceTreeModel) {
+    const addListener = resourceTreeModel.addEventListener("FrameAdded" /* FrameAdded */, this.frameAdded, this);
+    const detachListener = resourceTreeModel.addEventListener("FrameDetached" /* FrameDetached */, this.frameDetached, this);
+    const navigatedListener = resourceTreeModel.addEventListener("FrameNavigated" /* FrameNavigated */, this.frameNavigated, this);
+    const resourceAddedListener = resourceTreeModel.addEventListener("ResourceAdded" /* ResourceAdded */, this.resourceAdded, this);
+    this.#eventListeners.set(
+      resourceTreeModel,
+      [addListener, detachListener, navigatedListener, resourceAddedListener]
+    );
+    this.#framesForTarget.set(resourceTreeModel.target().id(), /* @__PURE__ */ new Set());
+  }
+  modelRemoved(resourceTreeModel) {
+    const listeners = this.#eventListeners.get(resourceTreeModel);
+    if (listeners) {
+      Common10.EventTarget.removeEventListeners(listeners);
+    }
+    const frameSet = this.#framesForTarget.get(resourceTreeModel.target().id());
+    if (frameSet) {
+      for (const frameId of frameSet) {
+        this.decreaseOrRemoveFrame(frameId);
+      }
+    }
+    this.#framesForTarget.delete(resourceTreeModel.target().id());
+  }
+  frameAdded(event) {
+    const frame = event.data;
+    const frameData = this.#frames.get(frame.id);
+    if (frameData) {
+      frame.setCreationStackTrace(frameData.frame.getCreationStackTraceData());
+      this.#frames.set(frame.id, { frame, count: frameData.count + 1 });
+    } else {
+      const cachedFrameAttributes = this.#transferringFramesDataCache.get(frame.id);
+      if (cachedFrameAttributes?.creationStackTrace && cachedFrameAttributes?.creationStackTraceTarget) {
+        frame.setCreationStackTrace({
+          creationStackTrace: cachedFrameAttributes.creationStackTrace,
+          creationStackTraceTarget: cachedFrameAttributes.creationStackTraceTarget
+        });
+      }
+      this.#frames.set(frame.id, { frame, count: 1 });
+      this.#transferringFramesDataCache.delete(frame.id);
+    }
+    this.resetOutermostFrame();
+    const frameSet = this.#framesForTarget.get(frame.resourceTreeModel().target().id());
+    if (frameSet) {
+      frameSet.add(frame.id);
+    }
+    this.dispatchEventToListeners("FrameAddedToTarget" /* FRAME_ADDED_TO_TARGET */, { frame });
+    this.resolveAwaitedFrame(frame);
+  }
+  frameDetached(event) {
+    const { frame, isSwap } = event.data;
+    this.decreaseOrRemoveFrame(frame.id);
+    if (isSwap && !this.#frames.get(frame.id)) {
+      const traceData = frame.getCreationStackTraceData();
+      const cachedFrameAttributes = {
+        ...traceData.creationStackTrace && { creationStackTrace: traceData.creationStackTrace },
+        ...traceData.creationStackTrace && { creationStackTraceTarget: traceData.creationStackTraceTarget }
+      };
+      this.#transferringFramesDataCache.set(frame.id, cachedFrameAttributes);
+    }
+    const frameSet = this.#framesForTarget.get(frame.resourceTreeModel().target().id());
+    if (frameSet) {
+      frameSet.delete(frame.id);
+    }
+  }
+  frameNavigated(event) {
+    const frame = event.data;
+    this.dispatchEventToListeners("FrameNavigated" /* FRAME_NAVIGATED */, { frame });
+    if (frame.isOutermostFrame()) {
+      this.dispatchEventToListeners("OutermostFrameNavigated" /* OUTERMOST_FRAME_NAVIGATED */, { frame });
+    }
+  }
+  resourceAdded(event) {
+    this.dispatchEventToListeners("ResourceAdded" /* RESOURCE_ADDED */, { resource: event.data });
+  }
+  decreaseOrRemoveFrame(frameId) {
+    const frameData = this.#frames.get(frameId);
+    if (frameData) {
+      if (frameData.count === 1) {
+        this.#frames.delete(frameId);
+        this.resetOutermostFrame();
+        this.dispatchEventToListeners("FrameRemoved" /* FRAME_REMOVED */, { frameId });
+      } else {
+        frameData.count--;
+      }
+    }
+  }
+  /**
+   * Looks for the outermost frame in `#frames` and sets `#outermostFrame` accordingly.
+   *
+   * Important: This method needs to be called everytime `#frames` is updated.
+   */
+  resetOutermostFrame() {
+    const outermostFrames = this.getAllFrames().filter((frame) => frame.isOutermostFrame());
+    this.#outermostFrame = outermostFrames.length > 0 ? outermostFrames[0] : null;
+  }
+  /**
+   * Returns the ResourceTreeFrame with a given frameId.
+   * When a frame is being detached a new ResourceTreeFrame but with the same
+   * frameId is created. Consequently getFrame() will return a different
+   * ResourceTreeFrame after detachment. Callers of getFrame() should therefore
+   * immediately use the function return value and not store it for later use.
+   */
+  getFrame(frameId) {
+    const frameData = this.#frames.get(frameId);
+    if (frameData) {
+      return frameData.frame;
+    }
+    return null;
+  }
+  getAllFrames() {
+    return Array.from(this.#frames.values(), (frameData) => frameData.frame);
+  }
+  getOutermostFrame() {
+    return this.#outermostFrame;
+  }
+  async getOrWaitForFrame(frameId, notInTarget) {
+    const frame = this.getFrame(frameId);
+    if (frame && (!notInTarget || notInTarget !== frame.resourceTreeModel().target())) {
+      return frame;
+    }
+    return await new Promise((resolve) => {
+      const waiting = this.#awaitedFrames.get(frameId);
+      if (waiting) {
+        waiting.push({ notInTarget, resolve });
+      } else {
+        this.#awaitedFrames.set(frameId, [{ notInTarget, resolve }]);
+      }
+    });
+  }
+  resolveAwaitedFrame(frame) {
+    const waiting = this.#awaitedFrames.get(frame.id);
+    if (!waiting) {
+      return;
+    }
+    const newWaiting = waiting.filter(({ notInTarget, resolve }) => {
+      if (!notInTarget || notInTarget !== frame.resourceTreeModel().target()) {
+        resolve(frame);
+        return false;
+      }
+      return true;
+    });
+    if (newWaiting.length > 0) {
+      this.#awaitedFrames.set(frame.id, newWaiting);
+    } else {
+      this.#awaitedFrames.delete(frame.id);
+    }
+  }
+};
+var Events5 = /* @__PURE__ */ ((Events35) => {
+  Events35["FRAME_ADDED_TO_TARGET"] = "FrameAddedToTarget";
+  Events35["FRAME_NAVIGATED"] = "FrameNavigated";
+  Events35["FRAME_REMOVED"] = "FrameRemoved";
+  Events35["RESOURCE_ADDED"] = "ResourceAdded";
+  Events35["OUTERMOST_FRAME_NAVIGATED"] = "OutermostFrameNavigated";
+  return Events35;
+})(Events5 || {});
+
+// ../../front_end/core/sdk/TargetManager.ts
+var TargetManager = class _TargetManager extends Common11.ObjectWrapper.ObjectWrapper {
+  /**
+   * @deprecated
+   *
+   * Intended for {@link SDKModel} classes to be able to retrieve scoped singletons like
+   * the "PageResourceLoader" or the "FrameManager".
+   *
+   * This is only an intermediate step to migrate towards our "layering vision" where
+   * SDKModels don't require things from the next layer.
+   */
+  context;
+  #targets;
+  #observers;
+  get settings() {
+    return this.context.get(Common11.Settings.Settings);
+  }
+  // TODO(crbug.com/493763857): Remove fallback once all unit tests use TestUniverse.
+  getConsole() {
+    if ("has" in this.context && typeof this.context.has === "function" && !this.context.has(Common11.Console.Console)) {
+      return Common11.Console.Console.instance();
+    }
+    return this.context.get(Common11.Console.Console);
+  }
+  // TODO(crbug.com/493763857): Remove fallback once all unit tests use TestUniverse.
+  getFrameManager() {
+    if ("has" in this.context && typeof this.context.has === "function" && !this.context.has(FrameManager)) {
+      return FrameManager.instance();
+    }
+    return this.context.get(FrameManager);
+  }
+  // TODO(crbug.com/493763857): Remove fallback once all unit tests use TestUniverse.
+  getNetworkManager() {
+    if ("has" in this.context && typeof this.context.has === "function" && !this.context.has(MultitargetNetworkManager)) {
+      return MultitargetNetworkManager.instance();
+    }
+    return this.context.get(MultitargetNetworkManager);
+  }
+  // TODO(crbug.com/493763857): Remove fallback once all unit tests use TestUniverse.
+  getPageResourceLoader() {
+    if ("has" in this.context && typeof this.context.has === "function" && !this.context.has(PageResourceLoader)) {
+      return PageResourceLoader.instance();
+    }
+    return this.context.get(PageResourceLoader);
+  }
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  #modelListeners;
+  #modelObservers;
+  #scopedObservers;
+  /* eslint-enable @typescript-eslint/no-explicit-any */
+  #isSuspended;
+  #browserTarget;
+  #scopeTarget;
+  #defaultScopeSet;
+  #scopeChangeListeners;
+  #overrideAutoStartModels;
+  /**
+   * @param overrideAutoStartModels If provided, then the `autostart` flag on {@link RegistrationInfo} will be ignored.
+   */
+  constructor(context, overrideAutoStartModels) {
+    super();
+    this.context = context;
+    this.#targets = /* @__PURE__ */ new Set();
+    this.#observers = /* @__PURE__ */ new Set();
+    this.#modelListeners = new Platform8.MapUtilities.Multimap();
+    this.#modelObservers = new Platform8.MapUtilities.Multimap();
+    this.#isSuspended = false;
+    this.#browserTarget = null;
+    this.#scopeTarget = null;
+    this.#scopedObservers = /* @__PURE__ */ new WeakSet();
+    this.#defaultScopeSet = false;
+    this.#scopeChangeListeners = /* @__PURE__ */ new Set();
+    this.#overrideAutoStartModels = overrideAutoStartModels;
+  }
+  static instance({ forceNew } = { forceNew: false }) {
+    if (!Root2.DevToolsContext.globalInstance().has(_TargetManager) || forceNew) {
+      Root2.DevToolsContext.globalInstance().set(
+        _TargetManager,
+        new _TargetManager(Root2.DevToolsContext.globalInstance())
+      );
+    }
+    return Root2.DevToolsContext.globalInstance().get(_TargetManager);
+  }
+  static removeInstance() {
+    Root2.DevToolsContext.globalInstance().delete(_TargetManager);
+  }
+  // TODO(crbug.com/542394587): Should be `Symbol.dispose`
+  dispose() {
+    for (const target of this.targets()) {
+      target.dispose("TargetManager disposed");
+    }
+    if (this.#browserTarget) {
+      this.#browserTarget.dispose("TargetManager disposed");
+      this.#browserTarget = null;
+    }
+    this.#targets.clear();
+    this.#observers.clear();
+    this.#modelObservers.clear();
+    this.#modelListeners.clear();
+    this.#scopeChangeListeners.clear();
+    this.#scopeTarget = null;
+    this.#scopedObservers = /* @__PURE__ */ new WeakSet();
+  }
+  onInspectedURLChange(target) {
+    if (target !== this.#scopeTarget) {
+      return;
+    }
+    Host2.InspectorFrontendHost.InspectorFrontendHostInstance.inspectedURLChanged(
+      target.inspectedURL() || Platform8.DevToolsPath.EmptyUrlString
+    );
+    this.dispatchEventToListeners("InspectedURLChanged" /* INSPECTED_URL_CHANGED */, target);
+  }
+  onNameChange(target) {
+    this.dispatchEventToListeners("NameChanged" /* NAME_CHANGED */, target);
+  }
+  async suspendAllTargets(reason) {
+    if (this.#isSuspended) {
+      return;
+    }
+    this.#isSuspended = true;
+    this.dispatchEventToListeners("SuspendStateChanged" /* SUSPEND_STATE_CHANGED */);
+    const suspendPromises = Array.from(this.#targets.values(), (target) => target.suspend(reason));
+    await Promise.all(suspendPromises);
+  }
+  async #waitForPromiseWithTimeout(promise, timeoutMessage) {
+    const { promise: timeoutPromise, resolve: timeoutResolve } = Promise.withResolvers();
+    const timeoutId = globalThis.setTimeout(() => {
+      this.getConsole().warn(timeoutMessage);
+      timeoutResolve();
+    }, 2e3);
+    await Promise.race([promise, timeoutPromise]);
+    globalThis.clearTimeout(timeoutId);
+    timeoutResolve();
+  }
+  async resumeAllTargets() {
+    if (!this.#isSuspended) {
+      return;
+    }
+    this.#isSuspended = false;
+    this.dispatchEventToListeners("SuspendStateChanged" /* SUSPEND_STATE_CHANGED */);
+    const resumePromises = Array.from(this.#targets.values(), async (target) => {
+      await this.#waitForPromiseWithTimeout(target.resume(), `Timeout waiting for target ${target.name()} to resume`);
+    });
+    await Promise.all(resumePromises);
+  }
+  allTargetsSuspended() {
+    return this.#isSuspended;
+  }
+  models(modelClass, opts) {
+    const result = [];
+    for (const target of this.#targets) {
+      if (opts?.scoped && !this.isInScope(target)) {
+        continue;
+      }
+      const model = target.model(modelClass);
+      if (!model) {
+        continue;
+      }
+      result.push(model);
+    }
+    return result;
+  }
+  inspectedURL() {
+    const mainTarget = this.primaryPageTarget();
+    return mainTarget ? mainTarget.inspectedURL() : "";
+  }
+  observeModels(modelClass, observer, opts) {
+    const models = this.models(modelClass, opts);
+    this.#modelObservers.set(modelClass, observer);
+    if (opts?.scoped) {
+      this.#scopedObservers.add(observer);
+    }
+    for (const model of models) {
+      observer.modelAdded(model);
+    }
+  }
+  unobserveModels(modelClass, observer) {
+    this.#modelObservers.delete(modelClass, observer);
+    this.#scopedObservers.delete(observer);
+  }
+  modelAdded(modelClass, model, inScope) {
+    for (const observer of this.#modelObservers.get(modelClass).values()) {
+      if (!this.#scopedObservers.has(observer) || inScope) {
+        observer.modelAdded(model);
+      }
+    }
+  }
+  modelRemoved(modelClass, model, inScope) {
+    for (const observer of this.#modelObservers.get(modelClass).values()) {
+      if (!this.#scopedObservers.has(observer) || inScope) {
+        observer.modelRemoved(model);
+      }
+    }
+  }
+  addModelListener(modelClass, eventType, listener, thisObject, opts) {
+    const wrappedListener = (event) => {
+      if (!opts?.scoped || this.isInScope(event)) {
+        listener.call(thisObject, event);
+      }
+    };
+    for (const model of this.models(modelClass)) {
+      model.addEventListener(eventType, wrappedListener);
+    }
+    this.#modelListeners.set(eventType, { modelClass, thisObject, listener, wrappedListener });
+  }
+  removeModelListener(modelClass, eventType, listener, thisObject) {
+    if (!this.#modelListeners.has(eventType)) {
+      return;
+    }
+    let wrappedListener = null;
+    for (const info of this.#modelListeners.get(eventType)) {
+      if (info.modelClass === modelClass && info.listener === listener && info.thisObject === thisObject) {
+        wrappedListener = info.wrappedListener;
+        this.#modelListeners.delete(eventType, info);
+      }
+    }
+    if (wrappedListener) {
+      for (const model of this.models(modelClass)) {
+        model.removeEventListener(eventType, wrappedListener);
+      }
+    }
+  }
+  observeTargets(targetObserver, opts) {
+    if (this.#observers.has(targetObserver)) {
+      throw new Error("Observer can only be registered once");
+    }
+    if (opts?.scoped) {
+      this.#scopedObservers.add(targetObserver);
+    }
+    for (const target of this.#targets) {
+      if (!opts?.scoped || this.isInScope(target)) {
+        targetObserver.targetAdded(target);
+      }
+    }
+    this.#observers.add(targetObserver);
+  }
+  unobserveTargets(targetObserver) {
+    this.#observers.delete(targetObserver);
+    this.#scopedObservers.delete(targetObserver);
+  }
+  /** @returns The set of models we create unconditionally for new targets in the order in which they should be created */
+  #autoStartModels() {
+    const earlyModels = /* @__PURE__ */ new Set();
+    const models = /* @__PURE__ */ new Set();
+    const shouldAutostart = (model, info) => this.#overrideAutoStartModels ? this.#overrideAutoStartModels.has(model) : info.autostart;
+    for (const [model, info] of SDKModel.registeredModels) {
+      if (info.early) {
+        earlyModels.add(model);
+      } else if (shouldAutostart(model, info) || this.#modelObservers.has(model)) {
+        models.add(model);
+      }
+    }
+    return [...earlyModels, ...models];
+  }
+  createTarget(id, name, type, parentTarget, sessionId, waitForDebuggerInPage, connection, targetInfo) {
+    const target = new Target2(
+      this,
+      id,
+      name,
+      type,
+      parentTarget,
+      sessionId || "",
+      this.#isSuspended,
+      connection || null,
+      targetInfo
+    );
+    if (waitForDebuggerInPage) {
+      void target.pageAgent().invoke_waitForDebugger();
+    }
+    target.createModels(this.#autoStartModels());
+    this.#targets.add(target);
+    const inScope = this.isInScope(target);
+    for (const observer of [...this.#observers]) {
+      if (!this.#scopedObservers.has(observer) || inScope) {
+        observer.targetAdded(target);
+      }
+    }
+    for (const [modelClass, model] of target.models().entries()) {
+      this.modelAdded(modelClass, model, inScope);
+    }
+    for (const key of this.#modelListeners.keysArray()) {
+      for (const info of this.#modelListeners.get(key)) {
+        const model = target.model(info.modelClass);
+        if (model) {
+          model.addEventListener(key, info.wrappedListener);
+        }
+      }
+    }
+    if (target === target.outermostTarget() && (target.type() !== "frame" /* FRAME */ || target === this.primaryPageTarget()) && !this.#defaultScopeSet) {
+      this.setScopeTarget(target);
+    }
+    return target;
+  }
+  removeTarget(target) {
+    if (!this.#targets.has(target)) {
+      return;
+    }
+    const inScope = this.isInScope(target);
+    this.#targets.delete(target);
+    for (const modelClass of target.models().keys()) {
+      const model = target.models().get(modelClass);
+      assertNotNullOrUndefined2(model);
+      this.modelRemoved(modelClass, model, inScope);
+    }
+    for (const observer of [...this.#observers]) {
+      if (!this.#scopedObservers.has(observer) || inScope) {
+        observer.targetRemoved(target);
+      }
+    }
+    for (const key of this.#modelListeners.keysArray()) {
+      for (const info of this.#modelListeners.get(key)) {
+        const model = target.model(info.modelClass);
+        if (model) {
+          model.removeEventListener(key, info.wrappedListener);
+        }
+      }
+    }
+  }
+  targets() {
+    return [...this.#targets];
+  }
+  targetById(id) {
+    return this.targets().find((target) => target.id() === id) || null;
+  }
+  rootTarget() {
+    if (this.#targets.size === 0) {
+      return null;
+    }
+    return this.#targets.values().next().value ?? null;
+  }
+  primaryPageTarget() {
+    let target = this.rootTarget();
+    if (target?.type() === "tab" /* TAB */) {
+      target = this.targets().find(
+        (t) => t.parentTarget() === target && t.type() === "frame" /* FRAME */ && !t.targetInfo()?.subtype?.length
+      ) || null;
+    }
+    return target;
+  }
+  browserTarget() {
+    return this.#browserTarget;
+  }
+  async maybeAttachInitialTarget() {
+    if (!Boolean(Root2.Runtime.Runtime.queryParam("browserConnection"))) {
+      return false;
+    }
+    if (!this.#browserTarget) {
+      this.#browserTarget = new Target2(
+        this,
+        /* #id*/
+        "main",
+        /* #name*/
+        "browser",
+        "browser" /* BROWSER */,
+        /* #parentTarget*/
+        null,
+        /* #sessionId */
+        "",
+        /* suspended*/
+        false,
+        /* #connection*/
+        null,
+        /* targetInfo*/
+        void 0
+      );
+      this.#browserTarget.createModels(this.#autoStartModels());
+    }
+    const targetId = await Host2.InspectorFrontendHost.InspectorFrontendHostInstance.initialTargetId();
+    void this.#browserTarget.targetAgent().invoke_autoAttachRelated({
+      targetId,
+      waitForDebuggerOnStart: true
+    });
+    return true;
+  }
+  clearAllTargetsForTest() {
+    this.#targets.clear();
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  isInScope(arg) {
+    if (!arg) {
+      return false;
+    }
+    if (isSDKModelEvent(arg)) {
+      arg = arg.source;
+    }
+    if (arg instanceof SDKModel) {
+      arg = arg.target();
+    }
+    while (arg && arg !== this.#scopeTarget) {
+      arg = arg.parentTarget();
+    }
+    return Boolean(arg) && arg === this.#scopeTarget;
+  }
+  // Sets a root of a scope substree.
+  // TargetManager API invoked with `scoped: true` will behave as if targets
+  // outside of the scope subtree don't exist. Concretely this means that
+  // target observers, model observers and model listeners won't be invoked for targets outside of the
+  // scope tree. This method will invoke targetRemoved and modelRemoved for
+  // objects in the previous scope, as if they disappear and then will invoke
+  // targetAdded and modelAdded as if they just appeared.
+  // Note that scopeTarget could be null, which will effectively prevent scoped
+  // observes from getting any events.
+  setScopeTarget(scopeTarget) {
+    if (scopeTarget === this.#scopeTarget) {
+      return;
+    }
+    for (const target of this.targets()) {
+      if (!this.isInScope(target)) {
+        continue;
+      }
+      for (const modelClass of this.#modelObservers.keysArray()) {
+        const model = target.models().get(modelClass);
+        if (!model) {
+          continue;
+        }
+        for (const observer of [...this.#modelObservers.get(modelClass)].filter((o) => this.#scopedObservers.has(o))) {
+          observer.modelRemoved(model);
+        }
+      }
+      for (const observer of [...this.#observers].filter((o) => this.#scopedObservers.has(o))) {
+        observer.targetRemoved(target);
+      }
+    }
+    this.#scopeTarget = scopeTarget;
+    for (const target of this.targets()) {
+      if (!this.isInScope(target)) {
+        continue;
+      }
+      for (const observer of [...this.#observers].filter((o) => this.#scopedObservers.has(o))) {
+        observer.targetAdded(target);
+      }
+      for (const [modelClass, model] of target.models().entries()) {
+        for (const observer of [...this.#modelObservers.get(modelClass)].filter((o) => this.#scopedObservers.has(o))) {
+          observer.modelAdded(model);
+        }
+      }
+    }
+    for (const scopeChangeListener of this.#scopeChangeListeners) {
+      scopeChangeListener();
+    }
+    if (scopeTarget?.inspectedURL()) {
+      this.onInspectedURLChange(scopeTarget);
+    }
+  }
+  addScopeChangeListener(listener) {
+    this.#scopeChangeListeners.add(listener);
+  }
+  scopeTarget() {
+    return this.#scopeTarget;
+  }
+};
+var Events6 = /* @__PURE__ */ ((Events35) => {
+  Events35["AVAILABLE_TARGETS_CHANGED"] = "AvailableTargetsChanged";
+  Events35["INSPECTED_URL_CHANGED"] = "InspectedURLChanged";
+  Events35["NAME_CHANGED"] = "NameChanged";
+  Events35["SUSPEND_STATE_CHANGED"] = "SuspendStateChanged";
+  return Events35;
+})(Events6 || {});
+var Observer = class {
+  targetAdded(_target) {
+  }
+  targetRemoved(_target) {
+  }
+};
+var SDKModelObserver = class {
+  modelAdded(_model) {
+  }
+  modelRemoved(_model) {
+  }
+};
+function isSDKModelEvent(arg) {
+  return "source" in arg && arg.source instanceof SDKModel;
+}
+
+// ../../front_end/core/sdk/PageResourceLoader.ts
+var UIStrings4 = {
+  /**
+   * @description Error message for canceled source map loads.
+   */
+  loadCanceledDueToReloadOf: "Load canceled due to reload of inspected page"
+};
+var str_4 = i18n7.i18n.registerUIStrings("core/sdk/PageResourceLoader.ts", UIStrings4);
+var i18nString4 = i18n7.i18n.getLocalizedString.bind(void 0, str_4);
+function isExtensionInitiator(initiator) {
+  return "extensionId" in initiator;
+}
+var ResourceKey = class {
+  key;
+  constructor(key) {
+    this.key = key;
+  }
+};
+var PageResourceLoader = class _PageResourceLoader extends Common12.ObjectWrapper.ObjectWrapper {
+  #targetManager;
+  #settings;
+  #userAgentProvider;
+  #currentlyLoading = 0;
+  #currentlyLoadingPerTarget = /* @__PURE__ */ new Map();
+  #maxConcurrentLoads;
+  #pageResources = /* @__PURE__ */ new Map();
+  #queuedLoads = [];
+  #loadOverride;
+  constructor(targetManager, settings, userAgentProvider, loadOverride, maxConcurrentLoads = 500) {
+    super();
+    this.#targetManager = targetManager;
+    this.#settings = settings;
+    this.#userAgentProvider = userAgentProvider;
+    this.#maxConcurrentLoads = maxConcurrentLoads;
+    this.#targetManager.addModelListener(
+      ResourceTreeModel,
+      "PrimaryPageChanged" /* PrimaryPageChanged */,
+      this.onPrimaryPageChanged,
+      this
+    );
+    this.#loadOverride = loadOverride;
+  }
+  static instance({ forceNew, targetManager, settings, userAgentProvider, loadOverride, maxConcurrentLoads } = {
+    forceNew: false,
+    loadOverride: null
+  }) {
+    if (forceNew) {
+      Root3.DevToolsContext.globalInstance().set(
+        _PageResourceLoader,
+        new _PageResourceLoader(
+          targetManager ?? TargetManager.instance(),
+          settings ?? Common12.Settings.Settings.instance(),
+          userAgentProvider ?? MultitargetNetworkManager.instance(),
+          loadOverride,
+          maxConcurrentLoads
+        )
+      );
+    }
+    return Root3.DevToolsContext.globalInstance().get(_PageResourceLoader);
+  }
+  static removeInstance() {
+    Root3.DevToolsContext.globalInstance().delete(_PageResourceLoader);
+  }
+  onPrimaryPageChanged(event) {
+    const { frame: mainFrame, type } = event.data;
+    if (!mainFrame.isOutermostFrame()) {
+      return;
+    }
+    for (const { reject } of this.#queuedLoads) {
+      reject(new Error(i18nString4(UIStrings4.loadCanceledDueToReloadOf)));
+    }
+    this.#queuedLoads = [];
+    const mainFrameTarget = mainFrame.resourceTreeModel().target();
+    const keptResources = /* @__PURE__ */ new Map();
+    for (const [key, pageResource] of this.#pageResources.entries()) {
+      if (type === "Activation" /* ACTIVATION */ && mainFrameTarget === pageResource.initiator.target) {
+        keptResources.set(key, pageResource);
+      }
+    }
+    this.#pageResources = keptResources;
+    this.dispatchEventToListeners("Update" /* UPDATE */);
+  }
+  getResourcesLoaded() {
+    return this.#pageResources;
+  }
+  getScopedResourcesLoaded() {
+    return new Map([...this.#pageResources].filter(
+      ([_, pageResource]) => this.#targetManager.isInScope(pageResource.initiator.target) || isExtensionInitiator(pageResource.initiator)
+    ));
+  }
+  /**
+   * Loading is the number of currently loading and queued items. Resources is the total number of resources,
+   * including loading and queued resources, but not including resources that are still loading but scheduled
+   * for cancelation.;
+   */
+  getNumberOfResources() {
+    return { loading: this.#currentlyLoading, queued: this.#queuedLoads.length, resources: this.#pageResources.size };
+  }
+  getScopedNumberOfResources() {
+    let loadingCount = 0;
+    for (const [targetId, count] of this.#currentlyLoadingPerTarget) {
+      const target = this.#targetManager.targetById(targetId);
+      if (this.#targetManager.isInScope(target)) {
+        loadingCount += count;
+      }
+    }
+    return { loading: loadingCount, resources: this.getScopedResourcesLoaded().size };
+  }
+  async acquireLoadSlot(target) {
+    this.#currentlyLoading++;
+    if (target) {
+      const currentCount = this.#currentlyLoadingPerTarget.get(target.id()) || 0;
+      this.#currentlyLoadingPerTarget.set(target.id(), currentCount + 1);
+    }
+    if (this.#currentlyLoading > this.#maxConcurrentLoads) {
+      const {
+        promise: waitForCapacity,
+        resolve,
+        reject
+      } = Promise.withResolvers();
+      this.#queuedLoads.push({ resolve, reject });
+      await waitForCapacity;
+    }
+  }
+  releaseLoadSlot(target) {
+    this.#currentlyLoading--;
+    if (target) {
+      const currentCount = this.#currentlyLoadingPerTarget.get(target.id());
+      if (currentCount) {
+        this.#currentlyLoadingPerTarget.set(target.id(), currentCount - 1);
+      }
+    }
+    const entry = this.#queuedLoads.shift();
+    if (entry) {
+      entry.resolve();
+    }
+  }
+  static makeExtensionKey(url, initiator) {
+    if (isExtensionInitiator(initiator) && initiator.extensionId) {
+      return `${url}-${initiator.extensionId}`;
+    }
+    throw new Error("Invalid initiator");
+  }
+  static makeKey(url, initiator) {
+    if (initiator.frameId) {
+      return `${url}-${initiator.frameId}`;
+    }
+    if (initiator.target) {
+      return `${url}-${initiator.target.id()}`;
+    }
+    throw new Error("Invalid initiator");
+  }
+  resourceLoadedThroughExtension(pageResource) {
+    const key = _PageResourceLoader.makeExtensionKey(pageResource.url, pageResource.initiator);
+    this.#pageResources.set(key, pageResource);
+    this.dispatchEventToListeners("Update" /* UPDATE */);
+  }
+  async loadResource(url, initiator, isBinary = false) {
+    if (isExtensionInitiator(initiator)) {
+      throw new Error("Invalid initiator");
+    }
+    const key = _PageResourceLoader.makeKey(url, initiator);
+    const pageResource = {
+      success: null,
+      size: null,
+      duration: null,
+      url,
+      initiator
+    };
+    this.#pageResources.set(key, pageResource);
+    this.dispatchEventToListeners("Update" /* UPDATE */);
+    const startTime = performance.now();
+    try {
+      await this.acquireLoadSlot(initiator.target);
+      const resultPromise = this.dispatchLoad(url, initiator, isBinary);
+      const result = await resultPromise;
+      pageResource.errorMessage = result.errorDescription.message;
+      pageResource.success = result.success;
+      if (result.success) {
+        pageResource.size = result.content.length;
+        return { content: result.content };
+      }
+      throw new Error(result.errorDescription.message);
+    } catch (e) {
+      if (pageResource.errorMessage === void 0) {
+        pageResource.errorMessage = e.message;
+      }
+      if (pageResource.success === null) {
+        pageResource.success = false;
+      }
+      throw e;
+    } finally {
+      pageResource.duration = performance.now() - startTime;
+      this.releaseLoadSlot(initiator.target);
+      this.dispatchEventToListeners("Update" /* UPDATE */);
+    }
+  }
+  async dispatchLoad(url, initiator, isBinary) {
+    if (isExtensionInitiator(initiator)) {
+      throw new Error("Invalid initiator");
+    }
+    const failureReason = null;
+    if (this.#loadOverride) {
+      return await this.#loadOverride(url);
+    }
+    const parsedURL = new Common12.ParsedURL.ParsedURL(url);
+    const eligibleForLoadFromTarget = this.getLoadThroughTargetSetting().get() && parsedURL && parsedURL.scheme !== "file" && parsedURL.scheme !== "data" && parsedURL.scheme !== "devtools" && initiator.target;
+    Host3.userMetrics.developerResourceScheme(this.getDeveloperResourceScheme(parsedURL));
+    if (eligibleForLoadFromTarget) {
+      const isHttp = parsedURL.scheme === "http" || parsedURL.scheme === "https";
+      let mustEnforceCSP = isHttp;
+      if (isHttp && initiator.target) {
+        const networkManager = initiator.target.model(NetworkManager);
+        if (networkManager) {
+          let status = await networkManager.getSecurityIsolationStatus(initiator.frameId);
+          if (!status && initiator.frameId) {
+            status = await networkManager.getSecurityIsolationStatus(null);
+          }
+          if (status) {
+            const csps = status.csp ?? [];
+            mustEnforceCSP = csps.some((csp) => csp.effectiveDirectives.includes("connect-src") || csp.effectiveDirectives.includes("default-src"));
+          }
+        }
+      }
+      try {
+        Host3.userMetrics.developerResourceLoaded(Host3.UserMetrics.DeveloperResourceLoaded.LOAD_THROUGH_PAGE_VIA_TARGET);
+        const result2 = await this.loadFromTarget(initiator.target, initiator.frameId, url, isBinary);
+        return result2;
+      } catch (e) {
+        if (e instanceof Error) {
+          Host3.userMetrics.developerResourceLoaded(Host3.UserMetrics.DeveloperResourceLoaded.LOAD_THROUGH_PAGE_FAILURE);
+          if (mustEnforceCSP || e.message.includes("CSP violation")) {
+            return {
+              success: false,
+              content: "",
+              errorDescription: {
+                statusCode: 0,
+                message: e.message
+              }
+            };
+          }
+        }
+      }
+      Host3.userMetrics.developerResourceLoaded(Host3.UserMetrics.DeveloperResourceLoaded.LOAD_THROUGH_PAGE_FALLBACK);
+    } else {
+      const code = this.getLoadThroughTargetSetting().get() ? Host3.UserMetrics.DeveloperResourceLoaded.FALLBACK_PER_PROTOCOL : Host3.UserMetrics.DeveloperResourceLoaded.FALLBACK_PER_OVERRIDE;
+      Host3.userMetrics.developerResourceLoaded(code);
+    }
+    const result = await this.loadFromHostBindings(url);
+    if (eligibleForLoadFromTarget && !result.success) {
+      Host3.userMetrics.developerResourceLoaded(Host3.UserMetrics.DeveloperResourceLoaded.FALLBACK_FAILURE);
+    }
+    if (failureReason) {
+      result.errorDescription.message = `Fetch through target failed: ${failureReason}; Fallback: ${result.errorDescription.message}`;
+    }
+    return result;
+  }
+  getDeveloperResourceScheme(parsedURL) {
+    if (!parsedURL || parsedURL.scheme === "") {
+      return Host3.UserMetrics.DeveloperResourceScheme.UKNOWN;
+    }
+    const isLocalhost = parsedURL.host === "localhost" || parsedURL.host.endsWith(".localhost");
+    switch (parsedURL.scheme) {
+      case "file":
+        return Host3.UserMetrics.DeveloperResourceScheme.FILE;
+      case "data":
+        return Host3.UserMetrics.DeveloperResourceScheme.DATA;
+      case "blob":
+        return Host3.UserMetrics.DeveloperResourceScheme.BLOB;
+      case "http":
+        return isLocalhost ? Host3.UserMetrics.DeveloperResourceScheme.HTTP_LOCALHOST : Host3.UserMetrics.DeveloperResourceScheme.HTTP;
+      case "https":
+        return isLocalhost ? Host3.UserMetrics.DeveloperResourceScheme.HTTPS_LOCALHOST : Host3.UserMetrics.DeveloperResourceScheme.HTTPS;
+    }
+    return Host3.UserMetrics.DeveloperResourceScheme.OTHER;
+  }
+  async loadFromTarget(target, frameId, url, isBinary) {
+    const networkManager = target.model(NetworkManager);
+    const ioModel = target.model(IOModel);
+    const disableCache = this.#settings.resolve(cacheDisabledSettingDescriptor).get();
+    const resource = await networkManager.loadNetworkResource(frameId, url, { disableCache, includeCredentials: true });
+    try {
+      const content = resource.stream ? isBinary ? await ioModel.readToBuffer(resource.stream) : await ioModel.readToString(resource.stream) : "";
+      return {
+        success: resource.success,
+        content,
+        errorDescription: {
+          statusCode: resource.httpStatusCode || 0,
+          netError: resource.netError,
+          netErrorName: resource.netErrorName,
+          message: Host3.ResourceLoader.netErrorToMessage(
+            resource.netError,
+            resource.httpStatusCode,
+            resource.netErrorName
+          ) || ""
+        }
+      };
+    } finally {
+      if (resource.stream) {
+        void ioModel.close(resource.stream);
+      }
+    }
+  }
+  async loadFromHostBindings(url) {
+    const headers = {};
+    const currentUserAgent = this.#userAgentProvider.currentUserAgent();
+    if (currentUserAgent) {
+      headers["User-Agent"] = currentUserAgent;
+    }
+    if (this.#settings.resolve(cacheDisabledSettingDescriptor).get()) {
+      headers["Cache-Control"] = "no-cache";
+    }
+    const allowRemoteFilePaths = this.#settings.resolve(enableRemoteFileLoadingSettingDescriptor).get();
+    return await new Promise(
+      (resolve) => Host3.ResourceLoader.load(url, headers, (success, _responseHeaders, content, errorDescription) => {
+        resolve({ success, content, errorDescription });
+      }, allowRemoteFilePaths)
+    );
+  }
+  getLoadThroughTargetSetting() {
+    return this.#settings.createSetting("load-through-target", true);
+  }
+};
+var Events7 = /* @__PURE__ */ ((Events35) => {
+  Events35["UPDATE"] = "Update";
+  return Events35;
+})(Events7 || {});
 
 // ../../front_end/core/sdk/SourceMapCache.ts
 var SourceMapCache_exports = {};
@@ -24680,7 +24740,14 @@ var SourceMapManager = class _SourceMapManager extends Common13.ObjectWrapper.Ob
   constructor(target, factory) {
     super();
     this.#target = target;
-    this.#factory = factory ?? ((compiledURL, sourceMappingURL, payload) => new SourceMap(compiledURL, sourceMappingURL, payload, this.#target.targetManager().getConsole()));
+    this.#factory = factory ?? ((compiledURL, sourceMappingURL, payload, _client, provenance) => new SourceMap(
+      compiledURL,
+      sourceMappingURL,
+      payload,
+      this.#target.targetManager().getConsole(),
+      void 0,
+      provenance
+    ));
     const settings = target.targetManager().settings;
     this.#lazyLoadingSetting = settings.resolve(lazyLoadingSettingDescriptor);
   }
@@ -24696,8 +24763,8 @@ var SourceMapManager = class _SourceMapManager extends Common13.ObjectWrapper.Ob
       this.detachSourceMap(client);
     }
     this.#isEnabled = isEnabled;
-    for (const [client, { relativeSourceURL, relativeSourceMapURL }] of clientData) {
-      this.attachSourceMap(client, relativeSourceURL, relativeSourceMapURL);
+    for (const [client, { relativeSourceURL, relativeSourceMapURL, provenance }] of clientData) {
+      this.attachSourceMap(client, relativeSourceURL, relativeSourceMapURL, provenance);
     }
   }
   static getBaseUrl(target) {
@@ -24725,7 +24792,7 @@ var SourceMapManager = class _SourceMapManager extends Common13.ObjectWrapper.Ob
     return this.#sourceMaps.get(sourceMap);
   }
   // TODO(bmeurer): We are lying about the type of |relativeSourceURL| here.
-  attachSourceMap(client, relativeSourceURL, relativeSourceMapURL) {
+  attachSourceMap(client, relativeSourceURL, relativeSourceMapURL, provenance) {
     if (this.#clientData.has(client)) {
       throw new Error("SourceMap is already attached or being attached to client");
     }
@@ -24735,6 +24802,7 @@ var SourceMapManager = class _SourceMapManager extends Common13.ObjectWrapper.Ob
     const clientData = {
       relativeSourceURL,
       relativeSourceMapURL,
+      provenance,
       getSourceMap: () => Promise.resolve(void 0)
     };
     this.#clientData.set(client, clientData);
@@ -24756,7 +24824,7 @@ var SourceMapManager = class _SourceMapManager extends Common13.ObjectWrapper.Ob
               const resourceLoader = this.#target.targetManager().context.get(PageResourceLoader);
               sourceMapPromise = loadSourceMap(resourceLoader, this.#sourceMapCache, sourceMapURL, client.debugId(), initiator).then(
                 (payload) => {
-                  const sourceMap = this.#factory(sourceURL, sourceMapURL, payload, client);
+                  const sourceMap = this.#factory(sourceURL, sourceMapURL, payload, client, provenance);
                   if (this.#clientData.get(client) === clientData) {
                     clientData.sourceMap = sourceMap;
                     this.#sourceMaps.set(sourceMap, client);
@@ -25476,7 +25544,12 @@ var CSSModel = class _CSSModel extends SDKModel {
       }
       styleSheetIds.add(styleSheetHeader.id);
     }
-    this.#sourceMapManager.attachSourceMap(styleSheetHeader, styleSheetHeader.sourceURL, styleSheetHeader.sourceMapURL);
+    this.#sourceMapManager.attachSourceMap(
+      styleSheetHeader,
+      styleSheetHeader.sourceURL,
+      styleSheetHeader.sourceMapURL,
+      "cdp" /* CDP */
+    );
     this.dispatchEventToListeners("StyleSheetAdded" /* StyleSheetAdded */, styleSheetHeader);
   }
   styleSheetRemoved(id) {
@@ -25533,7 +25606,7 @@ var CSSModel = class _CSSModel extends SDKModel {
     const sourceMapURL = response.sourceMapURL;
     this.#sourceMapManager.detachSourceMap(header);
     header.setSourceMapURL(sourceMapURL);
-    this.#sourceMapManager.attachSourceMap(header, header.sourceURL, header.sourceMapURL);
+    this.#sourceMapManager.attachSourceMap(header, header.sourceURL, header.sourceMapURL, "cdp" /* CDP */);
     if (sourceMapURL === null) {
       return "Error in CSS.setStyleSheetText";
     }
@@ -26605,12 +26678,11 @@ var OverlayModel = class _OverlayModel extends SDKModel {
     this.#sourceOrderModeActive = isActive;
   }
   delayedHideHighlight(delay) {
-    if (this.#hideHighlightTimeout === void 0) {
-      this.#hideHighlightTimeout = globalThis.setTimeout(
-        () => this.highlightInOverlay({ clear: true }),
-        delay
-      );
-    }
+    clearTimeout(this.#hideHighlightTimeout);
+    this.#hideHighlightTimeout = globalThis.setTimeout(
+      () => this.highlightInOverlay({ clear: true }),
+      delay
+    );
   }
   highlightFrame(frameId) {
     clearTimeout(this.#hideHighlightTimeout);
@@ -29633,11 +29705,8 @@ var DOMNode = class _DOMNode extends Common20.ObjectWrapper.ObjectWrapper {
     if (!node) {
       return;
     }
-    const result = await node.callFunction(scrollIntoViewInPage);
-    if (!result) {
-      return;
-    }
     node.highlightForTwoSeconds();
+    await node.callFunction(scrollIntoViewInPage);
   }
   async focus() {
     const node = this.enclosingElementOrSelf();
@@ -32513,12 +32582,13 @@ var DebuggerModel = class _DebuggerModel extends SDKModel {
     this.#runtimeModel = target.model(RuntimeModel);
     this.#sourceMapManager = new SourceMapManager(
       target,
-      (compiledURL, sourceMappingURL, payload, script) => new SourceMap(
+      (compiledURL, sourceMappingURL, payload, script, provenance) => new SourceMap(
         compiledURL,
         sourceMappingURL,
         payload,
         target.targetManager().getConsole(),
-        script
+        script,
+        provenance
       )
     );
     const settings = this.target().targetManager().settings;
@@ -32962,7 +33032,7 @@ var DebuggerModel = class _DebuggerModel extends SDKModel {
     this.registerScript(script);
     this.dispatchEventToListeners("ParsedScriptSource" /* ParsedScriptSource */, script);
     if ((!selectedDebugSymbol || selectedDebugSymbol.type === Debugger.DebugSymbolsType.SourceMap) && script.sourceMapURL && !hasSyntaxError) {
-      this.#sourceMapManager.attachSourceMap(script, script.sourceURL, script.sourceMapURL);
+      this.#sourceMapManager.attachSourceMap(script, script.sourceURL, script.sourceMapURL, "cdp" /* CDP */);
     }
     const isDiscardable = hasSyntaxError && script.isAnonymousScript();
     if (isDiscardable) {
@@ -32971,10 +33041,10 @@ var DebuggerModel = class _DebuggerModel extends SDKModel {
     }
     return script;
   }
-  setSourceMapURL(script, newSourceMapURL) {
+  setSourceMapURL(script, newSourceMapURL, provenance) {
     this.#sourceMapManager.detachSourceMap(script);
     script.sourceMapURL = newSourceMapURL;
-    this.#sourceMapManager.attachSourceMap(script, script.sourceURL, script.sourceMapURL);
+    this.#sourceMapManager.attachSourceMap(script, script.sourceURL, script.sourceMapURL, provenance);
   }
   async setDebugInfoURL(script, _externalURL) {
     this.dispatchEventToListeners("DebugInfoAttached" /* DebugInfoAttached */, script);
@@ -41747,7 +41817,11 @@ var UIStrings15 = {
   /**
    * @description Text on the remote debugging window to indicate the connection is lost.
    */
-  websocketDisconnected: "WebSocket disconnected"
+  websocketDisconnected: "WebSocket disconnected",
+  /**
+   * @description Text in the remote debugging terminated dialog when the WebSocket connection fails, instructing the user to check the --remote-allow-origins flag on the Chrome instance.
+   */
+  websocketConnectionFailed: "WebSocket disconnected. Make sure `--remote-allow-origins` on the Chrome instance allows the current origin."
 };
 var str_15 = i18n33.i18n.registerUIStrings("core/sdk/Connections.ts", UIStrings15);
 var i18nString15 = i18n33.i18n.getLocalizedString.bind(void 0, str_15);
@@ -41837,7 +41911,7 @@ var WebSocketTransport = class {
   }
   onError() {
     if (this.#onWebSocketDisconnect) {
-      this.#onWebSocketDisconnect.call(null, i18nString15(UIStrings15.websocketDisconnected));
+      this.#onWebSocketDisconnect.call(null, i18nString15(UIStrings15.websocketConnectionFailed));
     }
     if (this.#onDisconnect) {
       this.#onDisconnect.call(null, "connection failed");

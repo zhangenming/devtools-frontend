@@ -24280,6 +24280,10 @@ var TreeViewTreeElement = class _TreeViewTreeElement extends TreeElement {
     this.refresh();
   }
   updateExpansionFromAttribute() {
+    if (!this.isExpandable()) {
+      this.#previousOpenAttributeValue = void 0;
+      return;
+    }
     const openAttr = this.configElement.getAttribute("open");
     if (openAttr === this.#previousOpenAttributeValue) {
       return;
@@ -24320,6 +24324,7 @@ var TreeViewTreeElement = class _TreeViewTreeElement extends TreeElement {
       this.#clonedClasses.add(className);
     }
     this.hidden = hasBooleanAttribute(this.configElement, "hidden");
+    this.selectable = !this.configElement.hasAttribute("selectable") || hasBooleanAttribute(this.configElement, "selectable");
     this.updateExpansionFromAttribute();
   }
   refresh() {

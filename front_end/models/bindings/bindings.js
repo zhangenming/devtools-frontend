@@ -1392,7 +1392,7 @@ var StyleFile = class {
     const sourceMapManager = this.#cssModel.sourceMapManager();
     this.headers.forEach((header) => {
       sourceMapManager.detachSourceMap(header);
-      sourceMapManager.attachSourceMap(header, sourceUrl, sourceMapUrl);
+      sourceMapManager.attachSourceMap(header, sourceUrl, sourceMapUrl, SDK5.SourceMap.SourceMapProvenance.USER);
     });
   }
 };
@@ -5916,11 +5916,11 @@ var ResourceScriptFile = class {
     this.uiSourceCode = uiSourceCode;
     this.script = this.uiSourceCode.contentType().isScript() ? script : null;
   }
-  addSourceMapURL(sourceMapURL) {
+  addSourceMapURL(sourceMapURL, provenance) {
     if (!this.script) {
       return;
     }
-    this.script.debuggerModel.setSourceMapURL(this.script, sourceMapURL);
+    this.script.debuggerModel.setSourceMapURL(this.script, sourceMapURL, provenance);
   }
   addDebugInfoURL(debugInfoURL) {
     if (!this.script) {
