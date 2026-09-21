@@ -19264,6 +19264,8 @@ var ElementsTreeElement = class extends UI15.TreeOutline.TreeElement {
         click: true
       })}`
     );
+    this.listItemElement.setAttribute("data-backend-node-id", String(node.backendNodeId()));
+    this.listItemElement.setAttribute("data-target-id", node.domModel().target().id());
     this.widgetWrapper = document.createElement("div");
     this.widgetWrapper.style.display = "contents";
     this.title = this.widgetWrapper;

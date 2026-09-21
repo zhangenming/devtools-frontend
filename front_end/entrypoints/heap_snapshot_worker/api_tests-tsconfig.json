@@ -27,7 +27,7 @@
     "noImplicitReturns": true,
     "outDir": ".",
     "preserveConstEnums": true,
-    "rootDir": "../../../../../../test/ai_evals/network",
+    "rootDir": "../../../../../../front_end/entrypoints/heap_snapshot_worker",
     "rootDirs": [
       "../../../../../../",
       "../../../"
@@ -41,32 +41,30 @@
       "../../../../../../node_modules"
     ],
     "types": [
-      "mocha",
-      "node",
-      "undici-types"
+      "mocha"
     ],
     "useUnknownInCatchVariables": false
   },
   "files": [
-    "../../../../../../test/ai_evals/network/server-error-5xx.test.ts",
+    "../../../../../../front_end/entrypoints/heap_snapshot_worker/HeapSnapshot.test.api.ts",
     "../../../../../../front_end/legacy/legacy-defs.d.ts",
     "../../../../../../front_end/global_typings/global_defs.d.ts",
     "../../../../../../node_modules/@types/filesystem/index.d.ts",
     "../../../../../../node_modules/@types/filewriter/index.d.ts",
-    "../../../../../../test/e2e/types.d.ts"
+    "../../../../../../test/api/types.d.ts"
   ],
   "references": [
     {
-      "path": "../../conductor/implementation-tsconfig.ref.json"
+      "path": "bundle-tsconfig.ref.json"
     },
     {
-      "path": "../../e2e/helpers/helpers-tsconfig.ref.json"
+      "path": "../../core/sdk/bundle-tsconfig.ref.json"
     },
     {
-      "path": "../helpers/helpers-tsconfig.ref.json"
+      "path": "../../models/heap_snapshot/bundle-tsconfig.ref.json"
     },
     {
-      "path": "../report/report-tsconfig.ref.json"
+      "path": "../../../test/api/test_interface_types-tsconfig.ref.json"
     }
   ]
 }

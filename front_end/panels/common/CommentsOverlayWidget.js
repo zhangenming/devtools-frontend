@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 import * as Root from '../../core/root/root.js';
+import * as SDK from '../../core/sdk/sdk.js';
 import * as CommentManager from '../../models/comment_manager/comment_manager.js';
 import * as Comments from '../../ui/comments/comments.js';
 import * as UI from '../../ui/legacy/legacy.js';
@@ -59,6 +60,7 @@ const DEFAULT_VIEW = (input, _output, target) => {
         left: `${Math.min(Math.max(POPUP_MARGIN, item.pin.left), Math.max(POPUP_MARGIN, target.clientWidth - POPUP_WIDTH - POPUP_MARGIN))}px`,
     })}>
             ${UI.Widget.widget(CommentThreadWidget, {
+        title: input.title,
         comments: [...item.thread.comments],
         onAddComment: input.onAddComment,
     })}
@@ -74,6 +76,8 @@ export class CommentsOverlayWidget extends UI.Widget.Widget {
     #commentManager;
     #commentOverlayManager;
     #activeThreadId = null;
+    #cachedTitle = { text: '' };
+    #cachedTitleAnchor = null;
     constructor(element, [commentManager], view = DEFAULT_VIEW) {
         super(element, { useShadowDom: false });
         this.#view = view;
@@ -119,6 +123,36 @@ export class CommentsOverlayWidget extends UI.Widget.Widget {
         }
         this.requestUpdate();
     }
+    async #getOrComputeTitle(anchor) {
+        if (anchor === this.#cachedTitleAnchor) {
+            return this.#cachedTitle;
+        }
+        const title = anchor ? await this.#computeTitle(anchor) : { text: '' };
+        this.#cachedTitleAnchor = anchor;
+        this.#cachedTitle = title;
+        return title;
+    }
+    async #computeTitle(anchor) {
+        if (anchor.node) {
+            const target = SDK.TargetManager.TargetManager.instance().targetById(anchor.node.targetId);
+            if (target) {
+                const deferredNode = new SDK.DOMModel.DeferredDOMNode(target, anchor.node.backendNodeId);
+                const node = await deferredNode.resolvePromise();
+                if (node) {
+                    return { node };
+                }
+            }
+            return { text: '' };
+        }
+        if (anchor.networkRequestId) {
+            const target = SDK.TargetManager.TargetManager.instance().primaryPageTarget();
+            const request = target?.model(SDK.NetworkManager.NetworkManager)?.requestForId(anchor.networkRequestId);
+            if (request) {
+                return { text: request.name() };
+            }
+        }
+        return { text: anchor.textSignature || '' };
+    }
     #handlePinClick = (threadId) => {
         const thread = this.#commentManager.getCommentThread(threadId);
         if (this.#activeThreadId === threadId) {
@@ -133,15 +167,13 @@ export class CommentsOverlayWidget extends UI.Widget.Widget {
         }
         this.requestUpdate();
     };
-    performUpdate() {
+    async performUpdate(signal) {
+        const activeThread = this.#activeThreadId ? this.#commentManager.getCommentThread(this.#activeThreadId) ?? null : null;
+        const title = await this.#getOrComputeTitle(activeThread?.anchor ?? null);
+        signal?.throwIfAborted();
         const pins = this.#commentOverlayManager.getPinPositions();
         const highlights = this.#commentOverlayManager.getHighlightRects();
-        let activePin = null;
-        let activeThread = null;
-        if (this.#activeThreadId) {
-            activePin = pins.find(p => p.id === this.#activeThreadId) ?? null;
-            activeThread = this.#commentManager.getCommentThread(this.#activeThreadId) ?? null;
-        }
+        const activePin = this.#activeThreadId ? pins.find(p => p.id === this.#activeThreadId) ?? null : null;
         const viewInput = {
             pins,
             highlights,
@@ -150,6 +182,7 @@ export class CommentsOverlayWidget extends UI.Widget.Widget {
             onPinClick: this.#handlePinClick,
             activeThread,
             activePin,
+            title,
             onAddComment: (text) => {
                 activeThread?.save(text);
             },

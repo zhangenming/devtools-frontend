@@ -27,18 +27,18 @@
     "noImplicitReturns": true,
     "outDir": ".",
     "preserveConstEnums": true,
-    "rootDir": "../../../../../../test/ai_evals/network",
+    "rootDir": "../../../../../test/unit",
     "rootDirs": [
-      "../../../../../../",
-      "../../../"
+      "../../../../../",
+      "../../"
     ],
     "skipLibCheck": true,
     "sourceMap": true,
     "strict": true,
     "target": "ES2023",
     "typeRoots": [
-      "../../../../../../node_modules/@types",
-      "../../../../../../node_modules"
+      "../../../../../node_modules/@types",
+      "../../../../../node_modules"
     ],
     "types": [
       "mocha",
@@ -48,25 +48,19 @@
     "useUnknownInCatchVariables": false
   },
   "files": [
-    "../../../../../../test/ai_evals/network/server-error-5xx.test.ts",
-    "../../../../../../front_end/legacy/legacy-defs.d.ts",
-    "../../../../../../front_end/global_typings/global_defs.d.ts",
-    "../../../../../../node_modules/@types/filesystem/index.d.ts",
-    "../../../../../../node_modules/@types/filewriter/index.d.ts",
-    "../../../../../../test/e2e/types.d.ts"
+    "../../../../../test/unit/mocha-hooks.ts",
+    "../../../../../test/unit/run-mocha.ts",
+    "../../../../../front_end/legacy/legacy-defs.d.ts",
+    "../../../../../front_end/global_typings/global_defs.d.ts",
+    "../../../../../node_modules/@types/filesystem/index.d.ts",
+    "../../../../../node_modules/@types/filewriter/index.d.ts"
   ],
   "references": [
     {
-      "path": "../../conductor/implementation-tsconfig.ref.json"
+      "path": "../conductor/implementation-tsconfig.ref.json"
     },
     {
-      "path": "../../e2e/helpers/helpers-tsconfig.ref.json"
-    },
-    {
-      "path": "../helpers/helpers-tsconfig.ref.json"
-    },
-    {
-      "path": "../report/report-tsconfig.ref.json"
+      "path": "../shared/shared-tsconfig.ref.json"
     }
   ]
 }

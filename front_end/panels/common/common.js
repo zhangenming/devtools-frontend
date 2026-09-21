@@ -3879,6 +3879,7 @@ var commentThreadWidget_css_default = `/*
     width: 100%;
     justify-content: space-between;
     align-items: center;
+    gap: var(--sys-size-4);
   }
 
   .sent-status {
@@ -3887,6 +3888,7 @@ var commentThreadWidget_css_default = `/*
     gap: var(--sys-size-2);
     font-size: var(--sys-typescale-body5-size);
     color: var(--sys-color-on-surface-subtle);
+    flex-shrink: 0;
   }
 
   .check-icon {
@@ -4005,7 +4007,23 @@ var commentThreadWidget_css_default = `/*
     padding: var(--sys-size-4) var(--sys-size-5);
   }
 
+  .tooltip-link {
+    display: block;
+    margin-top: var(--sys-size-4);
+    color: var(--sys-color-primary);
+    padding-left: 0;
+    background: none;
+    border: none;
+    font: inherit;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+
+  .selected-item devtools-widget,
   .selected-item-text {
+    display: block;
+    flex: 0 1 auto;
+    min-width: 0;
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
@@ -4016,6 +4034,7 @@ var commentThreadWidget_css_default = `/*
 
 // ../../front_end/panels/common/CommentThreadWidget.ts
 var { html: html8, render: render7, Directives: { createRef, ref: ref2 } } = Lit3;
+var { widget: widget3 } = UI9.Widget;
 var UIStrings7 = {
   /**
    * @description Text next to the checkmark in the comment thread header indicating that comments have been sent to
@@ -4056,7 +4075,7 @@ var DEFAULT_VIEW6 = (input, _output, target) => {
     <div class="comment-thread-widget ${hasComment ? "submitted" : ""}">
       <div class="header">
         <span class="selected-item">
-          <span class="selected-item-text">${input.title}</span>
+          ${"node" in input.title ? widget3(DOMNodeLink, { node: input.title.node }) : html8`<span class="selected-item-text">${input.title.text}</span>`}
         </span>
         ${hasComment ? html8`
           <div class="sent-status">
@@ -4132,7 +4151,7 @@ var DEFAULT_VIEW6 = (input, _output, target) => {
   `, target);
 };
 var CommentThreadWidget = class extends UI9.Widget.Widget {
-  title = "Comment Thread";
+  title = { text: "" };
   #comments = [];
   #commentText = "";
   #textAreaRef = createRef();
@@ -4186,6 +4205,7 @@ __export(CommentsOverlayWidget_exports, {
   CommentsOverlayWidget: () => CommentsOverlayWidget
 });
 import * as Root3 from "../../core/root/root.js";
+import * as SDK5 from "../../core/sdk/sdk.js";
 import * as CommentManager from "../../models/comment_manager/comment_manager.js";
 import * as Comments from "../../ui/comments/comments.js";
 import * as UI10 from "../../ui/legacy/legacy.js";
@@ -4336,6 +4356,7 @@ var DEFAULT_VIEW7 = (input, _output, target) => {
       )}px`
     })}>
             ${UI10.Widget.widget(CommentThreadWidget, {
+      title: input.title,
       comments: [...item2.thread.comments],
       onAddComment: input.onAddComment
     })}
@@ -4351,6 +4372,8 @@ var CommentsOverlayWidget = class extends UI10.Widget.Widget {
   #commentManager;
   #commentOverlayManager;
   #activeThreadId = null;
+  #cachedTitle = { text: "" };
+  #cachedTitleAnchor = null;
   constructor(element, [commentManager], view = DEFAULT_VIEW7) {
     super(element, { useShadowDom: false });
     this.#view = view;
@@ -4431,6 +4454,39 @@ var CommentsOverlayWidget = class extends UI10.Widget.Widget {
     }
     this.requestUpdate();
   }
+  async #getOrComputeTitle(anchor) {
+    if (anchor === this.#cachedTitleAnchor) {
+      return this.#cachedTitle;
+    }
+    const title = anchor ? await this.#computeTitle(anchor) : { text: "" };
+    this.#cachedTitleAnchor = anchor;
+    this.#cachedTitle = title;
+    return title;
+  }
+  async #computeTitle(anchor) {
+    if (anchor.node) {
+      const target = SDK5.TargetManager.TargetManager.instance().targetById(anchor.node.targetId);
+      if (target) {
+        const deferredNode = new SDK5.DOMModel.DeferredDOMNode(
+          target,
+          anchor.node.backendNodeId
+        );
+        const node = await deferredNode.resolvePromise();
+        if (node) {
+          return { node };
+        }
+      }
+      return { text: "" };
+    }
+    if (anchor.networkRequestId) {
+      const target = SDK5.TargetManager.TargetManager.instance().primaryPageTarget();
+      const request = target?.model(SDK5.NetworkManager.NetworkManager)?.requestForId(anchor.networkRequestId);
+      if (request) {
+        return { text: request.name() };
+      }
+    }
+    return { text: anchor.textSignature || "" };
+  }
   #handlePinClick = (threadId) => {
     const thread = this.#commentManager.getCommentThread(threadId);
     if (this.#activeThreadId === threadId) {
@@ -4444,15 +4500,13 @@ var CommentsOverlayWidget = class extends UI10.Widget.Widget {
     }
     this.requestUpdate();
   };
-  performUpdate() {
+  async performUpdate(signal) {
+    const activeThread = this.#activeThreadId ? this.#commentManager.getCommentThread(this.#activeThreadId) ?? null : null;
+    const title = await this.#getOrComputeTitle(activeThread?.anchor ?? null);
+    signal?.throwIfAborted();
     const pins = this.#commentOverlayManager.getPinPositions();
     const highlights = this.#commentOverlayManager.getHighlightRects();
-    let activePin = null;
-    let activeThread = null;
-    if (this.#activeThreadId) {
-      activePin = pins.find((p) => p.id === this.#activeThreadId) ?? null;
-      activeThread = this.#commentManager.getCommentThread(this.#activeThreadId) ?? null;
-    }
+    const activePin = this.#activeThreadId ? pins.find((p) => p.id === this.#activeThreadId) ?? null : null;
     const viewInput = {
       pins,
       highlights,
@@ -4461,6 +4515,7 @@ var CommentsOverlayWidget = class extends UI10.Widget.Widget {
       onPinClick: this.#handlePinClick,
       activeThread,
       activePin,
+      title,
       onAddComment: (text) => {
         activeThread?.save(text);
       }

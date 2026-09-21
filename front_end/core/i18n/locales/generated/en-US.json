@@ -4557,10 +4557,10 @@
     "message": "No session"
   },
   "panels/application/DeviceBoundSessionsTreeElement.ts | sessionWithErrors": {
-    "message": "{sessionName}, Session has errors"
+    "message": "{sessionName}, session has errors"
   },
   "panels/application/DeviceBoundSessionsTreeElement.ts | terminatedSession": {
-    "message": "{sessionName}, Session terminated"
+    "message": "{sessionName}, session terminated"
   },
   "panels/application/DeviceBoundSessionsView.ts | allowedRefreshInitiators": {
     "message": "Allowed refresh initiators"
@@ -4569,7 +4569,7 @@
     "message": "Attestation key generation error"
   },
   "panels/application/DeviceBoundSessionsView.ts | boundCookieSetForbidden": {
-    "message": "Registration in a context that cannot set bound cookies"
+    "message": "Registration in a context that can’t set bound cookies"
   },
   "panels/application/DeviceBoundSessionsView.ts | cachedChallenge": {
     "message": "Cached challenge"
@@ -4740,7 +4740,7 @@
     "message": "Invalid scope specification"
   },
   "panels/application/DeviceBoundSessionsView.ts | invalidScopeSpecificationType": {
-    "message": "Scope specification type is neiher include or exclude"
+    "message": "Scope specification type is neither include nor exclude"
   },
   "panels/application/DeviceBoundSessionsView.ts | invalidSessionId": {
     "message": "Invalid session ID"
@@ -4812,7 +4812,7 @@
     "message": "Allowed refresh initiator has invalid host pattern"
   },
   "panels/application/DeviceBoundSessionsView.ts | refreshInitiatorNotString": {
-    "message": "Allowed refresh initiator is not a string"
+    "message": "Allowed refresh initiator isn’t a string"
   },
   "panels/application/DeviceBoundSessionsView.ts | refreshResult": {
     "message": "Refresh result"
@@ -4869,7 +4869,7 @@
     "message": "Site-scoped session has mismatch between host pattern and site"
   },
   "panels/application/DeviceBoundSessionsView.ts | selectEventToViewDetails": {
-    "message": "Select an event row to view more details"
+    "message": "Select an event row to view details"
   },
   "panels/application/DeviceBoundSessionsView.ts | serverError": {
     "message": "Endpoint transient error"
@@ -4911,7 +4911,7 @@
     "message": "Removed from storage partition"
   },
   "panels/application/DeviceBoundSessionsView.ts | subdomainRegistrationUnauthorized": {
-    "message": ".well-known did not authorize registration by subdomain"
+    "message": ".well-known didn’t authorize registration by subdomain"
   },
   "panels/application/DeviceBoundSessionsView.ts | subdomainRegistrationWellKnownMalformed": {
     "message": "Subdomain registration .well-known content malformed"

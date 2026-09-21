@@ -27,7 +27,7 @@
     "noImplicitReturns": true,
     "outDir": ".",
     "preserveConstEnums": true,
-    "rootDir": "../../../../../../test/ai_evals/network",
+    "rootDir": "../../../../../../test/ai_evals/report",
     "rootDirs": [
       "../../../../../../",
       "../../../"
@@ -48,25 +48,16 @@
     "useUnknownInCatchVariables": false
   },
   "files": [
-    "../../../../../../test/ai_evals/network/server-error-5xx.test.ts",
+    "../../../../../../test/ai_evals/report/eval-logger.ts",
+    "../../../../../../test/ai_evals/report/eval-task-recorder.ts",
+    "../../../../../../test/ai_evals/report/gcs-upload.ts",
+    "../../../../../../test/ai_evals/report/trajectory-builder.ts",
     "../../../../../../front_end/legacy/legacy-defs.d.ts",
     "../../../../../../front_end/global_typings/global_defs.d.ts",
     "../../../../../../node_modules/@types/filesystem/index.d.ts",
-    "../../../../../../node_modules/@types/filewriter/index.d.ts",
-    "../../../../../../test/e2e/types.d.ts"
+    "../../../../../../node_modules/@types/filewriter/index.d.ts"
   ],
   "references": [
-    {
-      "path": "../../conductor/implementation-tsconfig.ref.json"
-    },
-    {
-      "path": "../../e2e/helpers/helpers-tsconfig.ref.json"
-    },
-    {
-      "path": "../helpers/helpers-tsconfig.ref.json"
-    },
-    {
-      "path": "../report/report-tsconfig.ref.json"
-    }
+
   ]
 }
