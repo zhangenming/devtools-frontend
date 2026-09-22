@@ -15786,6 +15786,7 @@ var OPAQUE_PREFIXES = [
   "about:",
   "blob:about",
   "blob:data",
+  "blob:file",
   "blob:null"
 ];
 var IMPORTED_ORIGIN_PREFIXES = /* @__PURE__ */ new Set([
@@ -16817,11 +16818,11 @@ var BaseVariableMatcher = class extends BaseVariableMatcherBase {
     }
     const nameNode = args[0][0];
     const fallback = args.length === 2 ? args[1] : void 0;
-    if (nameNode?.name !== "VariableName") {
+    if (nameNode?.name !== "VariableName" && nameNode?.name !== "ValueName") {
       return null;
     }
     const varName = matching.ast.text(nameNode);
-    if (!varName.startsWith("--")) {
+    if (!varName.startsWith("--") || varName.length <= 2) {
       return null;
     }
     return new BaseVariableMatch(
@@ -24696,10 +24697,16 @@ var SourceMapCache = class _SourceMapCache {
     this.#name = name;
   }
   async set(debugId, securityOrigin, sourceMap) {
+    if (!securityOrigin || securityOrigin === "file://") {
+      return;
+    }
     const cache = await this.#cache();
     await cache?.put(_SourceMapCache.#urlForDebugId(debugId, securityOrigin), new Response(JSON.stringify(sourceMap)));
   }
   async get(debugId, securityOrigin) {
+    if (!securityOrigin || securityOrigin === "file://") {
+      return null;
+    }
     const cache = await this.#cache();
     const response = await cache?.match(_SourceMapCache.#urlForDebugId(debugId, securityOrigin));
     return await response?.json() ?? null;
@@ -24726,9 +24733,15 @@ var SourceMapCache = class _SourceMapCache {
 var IN_MEMORY_INSTANCE = new class {
   #cache = /* @__PURE__ */ new Map();
   async set(debugId, securityOrigin, sourceMap) {
+    if (!securityOrigin || securityOrigin === "file://") {
+      return;
+    }
     this.#cache.set(`${debugId}|${securityOrigin}`, sourceMap);
   }
   async get(debugId, securityOrigin) {
+    if (!securityOrigin || securityOrigin === "file://") {
+      return null;
+    }
     return this.#cache.get(`${debugId}|${securityOrigin}`) ?? null;
   }
   async disposeForTest() {
@@ -24903,20 +24916,29 @@ var SourceMapManager = class _SourceMapManager extends Common13.ObjectWrapper.Ob
     return Promise.all(this.#sourceMaps.keys().map((sourceMap) => sourceMap.waitForScopeInfo()));
   }
 };
+function getCacheOrigin(initiator) {
+  if (!initiator.initiatorUrl) {
+    return null;
+  }
+  const securityOrigin = SecurityOrigin.create(initiator.initiatorUrl);
+  if (securityOrigin.isOpaque() || securityOrigin.isFile() && securityOrigin.siteId() === "file:///") {
+    return null;
+  }
+  return securityOrigin.siteId();
+}
 async function loadSourceMap(resourceLoader, sourceMapCache, url, debugId, initiator) {
   try {
-    if (debugId) {
-      const securityOrigin = initiator.initiatorUrl ? Common13.ParsedURL.ParsedURL.extractOrigin(initiator.initiatorUrl) : Platform10.DevToolsPath.EmptyUrlString;
-      const cachedSourceMap = await sourceMapCache.get(debugId, securityOrigin);
+    const cacheOrigin = debugId ? getCacheOrigin(initiator) : null;
+    if (debugId && cacheOrigin) {
+      const cachedSourceMap = await sourceMapCache.get(debugId, cacheOrigin);
       if (cachedSourceMap) {
         return cachedSourceMap;
       }
     }
     const { content } = await resourceLoader.loadResource(url, initiator);
     const sourceMap = parseSourceMap(content);
-    if (debugId && "debugId" in sourceMap && sourceMap.debugId === debugId) {
-      const securityOrigin = initiator.initiatorUrl ? Common13.ParsedURL.ParsedURL.extractOrigin(initiator.initiatorUrl) : Platform10.DevToolsPath.EmptyUrlString;
-      await sourceMapCache.set(sourceMap.debugId, securityOrigin, sourceMap).catch();
+    if (debugId && cacheOrigin && "debugId" in sourceMap && sourceMap.debugId === debugId) {
+      await sourceMapCache.set(sourceMap.debugId, cacheOrigin, sourceMap).catch();
     }
     return sourceMap;
   } catch (cause) {

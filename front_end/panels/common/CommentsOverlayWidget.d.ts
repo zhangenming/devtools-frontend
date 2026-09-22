@@ -29,3 +29,8 @@ export declare class ActionDelegate implements UI.ActionRegistration.ActionDeleg
     handleAction(_context: UI.Context.Context, actionId: string): boolean;
     static resetForTest(): void;
 }
+export declare class ButtonProvider implements UI.Toolbar.Provider {
+    #private;
+    constructor(commentManager?: CommentManager.CommentManager.CommentManager);
+    item(): UI.Toolbar.ToolbarItem | null;
+}

@@ -94,6 +94,7 @@ export class CommentsOverlayWidget extends UI.Widget.Widget {
         this.#commentOverlayManager.addEventListener("HoverHighlightChanged" /* Comments.CommentOverlayManager.Events.HOVER_HIGHLIGHT_CHANGED */, this.#onStateChanged, this);
         this.#commentManager.addEventListener("CommentThreadsChanged" /* CommentManager.CommentManager.Events.COMMENT_THREADS_CHANGED */, this.#onStateChanged, this);
         this.#commentManager.addEventListener("CommentModeChanged" /* CommentManager.CommentManager.Events.COMMENT_MODE_CHANGED */, this.#onCommentModeChanged, this);
+        this.#commentManager.addEventListener("AgentAttachedChanged" /* CommentManager.CommentManager.Events.AGENT_ATTACHED_CHANGED */, this.#onAgentAttachedChanged, this);
         this.requestUpdate();
     }
     willHide() {
@@ -102,7 +103,14 @@ export class CommentsOverlayWidget extends UI.Widget.Widget {
         this.#commentOverlayManager.removeEventListener("HoverHighlightChanged" /* Comments.CommentOverlayManager.Events.HOVER_HIGHLIGHT_CHANGED */, this.#onStateChanged, this);
         this.#commentManager.removeEventListener("CommentThreadsChanged" /* CommentManager.CommentManager.Events.COMMENT_THREADS_CHANGED */, this.#onStateChanged, this);
         this.#commentManager.removeEventListener("CommentModeChanged" /* CommentManager.CommentManager.Events.COMMENT_MODE_CHANGED */, this.#onCommentModeChanged, this);
+        this.#commentManager.removeEventListener("AgentAttachedChanged" /* CommentManager.CommentManager.Events.AGENT_ATTACHED_CHANGED */, this.#onAgentAttachedChanged, this);
         super.willHide();
+    }
+    #onAgentAttachedChanged(event) {
+        if (!event.data) {
+            this.#activeThreadId = null;
+        }
+        this.requestUpdate();
     }
     #onCommentModeChanged(event) {
         const isModeActive = event.data;
@@ -168,6 +176,20 @@ export class CommentsOverlayWidget extends UI.Widget.Widget {
         this.requestUpdate();
     };
     async performUpdate(signal) {
+        if (!this.#commentManager.isAgentAttached()) {
+            this.#view({
+                pins: [],
+                highlights: [],
+                hoverHighlight: null,
+                commentMode: false,
+                onPinClick: this.#handlePinClick,
+                activeThread: null,
+                activePin: null,
+                title: { text: '' },
+                onAddComment: () => { },
+            }, undefined, this.contentElement);
+            return;
+        }
         const activeThread = this.#activeThreadId ? this.#commentManager.getCommentThread(this.#activeThreadId) ?? null : null;
         const title = await this.#getOrComputeTitle(activeThread?.anchor ?? null);
         signal?.throwIfAborted();
@@ -214,6 +236,22 @@ export class ActionDelegate {
             widgetInstance.detach();
             widgetInstance = null;
         }
+    }
+}
+export class ButtonProvider {
+    #button;
+    #commentManager;
+    constructor(commentManager) {
+        this.#commentManager = commentManager ??
+            Root.DevToolsContext.globalInstance().get(CommentManager.CommentManager.CommentManager);
+        this.#button = UI.Toolbar.Toolbar.createActionButton('comments.toggle-comment-mode');
+        this.#button.setVisible(this.#commentManager.isAgentAttached());
+        this.#commentManager.addEventListener("AgentAttachedChanged" /* CommentManager.CommentManager.Events.AGENT_ATTACHED_CHANGED */, event => {
+            this.#button.setVisible(event.data);
+        });
+    }
+    item() {
+        return this.#button;
     }
 }
 //# sourceMappingURL=CommentsOverlayWidget.js.map
