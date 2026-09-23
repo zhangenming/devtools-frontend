@@ -37,7 +37,7 @@ export class CD4ABridge extends Common.ObjectWrapper.ObjectWrapper {
         if (!this.#targetManager) {
             return undefined;
         }
-        const target = this.#targetManager.targetById(nodeSignature.targetId) ?? this.#targetManager.primaryPageTarget();
+        const target = this.#targetManager.targetById(nodeSignature.targetId);
         const domModel = target?.model(SDK.DOMModel.DOMModel);
         if (!domModel) {
             return undefined;
@@ -67,6 +67,11 @@ export class CD4ABridge extends Common.ObjectWrapper.ObjectWrapper {
                 `${thread.anchor.editor.filePath}:${thread.anchor.editor.lineNumber}` :
                 `line ${thread.anchor.editor.lineNumber}`;
             details.push(`- Editor: ${editorInfo}`);
+        }
+        if (thread.changes?.length) {
+            for (const change of thread.changes) {
+                details.push(`- Change: ${change.description}`);
+            }
         }
         if (details.length === 0) {
             return rawText;
@@ -106,7 +111,7 @@ export class CD4ABridge extends Common.ObjectWrapper.ObjectWrapper {
             }
         }
         if (target?.node && this.#targetManager) {
-            const sdkTarget = this.#targetManager.targetById(target.node.targetId) ?? this.#targetManager.primaryPageTarget();
+            const sdkTarget = this.#targetManager.targetById(target.node.targetId);
             const domModel = sdkTarget?.model(SDK.DOMModel.DOMModel);
             if (domModel) {
                 const cdpNodeId = target.node.backendNodeId;

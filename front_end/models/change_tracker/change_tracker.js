@@ -40,6 +40,7 @@ var ChangeTracker = class {
       this.#evictOldestRecord();
     }
     const thread = this.#commentManager.createCommentThread(anchor, void 0, void 0, [record]);
+    thread.save();
     this.#records.set(thread.id, record);
     this.#lastRecord = record;
     return record;

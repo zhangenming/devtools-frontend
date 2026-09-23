@@ -38,6 +38,9 @@ export class CommentManager extends Common.ObjectWrapper.ObjectWrapper {
         return this.#agentAttached;
     }
     setCommentMode(active) {
+        if (active && !this.#agentAttached) {
+            return;
+        }
         if (this.#commentMode === active) {
             return;
         }
@@ -73,7 +76,7 @@ export class CommentManager extends Common.ObjectWrapper.ObjectWrapper {
     takeComments() {
         const threads = [];
         for (const thread of this.#commentThreads.values()) {
-            if (thread.status === 'ACTIVE' && !thread.transmitted) {
+            if (thread.status === 'SENT_TO_AGENT' && !thread.transmitted) {
                 thread.transmitted = true;
                 threads.push(thread);
             }

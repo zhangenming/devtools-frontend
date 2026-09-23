@@ -23679,6 +23679,9 @@ var TreeElement = class {
   }
   set selectable(x) {
     this.selectableInternal = x;
+    if (!x && this.selected) {
+      this.deselect();
+    }
   }
   get listItemElement() {
     return this.listItemNode;
@@ -24410,7 +24413,7 @@ var TreeViewTreeElement = class _TreeViewTreeElement extends TreeElement {
     this.#clonedClasses.clear();
     for (let i = 0; i < this.configElement.attributes.length; ++i) {
       const attribute = this.configElement.attributes.item(i);
-      if (attribute && attribute.name !== "role" && _TreeViewTreeElement.CLONED_ATTRIBUTES.has(attribute.name)) {
+      if (attribute && attribute.name !== "role" && (_TreeViewTreeElement.CLONED_ATTRIBUTES.has(attribute.name) || attribute.name.startsWith("data-"))) {
         this.listItemElement.setAttribute(attribute.name, attribute.value);
         this.#clonedAttributes.add(attribute.name);
       }
@@ -24441,7 +24444,7 @@ var TreeViewTreeElement = class _TreeViewTreeElement extends TreeElement {
     this.toggleOnClick = hasBooleanAttribute(this.configElement, "toggle-on-click");
     this.updateExpansionFromAttribute();
     Highlighting.HighlightManager.HighlightManager.instance().apply(this.titleElement);
-    if (hadFocus) {
+    if (hadFocus && this.selected) {
       this.listItemElement.focus();
     }
   }

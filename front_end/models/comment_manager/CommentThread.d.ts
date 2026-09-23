@@ -53,7 +53,7 @@ export interface ChangeRecord {
     description: string;
     timestamp: number;
 }
-export type CommentThreadStatus = 'DRAFT' | 'ACTIVE' | 'RESOLVED';
+export type CommentThreadStatus = 'DRAFT' | 'ACTIVE' | 'SENT_TO_AGENT' | 'RESOLVED';
 export declare const enum Events {
     CHANGED = "Changed"
 }
@@ -77,5 +77,6 @@ export declare class CommentThread extends Common.ObjectWrapper.ObjectWrapper<Ev
     constructor(options: CommentThreadOptions);
     get index(): number;
     save(text?: string, author?: 'DEVELOPER' | 'AGENT'): void;
+    sendToAgent(text?: string, author?: 'DEVELOPER' | 'AGENT'): void;
     resolve(replyText?: string): void;
 }

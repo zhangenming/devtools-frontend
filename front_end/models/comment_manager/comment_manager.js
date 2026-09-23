@@ -55,21 +55,40 @@ var CommentThread = class _CommentThread extends Common.ObjectWrapper.ObjectWrap
   get index() {
     return this.#savedIndex ?? _CommentThread.#nextIndex;
   }
-  save(text, author = "DEVELOPER") {
-    let changed = false;
+  /**
+   * Returns whether it was changed.
+   */
+  #saveText(text, author = "DEVELOPER") {
     if (text && text.trim().length > 0) {
       this.comments.push({
         author,
         text: text.trim(),
         timestamp: Date.now()
       });
-      changed = true;
+      return true;
     }
+    return false;
+  }
+  save(text, author = "DEVELOPER") {
+    let changed = this.#saveText(text, author);
     if (this.status === "DRAFT") {
       if (this.#savedIndex === void 0) {
         this.#savedIndex = _CommentThread.#nextIndex++;
       }
       this.status = "ACTIVE";
+      changed = true;
+    }
+    if (changed) {
+      this.dispatchEventToListeners("Changed" /* CHANGED */);
+    }
+  }
+  sendToAgent(text, author = "DEVELOPER") {
+    let changed = this.#saveText(text, author);
+    if (this.status === "DRAFT" || this.status === "ACTIVE") {
+      if (this.#savedIndex === void 0) {
+        this.#savedIndex = _CommentThread.#nextIndex++;
+      }
+      this.status = "SENT_TO_AGENT";
       changed = true;
     }
     if (changed) {
@@ -124,6 +143,9 @@ var CommentManager = class extends Common2.ObjectWrapper.ObjectWrapper {
     return this.#agentAttached;
   }
   setCommentMode(active) {
+    if (active && !this.#agentAttached) {
+      return;
+    }
     if (this.#commentMode === active) {
       return;
     }
@@ -158,7 +180,7 @@ var CommentManager = class extends Common2.ObjectWrapper.ObjectWrapper {
   takeComments() {
     const threads = [];
     for (const thread of this.#commentThreads.values()) {
-      if (thread.status === "ACTIVE" && !thread.transmitted) {
+      if (thread.status === "SENT_TO_AGENT" && !thread.transmitted) {
         thread.transmitted = true;
         threads.push(thread);
       }
@@ -226,7 +248,7 @@ var CD4ABridge = class extends Common3.ObjectWrapper.ObjectWrapper {
     if (!this.#targetManager) {
       return void 0;
     }
-    const target = this.#targetManager.targetById(nodeSignature.targetId) ?? this.#targetManager.primaryPageTarget();
+    const target = this.#targetManager.targetById(nodeSignature.targetId);
     const domModel = target?.model(SDK.DOMModel.DOMModel);
     if (!domModel) {
       return void 0;
@@ -254,6 +276,11 @@ var CD4ABridge = class extends Common3.ObjectWrapper.ObjectWrapper {
     if (thread.anchor.editor) {
       const editorInfo = thread.anchor.editor.filePath ? `${thread.anchor.editor.filePath}:${thread.anchor.editor.lineNumber}` : `line ${thread.anchor.editor.lineNumber}`;
       details.push(`- Editor: ${editorInfo}`);
+    }
+    if (thread.changes?.length) {
+      for (const change of thread.changes) {
+        details.push(`- Change: ${change.description}`);
+      }
     }
     if (details.length === 0) {
       return rawText;
@@ -298,7 +325,7 @@ ${details.join("\n")}` : details.join("\n");
       }
     }
     if (target?.node && this.#targetManager) {
-      const sdkTarget = this.#targetManager.targetById(target.node.targetId) ?? this.#targetManager.primaryPageTarget();
+      const sdkTarget = this.#targetManager.targetById(target.node.targetId);
       const domModel = sdkTarget?.model(SDK.DOMModel.DOMModel);
       if (domModel) {
         const cdpNodeId = target.node.backendNodeId;
