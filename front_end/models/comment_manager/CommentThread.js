@@ -13,16 +13,17 @@ export class CommentThread extends Common.ObjectWrapper.ObjectWrapper {
     }
     id = crypto.randomUUID();
     anchor;
+    /** True for comments generated from the change tracker. */
+    isGeneratedComment;
     #savedIndex;
     comments;
     status = 'DRAFT';
     transmitted = false;
-    changes;
     constructor(options) {
         super();
         this.anchor = options.anchor;
         this.comments = options.comments ?? [];
-        this.changes = options.changes;
+        this.isGeneratedComment = Boolean(options.isGeneratedComment);
     }
     get index() {
         return this.#savedIndex ?? CommentThread.#nextIndex;

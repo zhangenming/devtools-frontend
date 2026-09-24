@@ -1239,9 +1239,8 @@ export class TreeElement {
             if (!dontPopulate) {
                 void element.populateIfNeeded();
             }
-            element =
-                (skipUnrevealed ? (element.revealed() && element.expanded ? element.lastChild() : null) :
-                    element.lastChild());
+            element = (skipUnrevealed ? (element.revealed() && element.expanded ? element.lastChild() : null) :
+                element.lastChild());
         }
         if (element) {
             return element;
@@ -1884,7 +1883,13 @@ class IfExpandedDirective extends Lit.Directive.Directive {
         this.#partInfo = partInfo;
     }
     render(content) {
-        return this.#isInExpandedRow(this.#partInfo.startNode) ? content : Lit.nothing;
+        if (!this.#isInExpandedRow(this.#partInfo.startNode)) {
+            return Lit.nothing;
+        }
+        if (typeof content === 'function') {
+            return content();
+        }
+        return content;
     }
     #isInExpandedRow(element) {
         if (!element) {

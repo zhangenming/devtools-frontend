@@ -41,16 +41,17 @@ var CommentThread = class _CommentThread extends Common.ObjectWrapper.ObjectWrap
   }
   id = crypto.randomUUID();
   anchor;
+  /** True for comments generated from the change tracker. */
+  isGeneratedComment;
   #savedIndex;
   comments;
   status = "DRAFT";
   transmitted = false;
-  changes;
   constructor(options) {
     super();
     this.anchor = options.anchor;
     this.comments = options.comments ?? [];
-    this.changes = options.changes;
+    this.isGeneratedComment = Boolean(options.isGeneratedComment);
   }
   get index() {
     return this.#savedIndex ?? _CommentThread.#nextIndex;
@@ -155,7 +156,7 @@ var CommentManager = class extends Common2.ObjectWrapper.ObjectWrapper {
   isCommentMode() {
     return this.#commentMode;
   }
-  createCommentThread(anchor, text, author = "DEVELOPER", changes) {
+  createCommentThread(anchor, text, author = "DEVELOPER", isGeneratedComment) {
     const comments = text ? [{
       author,
       text,
@@ -164,7 +165,7 @@ var CommentManager = class extends Common2.ObjectWrapper.ObjectWrapper {
     const thread = new CommentThread({
       anchor,
       comments,
-      changes
+      isGeneratedComment
     });
     thread.addEventListener("Changed" /* CHANGED */, this.#onThreadChanged, this);
     this.#commentThreads.set(thread.id, thread);
@@ -263,6 +264,9 @@ var CD4ABridge = class extends Common3.ObjectWrapper.ObjectWrapper {
   #formatCommentText(thread) {
     const rawText = thread.comments[0]?.text ?? "";
     const details = [];
+    if (thread.anchor.vePath) {
+      details.push(`- DevTools VEPath: ${thread.anchor.vePath}`);
+    }
     if (thread.anchor.textSignature) {
       details.push(`- DevTools element: ${thread.anchor.textSignature}`);
     }
@@ -276,11 +280,6 @@ var CD4ABridge = class extends Common3.ObjectWrapper.ObjectWrapper {
     if (thread.anchor.editor) {
       const editorInfo = thread.anchor.editor.filePath ? `${thread.anchor.editor.filePath}:${thread.anchor.editor.lineNumber}` : `line ${thread.anchor.editor.lineNumber}`;
       details.push(`- Editor: ${editorInfo}`);
-    }
-    if (thread.changes?.length) {
-      for (const change of thread.changes) {
-        details.push(`- Change: ${change.description}`);
-      }
     }
     if (details.length === 0) {
       return rawText;

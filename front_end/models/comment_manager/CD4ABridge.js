@@ -52,6 +52,9 @@ export class CD4ABridge extends Common.ObjectWrapper.ObjectWrapper {
     #formatCommentText(thread) {
         const rawText = thread.comments[0]?.text ?? '';
         const details = [];
+        if (thread.anchor.vePath) {
+            details.push(`- DevTools VEPath: ${thread.anchor.vePath}`);
+        }
         if (thread.anchor.textSignature) {
             details.push(`- DevTools element: ${thread.anchor.textSignature}`);
         }
@@ -67,11 +70,6 @@ export class CD4ABridge extends Common.ObjectWrapper.ObjectWrapper {
                 `${thread.anchor.editor.filePath}:${thread.anchor.editor.lineNumber}` :
                 `line ${thread.anchor.editor.lineNumber}`;
             details.push(`- Editor: ${editorInfo}`);
-        }
-        if (thread.changes?.length) {
-            for (const change of thread.changes) {
-                details.push(`- Change: ${change.description}`);
-            }
         }
         if (details.length === 0) {
             return rawText;

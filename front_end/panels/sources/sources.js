@@ -2417,7 +2417,6 @@ var Audits;
     CookieExclusionReason2["ExcludeSameSiteLax"] = "ExcludeSameSiteLax";
     CookieExclusionReason2["ExcludeSameSiteStrict"] = "ExcludeSameSiteStrict";
     CookieExclusionReason2["ExcludeDomainNonASCII"] = "ExcludeDomainNonASCII";
-    CookieExclusionReason2["ExcludeThirdPartyCookieBlockedInFirstPartySet"] = "ExcludeThirdPartyCookieBlockedInFirstPartySet";
     CookieExclusionReason2["ExcludeThirdPartyPhaseout"] = "ExcludeThirdPartyPhaseout";
     CookieExclusionReason2["ExcludePortMismatch"] = "ExcludePortMismatch";
     CookieExclusionReason2["ExcludeSchemeMismatch"] = "ExcludeSchemeMismatch";
@@ -3669,7 +3668,6 @@ var Network;
     SetCookieBlockedReason2["SameSiteNoneInsecure"] = "SameSiteNoneInsecure";
     SetCookieBlockedReason2["UserPreferences"] = "UserPreferences";
     SetCookieBlockedReason2["ThirdPartyPhaseout"] = "ThirdPartyPhaseout";
-    SetCookieBlockedReason2["ThirdPartyBlockedInFirstPartySet"] = "ThirdPartyBlockedInFirstPartySet";
     SetCookieBlockedReason2["SyntaxError"] = "SyntaxError";
     SetCookieBlockedReason2["SchemeNotSupported"] = "SchemeNotSupported";
     SetCookieBlockedReason2["OverwriteSecure"] = "OverwriteSecure";
@@ -3694,7 +3692,6 @@ var Network;
     CookieBlockedReason2["SameSiteNoneInsecure"] = "SameSiteNoneInsecure";
     CookieBlockedReason2["UserPreferences"] = "UserPreferences";
     CookieBlockedReason2["ThirdPartyPhaseout"] = "ThirdPartyPhaseout";
-    CookieBlockedReason2["ThirdPartyBlockedInFirstPartySet"] = "ThirdPartyBlockedInFirstPartySet";
     CookieBlockedReason2["UnknownError"] = "UnknownError";
     CookieBlockedReason2["SchemefulSameSiteStrict"] = "SchemefulSameSiteStrict";
     CookieBlockedReason2["SchemefulSameSiteLax"] = "SchemefulSameSiteLax";
@@ -11465,17 +11462,21 @@ var ResourceOriginPlugin = class extends Plugin {
         const url = uiSourceCode.url();
         const text = Bindings6.ResourceUtils.displayNameForURL(url);
         const title = i18nString10(UIStrings11.sourceMappedFromS, { PH1: text });
-        links.push(Components.Linkifier.Linkifier.linkifyRevealable(
+        const link = Components.Linkifier.Linkifier.linkifyRevealable(
           uiSourceCode,
           text,
           url,
           title,
           void 0,
           "original-script-location"
-        ));
+        );
+        link.tabIndex = 0;
+        links.push(link);
       }
       for (const originURL of Bindings6.SASSSourceMapping.SASSSourceMapping.uiSourceOrigin(this.uiSourceCode)) {
-        links.push(Components.Linkifier.Linkifier.linkifyURL(originURL));
+        const link = Components.Linkifier.Linkifier.linkifyURL(originURL);
+        link.tabIndex = 0;
+        links.push(link);
       }
       if (links.length === 0) {
         return [];
@@ -11492,6 +11493,7 @@ var ResourceOriginPlugin = class extends Plugin {
     for (const script of debuggerWorkspaceBinding.scriptsForUISourceCode(this.uiSourceCode)) {
       if (script.originStackTrace?.callFrames.length) {
         const link = this.#linkifier.linkifyStackTraceTopFrame(script.debuggerModel.target(), script.originStackTrace);
+        link.tabIndex = 0;
         return [new UI11.Toolbar.ToolbarItem(uiI18n.getFormatLocalizedString(str_11, UIStrings11.fromS, { PH1: link }))];
       }
     }
@@ -17306,7 +17308,7 @@ var DEFAULT_VIEW8 = (input, output, target) => {
   const createScopeSection = ({ scope, objectTree }) => {
     let emptyPlaceholder;
     if (scope.type() === Debugger.ScopeType.Local || scope.type() === Debugger.ScopeType.Closure) {
-      emptyPlaceholder = i18nString22(UIStrings23.noVariables);
+      emptyPlaceholder = html13`${i18nString22(UIStrings23.noVariables)}`;
     }
     const icon = scope.icon();
     const { title, subtitle } = scopeTitle(scope);

@@ -3860,6 +3860,7 @@ __export(CommentThreadWidget_exports, {
 });
 import "../../ui/components/tooltips/tooltips.js";
 import * as i18n17 from "../../core/i18n/i18n.js";
+import * as Buttons4 from "../../ui/components/buttons/buttons.js";
 import * as Input from "../../ui/components/input/input.js";
 import * as MarkdownView from "../../ui/components/markdown_view/markdown_view.js";
 import * as UI9 from "../../ui/legacy/legacy.js";
@@ -3896,6 +3897,17 @@ var commentThreadWidget_css_default = `/*
     justify-content: space-between;
     align-items: center;
     gap: var(--sys-size-4);
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--sys-size-3);
+    flex-shrink: 0;
+  }
+
+  .close-button {
+    flex-shrink: 0;
   }
 
   .sent-status {
@@ -4073,7 +4085,11 @@ var UIStrings7 = {
   /**
    * @description aria-label for the comment text area.
    */
-  commentInputAriaLabel: "Comment input"
+  commentInputAriaLabel: "Comment input",
+  /**
+   * @description Tooltip and aria-label for the close button in the comment thread header.
+   */
+  close: "Close"
 };
 var UIStringsNotTranslate2 = {
   /**
@@ -4093,16 +4109,27 @@ var DEFAULT_VIEW6 = (input, _output, target) => {
         <span class="selected-item">
           ${"node" in input.title ? widget3(DOMNodeLink, { node: input.title.node }) : html8`<span class="selected-item-text">${input.title.text}</span>`}
         </span>
-        ${hasComment ? html8`
-          <div class="sent-status">
-            <devtools-icon
-              class="check-icon"
-              name="checkmark"
-              aria-label=${i18nString7(UIStrings7.sentCheckmark)}>
-            </devtools-icon>
-            <span>${i18nString7(UIStrings7.sent)}</span>
-          </div>
-        ` : Lit3.nothing}
+        <div class="header-actions">
+          ${hasComment ? html8`
+            <div class="sent-status">
+              <devtools-icon
+                class="check-icon"
+                name="checkmark"
+                aria-label=${i18nString7(UIStrings7.sentCheckmark)}>
+              </devtools-icon>
+              <span>${i18nString7(UIStrings7.sent)}</span>
+            </div>
+          ` : Lit3.nothing}
+          <devtools-button
+            class="close-button"
+            aria-label=${i18nString7(UIStrings7.close)}
+            .iconName=${"cross"}
+            .variant=${Buttons4.Button.Variant.ICON}
+            .size=${Buttons4.Button.Size.SMALL}
+            .title=${i18nString7(UIStrings7.close)}
+            @click=${input.onClose}
+          ></devtools-button>
+        </div>
       </div>
 
       ${hasComment ? html8`
@@ -4173,6 +4200,7 @@ var CommentThreadWidget = class extends UI9.Widget.Widget {
   #textAreaRef = createRef();
   #view;
   onAddComment;
+  onClose;
   constructor(element, view = DEFAULT_VIEW6) {
     super(element);
     this.#view = view;
@@ -4208,7 +4236,8 @@ var CommentThreadWidget = class extends UI9.Widget.Widget {
       commentText: this.#commentText,
       textAreaRef: this.#textAreaRef,
       onAddComment: this.#handleAddComment,
-      onCommentTextChange: this.#handleCommentTextChange
+      onCommentTextChange: this.#handleCommentTextChange,
+      onClose: this.onClose
     };
     this.#view(viewInput, void 0, this.contentElement);
   }
@@ -4376,7 +4405,8 @@ var DEFAULT_VIEW7 = (input, _output, target) => {
             ${UI10.Widget.widget(CommentThreadWidget, {
       title: input.title,
       comments: [...item2.thread.comments],
-      onAddComment: input.onAddComment
+      onAddComment: input.onAddComment,
+      onClose: input.onCloseCommentThread
     })}
           </div>
         `
@@ -4393,6 +4423,17 @@ var CommentsOverlayWidget = class extends UI10.Widget.Widget {
   #closeTimeoutId = null;
   #cachedTitle = { text: "" };
   #cachedTitleAnchor = null;
+  #setActiveThreadId(threadId) {
+    if (this.#activeThreadId !== threadId) {
+      this.#clearCloseTimeout();
+      this.#activeThreadId = threadId;
+      if (threadId && this.isShowing()) {
+        document.documentElement.addEventListener("keydown", this.#onKeyDown);
+      } else {
+        document.documentElement.removeEventListener("keydown", this.#onKeyDown);
+      }
+    }
+  }
   constructor(element, [commentManager], view = DEFAULT_VIEW7) {
     super(element, { useShadowDom: false });
     this.#view = view;
@@ -4432,10 +4473,14 @@ var CommentsOverlayWidget = class extends UI10.Widget.Widget {
       this.#onAgentAttachedChanged,
       this
     );
+    if (this.#activeThreadId) {
+      document.documentElement.addEventListener("keydown", this.#onKeyDown);
+    }
     this.requestUpdate();
   }
   willHide() {
     this.#clearCloseTimeout();
+    document.documentElement.removeEventListener("keydown", this.#onKeyDown);
     this.#commentOverlayManager.stop();
     this.#commentOverlayManager.removeEventListener(
       Comments.CommentOverlayManager.Events.POSITIONS_UPDATED,
@@ -4472,14 +4517,14 @@ var CommentsOverlayWidget = class extends UI10.Widget.Widget {
   }
   #onAgentAttachedChanged(event) {
     if (!event.data) {
-      this.#activeThreadId = null;
+      this.#setActiveThreadId(null);
     }
     this.requestUpdate();
   }
   #onCommentModeChanged(event) {
     const isModeActive = event.data;
     if (!isModeActive) {
-      this.#activeThreadId = null;
+      this.#setActiveThreadId(null);
     }
     const action3 = UI10.ActionRegistry.ActionRegistry.instance().getAction(
       "comments.toggle-comment-mode"
@@ -4490,9 +4535,9 @@ var CommentsOverlayWidget = class extends UI10.Widget.Widget {
   #onStateChanged() {
     const draftThread = this.#commentManager.getCommentThreads().find((t) => t.status === "DRAFT");
     if (draftThread) {
-      this.#activeThreadId = draftThread.id;
+      this.#setActiveThreadId(draftThread.id);
     } else if (this.#activeThreadId && !this.#commentManager.getCommentThread(this.#activeThreadId)) {
-      this.#activeThreadId = null;
+      this.#setActiveThreadId(null);
     }
     this.requestUpdate();
   }
@@ -4529,17 +4574,30 @@ var CommentsOverlayWidget = class extends UI10.Widget.Widget {
     return { text: anchor.textSignature || "" };
   }
   #handlePinClick = (threadId) => {
-    const thread = this.#commentManager.getCommentThread(threadId);
     if (this.#activeThreadId === threadId) {
-      if (thread?.status === "DRAFT") {
-        this.#commentOverlayManager.clearDraftThreads();
-      }
-      this.#activeThreadId = null;
-    } else {
-      this.#commentOverlayManager.clearDraftThreads();
-      this.#activeThreadId = threadId;
+      this.#handleCloseCommentThread();
+      return;
     }
+    this.#commentOverlayManager.clearDraftThreads();
+    this.#setActiveThreadId(threadId);
     this.requestUpdate();
+  };
+  #handleCloseCommentThread = () => {
+    if (!this.#activeThreadId) {
+      return;
+    }
+    const thread = this.#commentManager.getCommentThread(this.#activeThreadId);
+    if (thread?.status === "DRAFT") {
+      this.#commentOverlayManager.clearDraftThreads();
+    }
+    this.#setActiveThreadId(null);
+    this.requestUpdate();
+  };
+  #onKeyDown = (event) => {
+    if (this.#activeThreadId && event.key === "Escape" && !event.isComposing) {
+      event.consume(true);
+      this.#handleCloseCommentThread();
+    }
   };
   async performUpdate(signal) {
     if (!this.#commentManager.isAgentAttached()) {
@@ -4554,7 +4612,8 @@ var CommentsOverlayWidget = class extends UI10.Widget.Widget {
           activePin: null,
           title: { text: "" },
           onAddComment: () => {
-          }
+          },
+          onCloseCommentThread: this.#handleCloseCommentThread
         },
         void 0,
         this.contentElement
@@ -4582,14 +4641,16 @@ var CommentsOverlayWidget = class extends UI10.Widget.Widget {
         }
         activeThread.sendToAgent(text);
         const threadId = activeThread.id;
+        this.#clearCloseTimeout();
         this.#closeTimeoutId = window.setTimeout(() => {
           this.#closeTimeoutId = null;
           if (this.#activeThreadId === threadId) {
-            this.#activeThreadId = null;
+            this.#setActiveThreadId(null);
             this.requestUpdate();
           }
         }, AUTO_CLOSE_DELAY_MS);
-      }
+      },
+      onCloseCommentThread: this.#handleCloseCommentThread
     };
     this.#view(viewInput, void 0, this.contentElement);
   }
@@ -4661,29 +4722,69 @@ __export(CommentsStatusBarPill_exports, {
 });
 import * as i18n19 from "../../core/i18n/i18n.js";
 import * as CommentManager3 from "../../models/comment_manager/comment_manager.js";
+import * as Buttons5 from "../../ui/components/buttons/buttons.js";
 import * as UI11 from "../../ui/legacy/legacy.js";
 import * as Lit5 from "../../ui/lit/lit.js";
 import * as VisualLogging4 from "../../ui/visual_logging/visual_logging.js";
+
+// gen/front_end/panels/common/commentsStatusBarPill.css.js
+var commentsStatusBarPill_css_default = `/*
+ * Copyright 2026 The Chromium Authors
+ * Use of this source code is governed by a BSD-style license that can be
+ * found in the LICENSE file.
+ */
+
+@scope to (devtools-widget > *) {
+  .pill-container {
+    display: flex;
+    align-items: center;
+    gap: var(--sys-size-3);
+  }
+}
+
+/*# sourceURL=${import.meta.resolve("./commentsStatusBarPill.css")} */`;
+
+// ../../front_end/panels/common/CommentsStatusBarPill.ts
 var UIStrings8 = {
   /**
    * @description Button text for the comments status bar pill showing the number of open comments.
    * @example {2} PH1
    */
-  commentsCount: "Comments ({PH1})"
+  commentsCount: "Comments ({PH1})",
+  /**
+   * @description Button text for sending all draft comments to the agent in the comments status bar pill.
+   * @example {2} PH1
+   */
+  sendToAgentCount: "Send to agent ({PH1})"
 };
 var str_8 = i18n19.i18n.registerUIStrings("panels/common/CommentsStatusBarPill.ts", UIStrings8);
 var i18nString8 = i18n19.i18n.getLocalizedString.bind(void 0, str_8);
 var { html: html10, render: render9 } = Lit5;
 var DEFAULT_VIEW8 = (input, _output, target) => {
+  const unsentCount = input.threads.filter((thread) => thread.status === "ACTIVE").length;
+  const tooltip = input.threads.flatMap((thread) => thread.comments.map((comment) => comment.text)).join("\n");
   render9(html10`
+    <style>${commentsStatusBarPill_css_default}</style>
     ${input.threads.length <= 0 ? Lit5.nothing : html10`
-      <button
-        class="devtools-pill"
-        ?disabled=${input.disabled}
-        @click=${input.onPillClick}
-        jslog=${VisualLogging4.action("comments-status-bar-pill").track({ click: true })}>
-        ${i18nString8(UIStrings8.commentsCount, { PH1: input.threads.length })}
-      </button>
+      <div class="pill-container">
+        <button
+          class="devtools-pill"
+          title=${tooltip}
+          ?disabled=${input.disabled}
+          @click=${input.onPillClick}
+          jslog=${VisualLogging4.action("comments-status-bar-pill").track({ click: true })}>
+          ${i18nString8(UIStrings8.commentsCount, { PH1: input.threads.length })}
+        </button>
+        ${unsentCount > 0 ? html10`
+          <devtools-button
+            .variant=${Buttons5.Button.Variant.PRIMARY}
+            .disabled=${Boolean(input.disabled)}
+            .jslogContext=${"comments-send-to-agent"}
+            @click=${input.onSendToAgentClick}>
+            ${i18nString8(UIStrings8.sendToAgentCount, { PH1: unsentCount })}
+          </devtools-button>
+        ` : Lit5.nothing}
+      </div>
     `}
   `, target);
 };
@@ -4729,11 +4830,19 @@ var CommentsStatusBarPill = class extends UI11.Widget.Widget {
   performUpdate() {
     const viewInput = {
       threads: this.#commentManager.isAgentAttached() ? this.#commentManager.getCommentThreads().filter((thread) => thread.status !== "DRAFT") : [],
-      onPillClick: this.#handlePillClick
+      onPillClick: this.#handlePillClick,
+      onSendToAgentClick: this.#handleSendToAgentClick
     };
     this.#view(viewInput, void 0, this.contentElement);
   }
   #handlePillClick = () => {
+  };
+  #handleSendToAgentClick = () => {
+    for (const thread of this.#commentManager.getCommentThreads()) {
+      if (thread.status === "ACTIVE") {
+        thread.sendToAgent();
+      }
+    }
   };
 };
 export {

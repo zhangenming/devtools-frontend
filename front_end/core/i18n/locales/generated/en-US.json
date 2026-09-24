@@ -6623,6 +6623,12 @@
   "panels/common/CommentsStatusBarPill.ts | commentsCount": {
     "message": "Comments ({PH1})"
   },
+  "panels/common/CommentsStatusBarPill.ts | sendToAgentCount": {
+    "message": "Send to agent ({PH1})"
+  },
+  "panels/common/CommentThreadWidget.ts | close": {
+    "message": "Close"
+  },
   "panels/common/CommentThreadWidget.ts | commentInputAriaLabel": {
     "message": "Comment input"
   },
@@ -18101,7 +18107,7 @@
   "ui/legacy/components/object_ui/ObjectPropertiesSection.ts | noProperties": {
     "message": "No properties"
   },
-  "ui/legacy/components/object_ui/ObjectPropertiesSection.ts | openInMemoryInpector": {
+  "ui/legacy/components/object_ui/ObjectPropertiesSection.ts | openInMemoryInspector": {
     "message": "Open in Memory inspector panel"
   },
   "ui/legacy/components/object_ui/ObjectPropertiesSection.ts | showAll": {
