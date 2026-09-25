@@ -42310,7 +42310,7 @@ var CPUThrottlingManager = class _CPUThrottlingManager extends Common37.ObjectWr
     return result.value;
   }
   async updateHostDefaultCPUPerformanceTier() {
-    if (this.#manualCPUPerformanceOverride !== void 0) {
+    if (this.#isCPUPerformanceOverrideActive()) {
       return;
     }
     const target = this.#targetManager.primaryPageTarget();
