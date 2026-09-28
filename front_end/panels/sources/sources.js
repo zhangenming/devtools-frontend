@@ -3229,6 +3229,11 @@ var Emulation;
     SetDeviceMetricsOverrideRequestViewportMeta2["Enable"] = "enable";
     SetDeviceMetricsOverrideRequestViewportMeta2["Default"] = "default";
   })(SetDeviceMetricsOverrideRequestViewportMeta = Emulation2.SetDeviceMetricsOverrideRequestViewportMeta || (Emulation2.SetDeviceMetricsOverrideRequestViewportMeta = {}));
+  let SetDeviceMetricsOverrideRequestTextLayoutMode;
+  ((SetDeviceMetricsOverrideRequestTextLayoutMode2) => {
+    SetDeviceMetricsOverrideRequestTextLayoutMode2["Mobile"] = "mobile";
+    SetDeviceMetricsOverrideRequestTextLayoutMode2["Default"] = "default";
+  })(SetDeviceMetricsOverrideRequestTextLayoutMode = Emulation2.SetDeviceMetricsOverrideRequestTextLayoutMode || (Emulation2.SetDeviceMetricsOverrideRequestTextLayoutMode = {}));
   let SetEmitTouchEventsForMouseRequestConfiguration;
   ((SetEmitTouchEventsForMouseRequestConfiguration2) => {
     SetEmitTouchEventsForMouseRequestConfiguration2["Mobile"] = "mobile";
@@ -8241,37 +8246,27 @@ var sourcesView_css_default = `/*
  * found in the LICENSE file.
  */
 
-#sources-panel-sources-view {
-  --override-highlight-animation-10pc-background-color: rgb(158 54 153);
-  --override-highlight-animation-10pc-foreground-color: rgb(255 255 255);
+@scope to (devtools-widget > *) {
+  :scope {
+    flex: auto;
+    position: relative;
+  }
 
-  flex: auto;
-  position: relative;
-}
+  .sources-toolbar {
+    display: flex;
+    flex: 0 0 auto;
+    min-height: 27px;
+    background-color: var(--sys-color-cdt-base-container);
+    border-top: var(--sys-size-1) solid var(--sys-color-divider);
+    overflow: hidden;
+    z-index: 0;
+    align-items: flex-end;
+  }
 
-#sources-panel-sources-view .sources-toolbar {
-  display: flex;
-  flex: 0 0 auto;
-  min-height: 27px;
-  background-color: var(--sys-color-cdt-base-container);
-  border-top: var(--sys-size-1) solid var(--sys-color-divider);
-  overflow: hidden;
-  z-index: 0;
-  align-items: flex-end;
-
-  devtools-toolbar:first-of-type {
+  .script-view-toolbar {
+    flex: auto;
     flex-wrap: wrap;
   }
-}
-
-.source-frame-debugger-script {
-  --override-debugger-background-tint: rgb(255 255 194 / 50%);
-
-  background-color: var(--override-debugger-background-tint);
-}
-
-.theme-with-dark-background .source-frame-debugger-script {
-  --override-debugger-background-tint: rgb(61 61 0 / 50%);
 }
 
 /*# sourceURL=${import.meta.resolve("./sourcesView.css")} */`;
@@ -9566,7 +9561,6 @@ var DebuggerPlugin = class extends Plugin {
     if (!debuggableFrame) {
       return null;
     }
-    const selectedCallFrame = debuggableFrame.sdkFrame;
     let textPosition = editor.editor.posAtCoords(event);
     if (!textPosition) {
       return null;
@@ -9602,51 +9596,15 @@ var DebuggerPlugin = class extends Plugin {
     return {
       box,
       show: async (popover) => {
-        const scopeMappings = await this.#getScopeMappings(debuggableFrame) ?? [];
-        const scopedVariable = findVariableInScopeMappings(evaluationText, highlightRange.from, scopeMappings);
-        if (scopedVariable.found) {
-          if (!scopedVariable.value) {
-            return false;
-          }
-          objectPopoverHelper = await ObjectUI.ObjectPopoverHelper.ObjectPopoverHelper.buildObjectPopover(scopedVariable.value, popover);
-          const potentiallyUpdatedCallFrame2 = UI10.Context.Context.instance().flavor(StackTrace.StackTrace.DebuggableFrameFlavor);
-          if (!objectPopoverHelper || debuggableFrame !== potentiallyUpdatedCallFrame2) {
-            objectPopoverHelper?.dispose();
-            return false;
-          }
-          return true;
-        }
-        let resolvedText = "";
-        if (selectedCallFrame.script.isJavaScript()) {
-          const nameMap = await SourceMapScopes.NamesResolver.allVariablesInCallFrame(
-            selectedCallFrame,
-            Bindings5.DebuggerWorkspaceBinding.DebuggerWorkspaceBinding.instance()
-          );
-          try {
-            resolvedText = await Formatter.FormatterWorkerPool.formatterWorkerPool().javaScriptSubstitute(evaluationText, nameMap);
-          } catch {
-          }
-        }
-        const throwOnSideEffect = highlightRange.containsSideEffects;
-        const result = await selectedCallFrame.evaluate({
-          expression: resolvedText || evaluationText,
-          objectGroup: "popover",
-          includeCommandLineAPI: false,
-          silent: true,
-          returnByValue: false,
-          generatePreview: false,
-          throwOnSideEffect
-        });
-        if (!result || "error" in result || !result.object || result.object.type === "object" && result.object.subtype === "error") {
+        const object = await this.#evaluateForPopover(debuggableFrame, highlightRange, evaluationText);
+        if (!object) {
           return false;
         }
-        objectPopoverHelper = await ObjectUI.ObjectPopoverHelper.ObjectPopoverHelper.buildObjectPopover(result.object, popover);
+        objectPopoverHelper = await ObjectUI.ObjectPopoverHelper.ObjectPopoverHelper.buildObjectPopover(object, popover);
         const potentiallyUpdatedCallFrame = UI10.Context.Context.instance().flavor(StackTrace.StackTrace.DebuggableFrameFlavor);
         if (!objectPopoverHelper || debuggableFrame !== potentiallyUpdatedCallFrame) {
           debuggerModel.runtimeModel().releaseObjectGroup("popover");
-          if (objectPopoverHelper) {
-            objectPopoverHelper.dispose();
-          }
+          objectPopoverHelper?.dispose();
           return false;
         }
         const decoration = CodeMirror4.Decoration.set(evalExpressionMark.range(highlightRange.from, highlightRange.to));
@@ -9661,6 +9619,39 @@ var DebuggerPlugin = class extends Plugin {
         editor.dispatch({ effects: evalExpression.update.of(CodeMirror4.Decoration.none) });
       }
     };
+  }
+  async #evaluateForPopover(debuggableFrame, highlightRange, evaluationText) {
+    const scopeMappings = await this.#getScopeMappings(debuggableFrame) ?? [];
+    const scopedVariable = findVariableInScopeMappings(evaluationText, highlightRange.from, scopeMappings);
+    if (scopedVariable.found) {
+      return scopedVariable.value;
+    }
+    const selectedCallFrame = debuggableFrame.sdkFrame;
+    let resolvedText = "";
+    if (selectedCallFrame.script.isJavaScript()) {
+      const nameMap = await SourceMapScopes.NamesResolver.allVariablesInCallFrame(
+        selectedCallFrame,
+        Bindings5.DebuggerWorkspaceBinding.DebuggerWorkspaceBinding.instance()
+      );
+      try {
+        resolvedText = await Formatter.FormatterWorkerPool.formatterWorkerPool().javaScriptSubstitute(evaluationText, nameMap);
+      } catch {
+      }
+    }
+    const throwOnSideEffect = highlightRange.containsSideEffects;
+    const result = await selectedCallFrame.evaluate({
+      expression: resolvedText || evaluationText,
+      objectGroup: "popover",
+      includeCommandLineAPI: false,
+      silent: true,
+      returnByValue: false,
+      generatePreview: false,
+      throwOnSideEffect
+    });
+    if (!result || "error" in result || !result.object || result.object.type === "object" && result.object.subtype === "error") {
+      return null;
+    }
+    return result.object;
   }
   onEditorUpdate(update) {
     if (!update.changes.empty) {
@@ -9899,10 +9890,7 @@ var DebuggerPlugin = class extends Plugin {
     const callFrame = debuggableFrame.sdkFrame;
     const url = this.uiSourceCode.url();
     const uiPositionToEditorOffset = (lineNumber, columnNumber) => this.editor?.toOffset(this.transformer.uiLocationToEditorLocation(lineNumber, columnNumber)) ?? null;
-    const scopeChain = await SourceMapScopes.ScopeChainModel.ScopeChainModel.resolveScopeChain(
-      callFrame,
-      Bindings5.DebuggerWorkspaceBinding.DebuggerWorkspaceBinding.instance()
-    );
+    const scopeChain = await SourceMapScopes.ScopeChainResolver.ScopeChainResolver.instance().resolveScopeChain(callFrame);
     const localOriginalScope = scopeChain.find((s) => s instanceof SDK8.SourceMapScopeChainEntry.SourceMapScopeChainEntry && s.type() === Debugger.ScopeType.Local)?.originalScope();
     const functionOffsetPromise = localOriginalScope ? Promise.resolve(uiPositionToEditorOffset(localOriginalScope.start.line, localOriginalScope.start.column)) : this.#rawLocationToEditorOffset(callFrame.functionLocation(), url);
     const executionOffsetPromise = this.#rawLocationToEditorOffset(callFrame.location(), url);
@@ -10956,10 +10944,7 @@ var ScopeMappingsCache = class {
 };
 async function computeScopeMappings(callFrame, rawLocationToEditorOffset, uiPositionToEditorOffset, resolvedScopeChain) {
   const scopeMappings = [];
-  const scopeChain = resolvedScopeChain ?? await SourceMapScopes.ScopeChainModel.ScopeChainModel.resolveScopeChain(
-    callFrame,
-    Bindings5.DebuggerWorkspaceBinding.DebuggerWorkspaceBinding.instance()
-  );
+  const scopeChain = resolvedScopeChain ?? await SourceMapScopes.ScopeChainResolver.ScopeChainResolver.instance().resolveScopeChain(callFrame);
   const activeScopes = new Set(scopeChain.filter((s) => s instanceof SDK8.SourceMapScopeChainEntry.SourceMapScopeChainEntry).map((s) => s.originalScope()));
   const addInactiveChildren = (children) => {
     for (const child of children) {
@@ -11120,6 +11105,12 @@ function containsSideEffects(doc, root) {
 var evalExpressionMark = CodeMirror4.Decoration.mark({ class: "cm-evaluatedExpression" });
 var evalExpression = defineStatefulDecoration();
 var theme3 = CodeMirror4.EditorView.baseTheme({
+  "&.source-frame-debugger-script": {
+    backgroundColor: "rgb(255 255 194 / 50%)"
+  },
+  "&dark.source-frame-debugger-script": {
+    backgroundColor: "rgb(61 61 0 / 50%)"
+  },
   ".cm-line::selection": {
     backgroundColor: "transparent",
     color: "currentColor"
@@ -12482,17 +12473,17 @@ var DEFAULT_VIEW5 = (input, _output, target) => {
       @select=${input.onSelect}
     >
       <devtools-toolbar class="tabbed-pane-left-toolbar" slot="left">
-        ${input.leftToolbarItems.map((item) => item instanceof UI14.Toolbar.ToolbarItem ? item.element : item)}
+        ${input.leftToolbarItems}
       </devtools-toolbar>
       <devtools-toolbar class="tabbed-pane-right-toolbar" slot="right">
-        ${input.rightToolbarItems.map((item) => item instanceof UI14.Toolbar.ToolbarItem ? item.element : item)}
+        ${input.rightToolbarItems}
       </devtools-toolbar>
       ${repeat2(input.openTabs, (tab) => tab.tabId, (tab) => html5`
         <div id=${tab.tabId}
+             class="vbox flex-auto"
              title=${tab.title}
              ?closeable=${tab.isCloseable}
-             ?selected=${input.activeTabId === tab.tabId}
-             style="display: flex; flex: auto;">
+             ?selected=${input.activeTabId === tab.tabId}>
              ${renderTabIcon(tab)}
              ${renderTabSuffix(tab, input)}
              ${tab.widget ? html5`${widget(UI14.Widget.WrapperWidget, { widget: tab.widget })}` : nothing4}
@@ -13524,7 +13515,12 @@ var DEFAULT_VIEW6 = (input, output, target) => {
     <style>${sourcesView_css_default}</style>
     <devtools-widget class="vbox flex-auto"
       ${widget2((element) => {
-    const searchableView = new UI15.SearchableView.SearchableView(input.searchProvider, input.replaceProvider, input.searchableViewId, element);
+    const searchableView = new UI15.SearchableView.SearchableView(
+      input.searchProvider,
+      input.replaceProvider,
+      "sources-view-search-config",
+      element
+    );
     searchableView.setMinimalSearchQuerySize(0);
     return searchableView;
   })}
@@ -13548,7 +13544,7 @@ var DEFAULT_VIEW6 = (input, output, target) => {
       </devtools-widget>
     </devtools-widget>
     <div class="sources-toolbar" jslog=${VisualLogging9.toolbar("bottom")}>
-      <devtools-toolbar class="script-view-toolbar" style="flex: auto;">
+      <devtools-toolbar class="script-view-toolbar">
         ${Array.isArray(input.scriptViewToolbarItems) ? input.scriptViewToolbarItems.map((item) => item.element) : input.scriptViewToolbarItems}
       </devtools-toolbar>
       <devtools-toolbar class="bottom-toolbar">
@@ -13637,7 +13633,6 @@ var SourcesView = class _SourcesView extends SourcesViewBase {
     const input = {
       searchProvider: this,
       replaceProvider: this,
-      searchableViewId: "sources-view-search-config",
       scriptViewToolbarItems: this.#scriptViewToolbarItems,
       isNavigatorSidebarOpen: this.#isNavigatorSidebarOpen,
       isDebuggerSidebarOpen: this.#isDebuggerSidebarOpen,
@@ -13663,7 +13658,7 @@ var SourcesView = class _SourcesView extends SourcesViewBase {
         that.#searchableView = value2;
       }
     };
-    this.#view(input, output, this.element);
+    this.#view(input, output, this.contentElement);
   }
   onDetach() {
     super.onDetach();
@@ -17251,7 +17246,6 @@ __export(ScopeChainSidebarPane_exports, {
   ScopeChainSidebarPane: () => ScopeChainSidebarPane
 });
 import * as i18n45 from "../../core/i18n/i18n.js";
-import * as Bindings11 from "../../models/bindings/bindings.js";
 import * as SourceMapScopes2 from "../../models/source_map_scopes/source_map_scopes.js";
 import * as StackTrace7 from "../../models/stack_trace/stack_trace.js";
 import * as ObjectUI3 from "../../ui/legacy/components/object_ui/object_ui.js";
@@ -17445,7 +17439,7 @@ var ScopeChainSidebarPane = class _ScopeChainSidebarPane extends UI22.Widget.VBo
     if (callFrame) {
       const scopeChainModel = new SourceMapScopes2.ScopeChainModel.ScopeChainModel(
         callFrame.sdkFrame,
-        Bindings11.DebuggerWorkspaceBinding.DebuggerWorkspaceBinding.instance()
+        SourceMapScopes2.ScopeChainResolver.ScopeChainResolver.instance()
       );
       this.#scopeChainModel = scopeChainModel;
       this.#scopeChainModel.addEventListener(SourceMapScopes2.ScopeChainModel.Events.SCOPE_CHAIN_UPDATED, (event) => {
@@ -17556,7 +17550,7 @@ import * as i18n47 from "../../core/i18n/i18n.js";
 import * as Platform15 from "../../core/platform/platform.js";
 import * as SDK13 from "../../core/sdk/sdk.js";
 import * as TextUtils12 from "../../core/text_utils/text_utils.js";
-import * as Bindings12 from "../../models/bindings/bindings.js";
+import * as Bindings11 from "../../models/bindings/bindings.js";
 import * as Persistence16 from "../../models/persistence/persistence.js";
 import * as Workspace28 from "../../models/workspace/workspace.js";
 import * as uiI18n3 from "../../ui/i18n/i18n.js";
@@ -17698,7 +17692,7 @@ var NetworkNavigatorView = class _NetworkNavigatorView extends NavigatorView {
   }
   acceptProject(project) {
     return project.type() === Workspace28.Workspace.projectTypes.Network && SDK13.TargetManager.TargetManager.instance().isInScope(
-      Bindings12.NetworkProject.NetworkProject.getTargetForProject(project)
+      Bindings11.NetworkProject.NetworkProject.getTargetForProject(project)
     );
   }
   onScopeChange() {
@@ -18021,7 +18015,7 @@ import * as Host13 from "../../core/host/host.js";
 import * as i18n49 from "../../core/i18n/i18n.js";
 import * as Platform16 from "../../core/platform/platform.js";
 import * as SDK14 from "../../core/sdk/sdk.js";
-import * as Bindings13 from "../../models/bindings/bindings.js";
+import * as Bindings12 from "../../models/bindings/bindings.js";
 import * as Formatter3 from "../../models/formatter/formatter.js";
 import * as SourceMapScopes3 from "../../models/source_map_scopes/source_map_scopes.js";
 import * as StackTrace9 from "../../models/stack_trace/stack_trace.js";
@@ -18845,7 +18839,7 @@ var WatchExpression = class _WatchExpression {
     if (callFrame?.script.isJavaScript()) {
       const nameMap = await SourceMapScopes3.NamesResolver.allVariablesInCallFrame(
         callFrame,
-        Bindings13.DebuggerWorkspaceBinding.DebuggerWorkspaceBinding.instance()
+        Bindings12.DebuggerWorkspaceBinding.DebuggerWorkspaceBinding.instance()
       );
       try {
         expression = await Formatter3.FormatterWorkerPool.formatterWorkerPool().javaScriptSubstitute(expression, nameMap);
