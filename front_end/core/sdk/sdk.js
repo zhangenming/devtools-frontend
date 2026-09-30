@@ -22224,7 +22224,7 @@ var SourceMapScopeRemoteObject = class _SourceMapScopeRemoteObject extends Remot
         variable,
         value,
         /* enumerable */
-        false,
+        true,
         /* writable */
         false,
         /* isOwn */
@@ -22307,7 +22307,7 @@ var SourceMapScopeRemoteObject = class _SourceMapScopeRemoteObject extends Remot
       name,
       null,
       /* enumerable */
-      false,
+      true,
       /* writeable */
       false,
       /* isOwn */
@@ -28913,7 +28913,7 @@ var DOMNode = class _DOMNode extends Common20.ObjectWrapper.ObjectWrapper {
     }
     const frameOwnerTags = /* @__PURE__ */ new Set(["EMBED", "IFRAME", "OBJECT", "FENCEDFRAME"]);
     if (payload.contentDocument) {
-      this.contentDocumentInternal = new DOMDocument(this.#domModel, payload.contentDocument);
+      this.contentDocumentInternal = new DOMDocument(this.#domModel, payload.contentDocument, payload.frameId);
       this.contentDocumentInternal.parentNode = this;
       this.childrenInternal = [];
     } else if (payload.frameId && frameOwnerTags.has(payload.nodeName)) {
@@ -29804,16 +29804,27 @@ var DOMNode = class _DOMNode extends Common20.ObjectWrapper.ObjectWrapper {
     return response.backendNodeIds.map((backendNodeId) => new DeferredDOMNode(target, backendNodeId));
   }
   async takeSnapshot(ownerDocumentSnapshot) {
-    const snapshot = this instanceof DOMDocument ? new DOMDocumentSnapshot(this.domModel(), {
-      nodeId: this.id,
-      backendNodeId: this.backendNodeId(),
-      nodeType: this.nodeType(),
-      nodeName: this.nodeName(),
-      localName: this.localName(),
-      nodeValue: this.nodeValueInternal,
-      documentURL: this.documentURL,
-      baseURL: this.baseURL
-    }) : new DOMNodeSnapshot(this.domModel());
+    let snapshot;
+    if (this instanceof DOMDocument) {
+      const doc = this;
+      snapshot = new DOMDocumentSnapshot(
+        this.domModel(),
+        {
+          nodeId: this.id,
+          backendNodeId: this.backendNodeId(),
+          nodeType: this.nodeType(),
+          nodeName: this.nodeName(),
+          localName: this.localName(),
+          nodeValue: this.nodeValueInternal,
+          documentURL: this.documentURL,
+          baseURL: this.baseURL
+        },
+        this.frameId(),
+        doc.securityOrigin()
+      );
+    } else {
+      snapshot = new DOMNodeSnapshot(this.domModel());
+    }
     snapshot.id = this.id;
     snapshot.#backendNodeId = this.#backendNodeId;
     snapshot.#frameOwnerFrameId = this.#frameOwnerFrameId;
@@ -29953,15 +29964,19 @@ var DOMDocument = class extends DOMNode {
   documentElement;
   #documentURL;
   #baseURL;
+  #frameId;
   #securityOrigin;
-  constructor(domModel, payload) {
+  constructor(domModel, payload, frameId) {
     super(domModel);
     this.body = null;
     this.documentElement = null;
     this.init(this, false, payload);
     this.#documentURL = payload.documentURL || "";
     this.#baseURL = payload.baseURL || "";
-    this.#securityOrigin = SecurityOrigin.create(this.#documentURL);
+    this.#frameId = frameId ?? null;
+    const resourceTreeModel = this.domModel().target().model(ResourceTreeModel);
+    const frame = this.#frameId ? resourceTreeModel?.frameForId(this.#frameId) : resourceTreeModel?.mainFrame;
+    this.#securityOrigin = frame?.securityOrigin() ?? SecurityOrigin.create(this.#documentURL);
   }
   get documentURL() {
     return this.#documentURL;
@@ -29969,22 +29984,25 @@ var DOMDocument = class extends DOMNode {
   get baseURL() {
     return this.#baseURL;
   }
+  frameId() {
+    return this.#frameId;
+  }
   /**
    * Returns the security origin of this document.
    *
-   * The security origin is derived from the document URL and is recomputed
+   * The security origin is resolved from the document's frame and is recomputed
    * when the document navigates to a new URL via `setDocumentURL`.
    */
   securityOrigin() {
     return this.#securityOrigin;
   }
   /**
-   * Updates the document and base URLs, and recomputes the document's security origin.
+   * Updates the document and base URLs, and updates the document's security origin.
    */
-  setDocumentURL(url) {
+  setDocumentURL(url, securityOrigin) {
     this.#documentURL = url;
     this.#baseURL = url;
-    this.#securityOrigin = SecurityOrigin.create(url);
+    this.#securityOrigin = securityOrigin ?? SecurityOrigin.create(url);
   }
 };
 var AdoptedStyleSheet = class {
@@ -30057,7 +30075,7 @@ var DOMModel = class _DOMModel extends SDKModel {
     if (node) {
       const contentDocument = node.contentDocument();
       if (contentDocument && contentDocument.documentURL !== frame.url) {
-        contentDocument.setDocumentURL(frame.url);
+        contentDocument.setDocumentURL(frame.url, frame.securityOrigin());
         this.dispatchEventToListeners("DocumentURLChanged" /* DocumentURLChanged */, contentDocument);
       }
     }
@@ -30209,7 +30227,8 @@ var DOMModel = class _DOMModel extends SDKModel {
     this.idToDOMNode = /* @__PURE__ */ new Map();
     this.frameIdToOwnerNode = /* @__PURE__ */ new Map();
     if (payload && "nodeId" in payload) {
-      this.#document = new DOMDocument(this, payload);
+      const mainFrameId = this.target().model(ResourceTreeModel)?.mainFrame?.id;
+      this.#document = new DOMDocument(this, payload, mainFrameId);
     } else {
       this.#document = null;
     }
@@ -30741,6 +30760,14 @@ var DOMNodeSnapshot = class extends DOMNode {
   }
 };
 var DOMDocumentSnapshot = class extends DOMDocument {
+  #snapshotSecurityOrigin;
+  constructor(domModel, payload, frameId, securityOrigin) {
+    super(domModel, payload, frameId);
+    this.#snapshotSecurityOrigin = securityOrigin;
+  }
+  securityOrigin() {
+    return this.#snapshotSecurityOrigin;
+  }
   init(_doc, _isInShadowTree, _payload, _retainedNodes) {
   }
   setNodeName(_name, _callback) {
@@ -33697,9 +33724,6 @@ var Scope = class {
   }
   icon() {
     return void 0;
-  }
-  empty() {
-    return Boolean(this.#payload.empty);
   }
   extraProperties() {
     if (this !== this.#callFrame.localScope() || this.#callFrame.script.isWasm()) {
